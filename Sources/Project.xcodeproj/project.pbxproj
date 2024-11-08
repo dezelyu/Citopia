@@ -64,6 +64,13 @@
             isa = PBXGroup;
             children = (
                 00000000000000000000000C,
+                C264877E2CDDD1E000A891A8,
+                C26487802CDDD1E600A891A8,
+                C26487822CDDD1EC00A891A8,
+                C26487842CDDD1F200A891A8,
+                C26487862CDDD1F700A891A8,
+                C26487882CDDD1FB00A891A8,
+                C264878A2CDDD20000A891A8,
                 000000000000000000000004,
             );
             sourceTree = "<group>";
@@ -114,6 +121,13 @@
             isa = PBXFrameworksBuildPhase;
             buildActionMask = 2147483647;
             files = (
+                C264877F2CDDD1E000A891A8,
+                C26487812CDDD1E600A891A8,
+                C26487832CDDD1EC00A891A8,
+                C26487852CDDD1F200A891A8,
+                C26487872CDDD1F700A891A8,
+                C26487892CDDD1FB00A891A8,
+                C264878B2CDDD20000A891A8,
             );
             runOnlyForDeploymentPostprocessing = 0;
         };
@@ -140,6 +154,55 @@
                 000000000000000000000014,
             );
             path = Project;
+            sourceTree = "<group>";
+        };
+        C264877E2CDDD1E000A891A8 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = ApplicationKit.framework;
+            path = ../Libraries/ApplicationKit.framework;
+            sourceTree = "<group>";
+        };
+        C26487802CDDD1E600A891A8 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = GraphicsKit.framework;
+            path = ../Libraries/GraphicsKit.framework;
+            sourceTree = "<group>";
+        };
+        C26487822CDDD1EC00A891A8 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = AssetKit.framework;
+            path = ../Libraries/AssetKit.framework;
+            sourceTree = "<group>";
+        };
+        C26487842CDDD1F200A891A8 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = NodeKit.framework;
+            path = ../Libraries/NodeKit.framework;
+            sourceTree = "<group>";
+        };
+        C26487862CDDD1F700A891A8 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = MeshKit.framework;
+            path = ../Libraries/MeshKit.framework;
+            sourceTree = "<group>";
+        };
+        C26487882CDDD1FB00A891A8 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = MotionKit.framework;
+            path = ../Libraries/MotionKit.framework;
+            sourceTree = "<group>";
+        };
+        C264878A2CDDD20000A891A8 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = CameraKit.framework;
+            path = ../Libraries/CameraKit.framework;
             sourceTree = "<group>";
         };
         00000000000000000000000D = {
@@ -237,6 +300,34 @@
         000000000000000000000010 = {
             isa = PBXBuildFile;
             fileRef = 000000000000000000000013;
+        };
+        C264877F2CDDD1E000A891A8 = {
+            isa = PBXBuildFile;
+            fileRef = C264877E2CDDD1E000A891A8;
+        };
+        C26487812CDDD1E600A891A8 = {
+            isa = PBXBuildFile;
+            fileRef = C26487802CDDD1E600A891A8;
+        };
+        C26487832CDDD1EC00A891A8 = {
+            isa = PBXBuildFile;
+            fileRef = C26487822CDDD1EC00A891A8;
+        };
+        C26487852CDDD1F200A891A8 = {
+            isa = PBXBuildFile;
+            fileRef = C26487842CDDD1F200A891A8;
+        };
+        C26487872CDDD1F700A891A8 = {
+            isa = PBXBuildFile;
+            fileRef = C26487862CDDD1F700A891A8;
+        };
+        C26487892CDDD1FB00A891A8 = {
+            isa = PBXBuildFile;
+            fileRef = C26487882CDDD1FB00A891A8;
+        };
+        C264878B2CDDD20000A891A8 = {
+            isa = PBXBuildFile;
+            fileRef = C264878A2CDDD20000A891A8;
         };
         000000000000000000000011 = {
             isa = PBXFileReference;
