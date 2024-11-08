@@ -74,6 +74,7 @@
                 C235D0D42CDDD768001BE6FF,
                 C235D0D52CDDD770001BE6FF,
                 000000000000000000000004,
+                C299E0CD2CDE7B02006BC334,
             );
             sourceTree = "<group>";
         };
@@ -127,6 +128,7 @@
             isa = PBXFrameworksBuildPhase;
             buildActionMask = 2147483647;
             files = (
+                C299E0CF2CDE7B02006BC334,
                 C264877F2CDDD1E000A891A8,
                 C26487812CDDD1E600A891A8,
                 C26487832CDDD1EC00A891A8,
@@ -227,6 +229,14 @@
                 C2ABC7E52CDE6BA0004FFF17,
             );
             path = Citopia;
+            sourceTree = "<group>";
+        };
+        C299E0CD2CDE7B02006BC334 = {
+            isa = PBXGroup;
+            children = (
+                C299E0CE2CDE7B02006BC334,
+            );
+            name = Frameworks;
             sourceTree = "<group>";
         };
         00000000000000000000000D = {
@@ -341,6 +351,10 @@
             isa = PBXBuildFile;
             fileRef = 000000000000000000000013;
         };
+        C299E0CF2CDE7B02006BC334 = {
+            isa = PBXBuildFile;
+            fileRef = C299E0CE2CDE7B02006BC334;
+        };
         C264877F2CDDD1E000A891A8 = {
             isa = PBXBuildFile;
             fileRef = C264877E2CDDD1E000A891A8;
@@ -416,6 +430,13 @@
             lastKnownFileType = sourcecode.metal;
             path = CitopiaShader.metal;
             sourceTree = "<group>";
+        };
+        C299E0CE2CDE7B02006BC334 = {
+            isa = PBXFileReference;
+            lastKnownFileType = wrapper.framework;
+            name = AVKit.framework;
+            path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.5.sdk/System/Library/Frameworks/AVKit.framework;
+            sourceTree = DEVELOPER_DIR;
         };
     };
     rootObject = 000000000000000000000000;
