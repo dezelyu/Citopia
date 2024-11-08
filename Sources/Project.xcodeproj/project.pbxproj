@@ -100,6 +100,7 @@
             files = (
                 00000000000000000000000E,
                 C235D0D72CDDD789001BE6FF,
+                C2C7B55B2CDEB4DC00515AC2,
                 C235D0D92CDDD794001BE6FF,
                 C2F59A692CDE5250000F99BF,
                 C2ABC7E62CDE6BA0004FFF17,
@@ -217,6 +218,7 @@
             isa = PBXGroup;
             children = (
                 C235D0D62CDDD789001BE6FF,
+                C2C7B55A2CDEB4DC00515AC2,
             );
             path = Renderer;
             sourceTree = "<group>";
@@ -331,6 +333,10 @@
             isa = PBXBuildFile;
             fileRef = C235D0D62CDDD789001BE6FF;
         };
+        C2C7B55B2CDEB4DC00515AC2 = {
+            isa = PBXBuildFile;
+            fileRef = C2C7B55A2CDEB4DC00515AC2;
+        };
         C235D0D92CDDD794001BE6FF = {
             isa = PBXBuildFile;
             fileRef = C235D0D82CDDD794001BE6FF;
@@ -411,6 +417,12 @@
             isa = PBXFileReference;
             lastKnownFileType = sourcecode.swift;
             path = Renderer.swift;
+            sourceTree = "<group>";
+        };
+        C2C7B55A2CDEB4DC00515AC2 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = RendererExtension.swift;
             sourceTree = "<group>";
         };
         C235D0D82CDDD794001BE6FF = {

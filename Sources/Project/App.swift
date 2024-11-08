@@ -23,11 +23,17 @@ import CameraKit
     // define the command queue
     var commandQueue: MTLCommandQueue!
     
+    // define the renderer instance
+    var renderer: Renderer!
+    
     // define the simulation instance
     var simulator: Citopia!
     
     // define the launching behavior
     override func launched() {
+        
+        // lock the cursor
+        Cursor.lock()
         
         // show performance statistics
         App.view?.showsStatistics = true
@@ -57,6 +63,14 @@ import CameraKit
         // create a new command queue
         self.commandQueue = self.device.makeCommandQueue()
         
+        // create a new renderer instance
+        self.renderer = Renderer()
+        
+        // create the visible characters
+        self.renderer.createCharacters(
+            visibleCharacterCount: self.visibleCharacterCount
+        )
+        
         // create a new simulation instance
         self.simulator = Citopia(device: self.device)
         
@@ -84,6 +98,30 @@ import CameraKit
             
             // wait until all commands have been completed
             commandBuffer.waitUntilCompleted()
+            
+            // perform rendering
+            self.renderer.render()
         }
+    }
+    
+    // define the hover behavior
+    override func hovered(delta: CGVector) {
+        
+        // update the target rotation of the camera
+        self.renderer.updateTargetRotation(delta: delta)
+    }
+    
+    // define the key down behavior
+    override func started(press: String) {
+        
+        // record the press
+        self.renderer.start(press: press)
+    }
+    
+    // define the key up behavior
+    override func removed(press: String) {
+        
+        // remove the press
+        self.renderer.remove(press: press)
     }
 }
