@@ -21,6 +21,23 @@ extension Citopia {
         self.frameBuffer.label = "FrameBuffer"
     }
     
+    // define the function that creates the naive simulation pipeline
+    func createNaiveSimulationPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "NaiveSimulationFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.naiveSimulationPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the character buffer
     func createCharacterBuffer() {
         

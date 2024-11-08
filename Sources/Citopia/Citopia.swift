@@ -37,6 +37,9 @@ class Citopia {
     // define the graphics device
     var device: MTLDevice!
     
+    // define the shader library
+    var library: MTLLibrary!
+    
     // define the uniform buffer for the frame data
     var frameBuffer: MTLBuffer!
     
@@ -45,6 +48,9 @@ class Citopia {
     
     // define the storage buffer for the indices of the visible characters
     var visibleCharacterIndexBuffer: MTLBuffer!
+    
+    // define the naive simulation pipeline
+    var naiveSimulationPipeline: MTLComputePipelineState!
     
     // define the position of the observer
     var observerPosition: simd_float3 = .zero
@@ -55,8 +61,14 @@ class Citopia {
         // store the graphics device
         self.device = device
         
+        // create a new library
+        self.library = self.device.makeDefaultLibrary()
+        
         // create the frame buffer
         self.createFrameBuffer()
+        
+        // create the naive simulation pipeline
+        self.createNaiveSimulationPipeline()
     }
     
     // define the character creator
@@ -80,5 +92,22 @@ class Citopia {
         
         // update the frame buffer
         self.updateFrameBuffer(time: time)
+        
+        // create a new compute command encoder
+        let encoder = commandBuffer.makeComputeCommandEncoder()!
+        
+        // configure the naive simulation pipeline
+        encoder.setComputePipelineState(self.naiveSimulationPipeline)
+        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+        
+        // perform the naive simulation
+        encoder.dispatchThreadgroups(
+            MTLSizeMake(self.characterCount / (self.naiveSimulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+            threadsPerThreadgroup: MTLSizeMake(self.naiveSimulationPipeline.threadExecutionWidth * 2, 1, 1)
+        )
+        
+        // finish encoding
+        encoder.endEncoding()
     }
 }
