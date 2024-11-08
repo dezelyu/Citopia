@@ -100,6 +100,7 @@
                 C235D0D72CDDD789001BE6FF,
                 C235D0D92CDDD794001BE6FF,
                 00000000000000000000000E,
+                C2F59A692CDE5250000F99BF,
             );
             runOnlyForDeploymentPostprocessing = 0;
         };
@@ -221,6 +222,7 @@
             isa = PBXGroup;
             children = (
                 C235D0D82CDDD794001BE6FF,
+                C2F59A682CDE5250000F99BF,
             );
             path = Citopia;
             sourceTree = "<group>";
@@ -321,6 +323,10 @@
             isa = PBXBuildFile;
             fileRef = 000000000000000000000011;
         };
+        C2F59A692CDE5250000F99BF = {
+            isa = PBXBuildFile;
+            fileRef = C2F59A682CDE5250000F99BF;
+        };
         00000000000000000000000F = {
             isa = PBXBuildFile;
             fileRef = 000000000000000000000012;
@@ -391,6 +397,12 @@
             isa = PBXFileReference;
             lastKnownFileType = sourcecode.swift;
             path = Citopia.swift;
+            sourceTree = "<group>";
+        };
+        C2F59A682CDE5250000F99BF = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = CitopiaExtension.swift;
             sourceTree = "<group>";
         };
     };
