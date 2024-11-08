@@ -71,6 +71,8 @@
                 C26487862CDDD1F700A891A8,
                 C26487882CDDD1FB00A891A8,
                 C264878A2CDDD20000A891A8,
+                C235D0D42CDDD768001BE6FF,
+                C235D0D52CDDD770001BE6FF,
                 000000000000000000000004,
             );
             sourceTree = "<group>";
@@ -95,6 +97,8 @@
             isa = PBXSourcesBuildPhase;
             buildActionMask = 2147483647;
             files = (
+                C235D0D72CDDD789001BE6FF,
+                C235D0D92CDDD794001BE6FF,
                 00000000000000000000000E,
             );
             runOnlyForDeploymentPostprocessing = 0;
@@ -205,6 +209,22 @@
             path = ../Libraries/CameraKit.framework;
             sourceTree = "<group>";
         };
+        C235D0D42CDDD768001BE6FF = {
+            isa = PBXGroup;
+            children = (
+                C235D0D62CDDD789001BE6FF,
+            );
+            path = Renderer;
+            sourceTree = "<group>";
+        };
+        C235D0D52CDDD770001BE6FF = {
+            isa = PBXGroup;
+            children = (
+                C235D0D82CDDD794001BE6FF,
+            );
+            path = Citopia;
+            sourceTree = "<group>";
+        };
         00000000000000000000000D = {
             isa = XCBuildConfiguration;
             buildSettings = {
@@ -289,6 +309,14 @@
             };
             name = Release;
         };
+        C235D0D72CDDD789001BE6FF = {
+            isa = PBXBuildFile;
+            fileRef = C235D0D62CDDD789001BE6FF;
+        };
+        C235D0D92CDDD794001BE6FF = {
+            isa = PBXBuildFile;
+            fileRef = C235D0D82CDDD794001BE6FF;
+        };
         00000000000000000000000E = {
             isa = PBXBuildFile;
             fileRef = 000000000000000000000011;
@@ -351,6 +379,18 @@
             isa = PBXFileReference;
             lastKnownFileType = text.plist.xml;
             path = Info.plist;
+            sourceTree = "<group>";
+        };
+        C235D0D62CDDD789001BE6FF = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = Renderer.swift;
+            sourceTree = "<group>";
+        };
+        C235D0D82CDDD794001BE6FF = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.swift;
+            path = Citopia.swift;
             sourceTree = "<group>";
         };
     };
