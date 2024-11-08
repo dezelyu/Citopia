@@ -1,0 +1,72 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios15.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name MotionKit
+import ApplicationKit
+import AssetKit
+import GraphicsKit
+import NodeKit
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+@_hasMissingDesignatedInitializers public class KeyframeBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class MotionNexusBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class MotionSamplerBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class MotionControllerBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+public class Motion {
+    public init(asset: AssetKit.MotionAsset)
+    @objc deinit
+}
+public class MotionNode : NodeKit.Node {
+    public var speed: Swift.Float {
+        get
+        set
+    }
+    public var weight: Swift.Float {
+        get
+    }
+    public var duration: Swift.Float {
+        get
+    }
+    public init(motion: MotionKit.Motion, looped: Swift.Bool, clamped: Swift.Bool)
+    public func play(attack: Swift.Float)
+    public func play(attack: (Swift.Float, Swift.Float))
+    public func stop(attack: Swift.Float)
+    public func stop()
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class MotionManager {
+    public static var speed: Swift.Float
+    public static func configure(capacity: (Swift.Int, Swift.Int, Swift.Int, Swift.Int))
+    public static func sample(command: GraphicsKit.Command)
+    public static func animate(command: GraphicsKit.Command)
+    public static func count() -> (Swift.Int, Swift.Int, Swift.Int, Swift.Int)
+    @objc deinit
+}

@@ -1,0 +1,40 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios15.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name ApplicationKit
+import GameController
+@_exported import SceneKit
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+open class Application {
+    public static var time: Swift.Float {
+        get
+    }
+    public static var view: SceneKit.SCNView? {
+        get
+    }
+    public static var controller: UIKit.UIViewController? {
+        get
+    }
+    required public init()
+    public static func main()
+    public static func register(delegate: any SceneKit.SCNSceneRendererDelegate)
+    open func launched()
+    open func updated(state: Swift.Int)
+    open func started(touch: Swift.Int, position: CoreFoundation.CGPoint)
+    open func dragged(touch: Swift.Int, position: CoreFoundation.CGPoint)
+    open func removed(touch: Swift.Int, position: CoreFoundation.CGPoint)
+    open func hovered(delta: CoreFoundation.CGVector)
+    open func started(press: Swift.String)
+    open func removed(press: Swift.String)
+    open func resumed()
+    open func paused()
+    open func ended()
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class Cursor {
+    public static func lock()
+    public static func unlock()
+    @objc deinit
+}

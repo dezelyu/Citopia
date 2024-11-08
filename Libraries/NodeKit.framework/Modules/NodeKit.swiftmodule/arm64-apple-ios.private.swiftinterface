@@ -1,0 +1,87 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios15.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name NodeKit
+import GraphicsKit
+@_exported import SceneKit
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+@_hasMissingDesignatedInitializers public class LocalNodeBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class GlobalNodeBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class FeedbackNodeBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers open class Node {
+    public var name: Swift.String {
+        get
+        set
+    }
+    public var data: (Swift.Int, Swift.Int, Swift.Int) {
+        get
+        set
+    }
+    public var scale: simd.simd_float3 {
+        get
+        set
+    }
+    public var position: simd.simd_float3 {
+        get
+        set
+    }
+    public var rotation: simd.simd_float3 {
+        get
+        set
+    }
+    public var transform: simd.simd_float4x4 {
+        get
+        set
+    }
+    public var closure: (() -> ())?
+    public init()
+    convenience public init(node: SceneKit.SCNNode)
+    public func index() -> Swift.Int
+    public func attach(node: NodeKit.Node)
+    public func detach()
+    public func parent() -> NodeKit.Node?
+    public func children() -> [NodeKit.Node]
+    public func hierarchy() -> [NodeKit.Node]
+    @objc deinit
+}
+extension Swift.Array where Element == NodeKit.Node {
+    public init(capacity: Swift.Int)
+}
+@_hasMissingDesignatedInitializers public class FeedbackNode : NodeKit.Node {
+    override public init()
+    public func feedback() -> simd.simd_float4x4
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class NodeManager {
+    public static func configure(capacity: (Swift.Int, Swift.Int))
+    public static func transform(command: GraphicsKit.Command)
+    public static func attach(node: NodeKit.Node)
+    public static func count() -> (Swift.Int, Swift.Int)
+    @objc deinit
+}

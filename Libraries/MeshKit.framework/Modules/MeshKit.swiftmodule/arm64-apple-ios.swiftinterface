@@ -1,0 +1,90 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios15.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name MeshKit
+import AssetKit
+import GraphicsKit
+import NodeKit
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+@_hasMissingDesignatedInitializers public class MeshBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class IndexBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class VertexBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class BindingBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class SkinningBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class BlendingBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+public class Mesh {
+    public var arguments: Metal.MTLDrawIndexedPrimitivesIndirectArguments {
+        get
+    }
+    public init(asset: AssetKit.MeshAsset, scale: Swift.Float, range: (Swift.Float, Swift.Float, Swift.Float, Swift.Float))
+    convenience public init(asset: AssetKit.MeshAsset)
+    @objc deinit
+}
+public class MeshNode : NodeKit.Node {
+    public init(mesh: MeshKit.Mesh, category: Swift.Int)
+    public func blend(name: Swift.String, weight: Swift.Float)
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class MeshManager {
+    public static func configure(capacity: (Swift.Int, Swift.Int, Swift.Int, Swift.Int, Swift.Int, Swift.Int))
+    public static func update()
+    public static func meshes() -> [MeshKit.Mesh]
+    public static func count() -> (Swift.Int, Swift.Int, Swift.Int, Swift.Int, Swift.Int, Swift.Int)
+    @objc deinit
+}

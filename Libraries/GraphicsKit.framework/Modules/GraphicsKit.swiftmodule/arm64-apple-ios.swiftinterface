@@ -1,0 +1,121 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios15.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name GraphicsKit
+import ApplicationKit
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+@_hasMissingDesignatedInitializers public class Descriptor {
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class GenericBuffer : GraphicsKit.Descriptor {
+    public init(buffer: any Metal.MTLBuffer)
+    public init(buffer: (any Metal.MTLBuffer, any Metal.MTLBuffer, any Metal.MTLBuffer))
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class UniformBuffer<T> : GraphicsKit.GenericBuffer {
+    public var data: T
+    public init(data: T)
+    public func revert() -> GraphicsKit.GenericBuffer
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class StorageBuffer<T> : GraphicsKit.GenericBuffer {
+    public init(capacity: Swift.Int, readable: Swift.Bool, writable: Swift.Bool)
+    public func read(index: Swift.Int) -> T
+    public func write(index: Swift.Int, data: T)
+    public func paste(index: Swift.Int, data: [T])
+    public func reserve(count: Swift.Int) -> Swift.Int?
+    public func release(index: Swift.Int)
+    public func revert() -> GraphicsKit.GenericBuffer
+    public func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class StaticBuffer<T> : GraphicsKit.GenericBuffer {
+    public init(capacity: Swift.Int)
+    public func insert(data: [T]) -> Swift.Int?
+    public func remove(index: Swift.Int)
+    public func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class GenericTexture : GraphicsKit.Descriptor {
+    public init(texture: any Metal.MTLTexture)
+    public init(texture: (any Metal.MTLTexture, any Metal.MTLTexture, any Metal.MTLTexture))
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class ImageTexture : GraphicsKit.GenericTexture {
+    public init(width: Swift.Int, height: Swift.Int, pointer: Swift.UnsafeRawPointer)
+    public func transfer(array: GraphicsKit.ArrayTexture) -> (Swift.Int, Swift.Float, Swift.Float, Swift.Float, Swift.Float)?
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class ArrayTexture : GraphicsKit.GenericTexture {
+    public init(width: Swift.Int, height: Swift.Int, capacity: Swift.Int)
+    public func count() -> Swift.Int
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class CubeTexture : GraphicsKit.GenericTexture {
+    public init(width: Swift.Int, height: Swift.Int, pointers: [Swift.UnsafeRawPointer])
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class Attachment : GraphicsKit.GenericTexture {
+    public init(type: Metal.MTLTextureType, format: Metal.MTLPixelFormat, width: Swift.Int, height: Swift.Int, capacity: Swift.Int, mipmapped: Swift.Bool)
+    convenience public init(type: Metal.MTLTextureType, format: Metal.MTLPixelFormat, scale: Swift.Float, capacity: Swift.Int, mipmapped: Swift.Bool)
+    public func enable(slice: Swift.Int) -> GraphicsKit.Attachment
+    public func clear() -> GraphicsKit.Attachment
+    public func store() -> GraphicsKit.Attachment
+    public func blend(source: (Metal.MTLBlendFactor, Metal.MTLBlendFactor), target: (Metal.MTLBlendFactor, Metal.MTLBlendFactor), operation: (Metal.MTLBlendOperation, Metal.MTLBlendOperation)) -> GraphicsKit.Attachment
+    public func revert() -> GraphicsKit.GenericTexture
+    public func present(prerequisite: ([GraphicsKit.Command], [GraphicsKit.Command], [GraphicsKit.Command]))
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class Sampler : GraphicsKit.Descriptor {
+    public init(linear: Swift.Bool, anisotropy: Swift.Int)
+    @objc deinit
+}
+public class Library {
+    public init(bundle: Foundation.Bundle)
+    public init(data: ([Swift.UInt8], [Swift.UInt8]))
+    @objc deinit
+}
+public class Function {
+    public init(library: GraphicsKit.Library, name: Swift.String)
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class RenderPipeline {
+    convenience public init(function: (GraphicsKit.Function, GraphicsKit.Function), colors: [GraphicsKit.Attachment], depth: (GraphicsKit.Attachment, Swift.Bool, Swift.Bool))
+    convenience public init(function: GraphicsKit.Function, colors: [GraphicsKit.Attachment])
+    convenience public init(function: GraphicsKit.Function)
+    @objc deinit
+}
+public class ComputePipeline {
+    public init(function: GraphicsKit.Function)
+    @objc deinit
+}
+public class Command {
+    public init()
+    public func copy(source: (GraphicsKit.GenericBuffer, Swift.Int), target: (GraphicsKit.GenericBuffer, Swift.Int), length: Swift.Int)
+    public func mipmap(texture: GraphicsKit.GenericTexture)
+    public func copy(source: (GraphicsKit.GenericTexture, Swift.Int, Swift.Int, Swift.Int), target: (GraphicsKit.GenericTexture, Swift.Int, Swift.Int, Swift.Int), width: Swift.Int, height: Swift.Int)
+    public func prepare(colors: [GraphicsKit.Attachment], depth: GraphicsKit.Attachment?)
+    public func bind(pipeline: GraphicsKit.RenderPipeline)
+    public func bind(stage: Metal.MTLRenderStages, descriptors: [GraphicsKit.Descriptor])
+    public func render(indices: GraphicsKit.GenericBuffer, arguments: GraphicsKit.GenericBuffer, index: Swift.Int)
+    public func render()
+    public func compute(pipeline: GraphicsKit.ComputePipeline, descriptors: [GraphicsKit.Descriptor], workload: Swift.Int)
+    public func end()
+    public func wait()
+    public func wait(command: GraphicsKit.Command, value: Swift.Int)
+    public func signal(value: Swift.Int)
+    public func commit()
+    public func complete()
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class Presenter {
+    public static func configure(pipeline: GraphicsKit.RenderPipeline, descriptors: [GraphicsKit.Descriptor], prerequisite: ([GraphicsKit.Command], [GraphicsKit.Command], [GraphicsKit.Command]))
+    public static func complete()
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class GraphicsManager {
+    public static func configure()
+    @objc deinit
+}

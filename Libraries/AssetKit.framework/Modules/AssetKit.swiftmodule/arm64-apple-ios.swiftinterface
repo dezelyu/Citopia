@@ -1,0 +1,95 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios15.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name AssetKit
+import CryptoKit
+@_exported import SceneKit
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+public struct VertexData {
+}
+public struct SkinningData {
+}
+public struct BlendingData {
+}
+public struct KeyframeData {
+}
+public class TextAsset {
+    public var data: [Swift.String] {
+        get
+    }
+    public init(name: Swift.String)
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class MeshAsset {
+    public var node: SceneKit.SCNNode {
+        get
+    }
+    public var indices: [Swift.UInt32] {
+        get
+    }
+    public var vertices: [AssetKit.VertexData] {
+        get
+    }
+    public var skinning: [AssetKit.SkinningData] {
+        get
+    }
+    public var blending: [Swift.String : [AssetKit.BlendingData]] {
+        get
+    }
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class MotionAsset {
+    public var node: SceneKit.SCNNode {
+        get
+    }
+    public var duration: Swift.Float {
+        get
+    }
+    public var positions: [Swift.String : [AssetKit.KeyframeData]] {
+        get
+    }
+    public var rotations: [Swift.String : [AssetKit.KeyframeData]] {
+        get
+    }
+    @objc deinit
+}
+public class SceneAsset {
+    public var root: SceneKit.SCNNode {
+        get
+    }
+    public var meshes: [AssetKit.MeshAsset] {
+        get
+    }
+    public var motions: [AssetKit.MotionAsset] {
+        get
+    }
+    public init(name: Swift.String)
+    @objc deinit
+}
+public class ImageAsset {
+    public var width: Swift.Int {
+        get
+    }
+    public var height: Swift.Int {
+        get
+    }
+    public var pointer: Swift.UnsafeMutableRawPointer {
+        get
+    }
+    public init(name: Swift.String)
+    @objc deinit
+}
+public class AudioAsset {
+    public var source: SceneKit.SCNAudioSource {
+        get
+    }
+    public init(name: Swift.String)
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class AssetManager {
+    public static func configure(name: Swift.String, data: Swift.String)
+    public static func validate(name: Swift.String)
+    @objc deinit
+}

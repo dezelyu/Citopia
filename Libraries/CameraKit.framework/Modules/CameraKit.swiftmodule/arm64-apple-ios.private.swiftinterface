@@ -1,0 +1,39 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios15.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name CameraKit
+import ApplicationKit
+import GraphicsKit
+import MeshKit
+import NodeKit
+import Swift
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+@_hasMissingDesignatedInitializers public class CameraBuffer {
+    public static var capacity: Swift.Int {
+        get
+    }
+    public static var buffer: GraphicsKit.GenericBuffer! {
+        get
+    }
+    public static func count() -> Swift.Int
+    @objc deinit
+}
+open class CameraNode : NodeKit.Node {
+    public var angle: Swift.Float {
+        get
+        set
+    }
+    public init(width: Swift.Float, height: Swift.Float, camera: SceneKit.SCNCamera, culler: (GraphicsKit.ComputePipeline, [GraphicsKit.Descriptor], () -> Swift.Int), capturer: (GraphicsKit.RenderPipeline, [GraphicsKit.Descriptor], [GraphicsKit.Descriptor]), capacity: (Swift.Int, Swift.Int))
+    convenience public init(category: Swift.Int, width: Swift.Float, height: Swift.Float, angle: Swift.Float, near: Swift.Float, far: Swift.Float)
+    convenience public init(category: Swift.Int, angle: Swift.Float, near: Swift.Float, far: Swift.Float)
+    open func capture(command: GraphicsKit.Command, color: [GraphicsKit.Attachment], depth: GraphicsKit.Attachment)
+    @objc deinit
+}
+@_hasMissingDesignatedInitializers public class CameraManager {
+    public static func configure(capacity: Swift.Int)
+    public static func attachment(scale: Swift.Float) -> (GraphicsKit.Attachment, GraphicsKit.Attachment)
+    public static func update(command: GraphicsKit.Command)
+    public static func present(camera: CameraKit.CameraNode, attachment: (GraphicsKit.Attachment, GraphicsKit.Attachment), prerequisite: ([GraphicsKit.Command], [GraphicsKit.Command], [GraphicsKit.Command]))
+    @objc deinit
+}
