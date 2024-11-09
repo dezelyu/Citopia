@@ -49,6 +49,9 @@ class Citopia {
     // define the storage buffer for the indices of the visible characters
     var visibleCharacterIndexBuffer: MTLBuffer!
     
+    // define the buffer for the visible characters
+    var visibleCharacterBuffer: MTLBuffer!
+    
     // define the naive simulation pipeline
     var naiveSimulationPipeline: MTLComputePipelineState!
     
@@ -72,7 +75,7 @@ class Citopia {
     }
     
     // define the character creator
-    func createCharacters(characterCount: Int, visibleCharacterCount: Int) {
+    func createCharacters(characterCount: Int, visibleCharacterCount: Int, visibleCharacterBuffer: MTLBuffer) {
         
         // store the total number of characters to simulate
         self.characterCount = characterCount
@@ -85,6 +88,9 @@ class Citopia {
         
         // create the visible character index buffer
         self.createVisibleCharacterIndexBuffer()
+        
+        // store the visible character buffer
+        self.visibleCharacterBuffer = visibleCharacterBuffer
     }
     
     // define the simulation behavior

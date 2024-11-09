@@ -68,7 +68,8 @@ import CameraKit
         
         // create the visible characters
         self.renderer.createCharacters(
-            visibleCharacterCount: self.visibleCharacterCount
+            visibleCharacterCount: self.visibleCharacterCount,
+            device: self.device
         )
         
         // create a new simulation instance
@@ -77,7 +78,8 @@ import CameraKit
         // create the simulation characters
         self.simulator.createCharacters(
             characterCount: self.characterCount,
-            visibleCharacterCount: self.visibleCharacterCount
+            visibleCharacterCount: self.visibleCharacterCount,
+            visibleCharacterBuffer: self.renderer.visibleCharacterBuffer.0
         )
     }
     

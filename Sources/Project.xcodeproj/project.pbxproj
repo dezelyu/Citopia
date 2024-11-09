@@ -101,6 +101,7 @@
                 00000000000000000000000E,
                 C235D0D72CDDD789001BE6FF,
                 C2C7B55B2CDEB4DC00515AC2,
+                C23A9C0E2CDEDB1A00499FA6,
                 C235D0D92CDDD794001BE6FF,
                 C2F59A692CDE5250000F99BF,
                 C2ABC7E62CDE6BA0004FFF17,
@@ -219,6 +220,7 @@
             children = (
                 C235D0D62CDDD789001BE6FF,
                 C2C7B55A2CDEB4DC00515AC2,
+                C23A9C0D2CDEDB1A00499FA6,
             );
             path = Renderer;
             sourceTree = "<group>";
@@ -337,6 +339,10 @@
             isa = PBXBuildFile;
             fileRef = C2C7B55A2CDEB4DC00515AC2;
         };
+        C23A9C0E2CDEDB1A00499FA6 = {
+            isa = PBXBuildFile;
+            fileRef = C23A9C0D2CDEDB1A00499FA6;
+        };
         C235D0D92CDDD794001BE6FF = {
             isa = PBXBuildFile;
             fileRef = C235D0D82CDDD794001BE6FF;
@@ -423,6 +429,12 @@
             isa = PBXFileReference;
             lastKnownFileType = sourcecode.swift;
             path = RendererExtension.swift;
+            sourceTree = "<group>";
+        };
+        C23A9C0D2CDEDB1A00499FA6 = {
+            isa = PBXFileReference;
+            lastKnownFileType = sourcecode.metal;
+            path = RenderShader.metal;
             sourceTree = "<group>";
         };
         C235D0D82CDDD794001BE6FF = {

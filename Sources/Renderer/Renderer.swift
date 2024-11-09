@@ -8,6 +8,24 @@ import MeshKit
 import MotionKit
 import CameraKit
 
+// define the visible character data
+struct VisibleCharacterData {
+    
+    // define the general visible character data
+    //  - data.x = sex
+    //  - data.w = character node index
+    var data: simd_uint4 = .zero
+    
+    // define the indices of the female mesh nodes
+    var femaleMeshNodeIndices: simd_uint4 = .zero
+    
+    // define the indices of the male mesh nodes
+    var maleMeshNodeIndices: simd_uint4 = .zero
+    
+    // define the transform of the visible character
+    var transform: simd_float4x4 = simd_float4x4(1.0)
+}
+
 // define the class for rendering the simulation
 class Renderer {
     
@@ -37,6 +55,15 @@ class Renderer {
     
     // define the commands
     var commands: [Command] = []
+    
+    // define the update compute pipeline
+    var updateComputePipeline: ComputePipeline!
+    
+    // define the total number of visible characters
+    var visibleCharacterCount: Int = 0
+    
+    // define the buffer for the visible characters
+    var visibleCharacterBuffer: (MTLBuffer, GenericBuffer)!
     
     // define the container for all the mesh nodes
     var meshNodes: [MeshNode] = []
@@ -89,10 +116,35 @@ class Renderer {
                 [self.commands[2]]
             )
         )
+        
+        // create a new library
+        let library = Library(bundle: Bundle(for: Renderer.self))
+        
+        // create the update compute pipeline
+        self.updateComputePipeline = ComputePipeline(
+            function: Function(library: library, name: "UpdateFunction")
+        )
     }
     
     // define the character creator
-    func createCharacters(visibleCharacterCount: Int) {
+    func createCharacters(visibleCharacterCount: Int, device: MTLDevice) {
+        
+        // store the total number of visible characters
+        self.visibleCharacterCount = visibleCharacterCount
+        
+        // create a new buffer for the visible characters
+        let buffer = device.makeBuffer(
+            length: MemoryLayout<VisibleCharacterData>.stride * visibleCharacterCount,
+            options: [
+                .cpuCacheModeWriteCombined,
+                .storageModeShared,
+            ]
+        )!
+        
+        // acquire a pointer to the buffer
+        let pointer = buffer.contents().bindMemory(
+            to: VisibleCharacterData.self, capacity: visibleCharacterCount
+        )
         
         // define the names of the scene assets to load
         let names = [
@@ -135,17 +187,26 @@ class Renderer {
         // iterate from one to the visible character count
         for index in 1...max(1, visibleCharacterCount) {
             
+            // create a new visible character data
+            var visibleCharacterData = VisibleCharacterData()
+            
             // create a new root for the character
             let characterNode = Node()
             
             // attach the skeleton to the character
             characterNode.attach(node: Node(node: skeleton))
             
+            // store the character node index
+            visibleCharacterData.data.w = UInt32(characterNode.index())
+            
             // load the female meshes
             for index in 0...3 {
                 let meshNode = MeshNode(mesh: meshes[index], category: 1)
                 self.meshNodes.append(meshNode)
                 characterNode.attach(node: meshNode)
+                
+                // store the female mesh indices
+                visibleCharacterData.femaleMeshNodeIndices[index] = UInt32(meshNode.index())
             }
             
             // load the male meshes
@@ -153,6 +214,9 @@ class Renderer {
                 let meshNode = MeshNode(mesh: meshes[index], category: 1)
                 self.meshNodes.append(meshNode)
                 characterNode.attach(node: meshNode)
+                
+                // store the male mesh indices
+                visibleCharacterData.maleMeshNodeIndices[index - 4] = UInt32(meshNode.index())
             }
             
             // position the character node
@@ -161,9 +225,20 @@ class Renderer {
             // scale the character node
             characterNode.scale = simd_float3(repeating: 0.01)
             
+            // store the character transform
+            visibleCharacterData.transform = characterNode.transform
+            
             // attach the character node to the scene
             NodeManager.attach(node: characterNode)
+            
+            // store the new visible character data
+            pointer[index] = visibleCharacterData
         }
+        
+        // save the visible character buffer
+        self.visibleCharacterBuffer = (
+            buffer, GenericBuffer(buffer: buffer)
+        )
     }
     
     // define the render
@@ -184,6 +259,14 @@ class Renderer {
         
         // perform rendering
         MeshManager.update()
+        self.commands[self.phase].compute(
+            pipeline: self.updateComputePipeline,
+            descriptors: [
+                self.visibleCharacterBuffer.1,
+                LocalNodeBuffer.buffer,
+            ], workload: self.visibleCharacterCount
+        )
+        self.commands[self.phase].wait()
         MotionManager.sample(command: self.commands[self.phase])
         self.commands[self.phase].wait()
         MotionManager.animate(command: self.commands[self.phase])
