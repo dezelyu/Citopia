@@ -68,6 +68,9 @@ class Renderer {
     // define the container for all the mesh nodes
     var meshNodes: [MeshNode] = []
     
+    // define the container for all the motion nodes
+    var motionNodes: [MotionNode] = []
+    
     // define the constructor
     init() {
         
@@ -146,27 +149,27 @@ class Renderer {
             to: VisibleCharacterData.self, capacity: visibleCharacterCount
         )
         
-        // define the names of the scene assets to load
-        let names = [
-            "Assets.scnassets/Character/Female0.scn",
-            "Assets.scnassets/Character/Female1.scn",
-            "Assets.scnassets/Character/Female2.scn",
-            "Assets.scnassets/Character/Female3.scn",
-            "Assets.scnassets/Character/Male0.scn",
-            "Assets.scnassets/Character/Male1.scn",
-            "Assets.scnassets/Character/Male2.scn",
-            "Assets.scnassets/Character/Male3.scn",
-            "Assets.scnassets/Character/Skeleton.scn",
+        // define the names of the mesh scene assets to load
+        let meshSceneNames = [
+            "Assets.scnassets/Characters/Female0.scn",
+            "Assets.scnassets/Characters/Female1.scn",
+            "Assets.scnassets/Characters/Female2.scn",
+            "Assets.scnassets/Characters/Female3.scn",
+            "Assets.scnassets/Characters/Male0.scn",
+            "Assets.scnassets/Characters/Male1.scn",
+            "Assets.scnassets/Characters/Male2.scn",
+            "Assets.scnassets/Characters/Male3.scn",
+            "Assets.scnassets/Characters/Skeleton.scn",
         ]
         
-        // load the scene assets
-        let sceneAssets = names.map { name in
-            return SceneAsset(name: name)
+        // load the mesh scene assets
+        let meshSceneAssets = meshSceneNames.map { meshSceneName in
+            return SceneAsset(name: meshSceneName)
         }
         
         // load the mesh assets
-        let meshAssets = sceneAssets.dropLast().map { sceneAsset in
-            return sceneAsset.meshes.first!
+        let meshAssets = meshSceneAssets.dropLast().map { meshSceneAsset in
+            return meshSceneAsset.meshes.first!
         }
         
         // load the meshes from the mesh assets
@@ -182,7 +185,30 @@ class Renderer {
         ]
         
         // load the skeleton node
-        let skeleton = sceneAssets.last!.root
+        let skeleton = meshSceneAssets.last!.root
+        
+        // define the names of the motion scene assets to load
+        let motionSceneNames = [
+            "Assets.scnassets/Motions/Idle0.scn" : (true, false),
+            "Assets.scnassets/Motions/Walk0.scn" : (true, false),
+        ]
+        
+        // load the motion scene assets
+        let motionSceneAssets = motionSceneNames.keys.map { motionSceneName in
+            return SceneAsset(name: motionSceneName)
+        }
+        
+        // load the motion assets
+        let motionAssets = motionSceneAssets.map { motionSceneAsset in
+            return motionSceneAsset.motions.first!
+        }
+        
+        // load the motions
+        let motions = Dictionary(uniqueKeysWithValues: zip(
+            motionSceneNames.keys, motionAssets.map { motionAsset in
+                return Motion(asset: motionAsset)
+            }
+        ))
         
         // iterate from one to the visible character count
         for index in 1...max(1, visibleCharacterCount) {
@@ -217,6 +243,20 @@ class Renderer {
                 
                 // store the male mesh indices
                 visibleCharacterData.maleMeshNodeIndices[index - 4] = UInt32(meshNode.index())
+            }
+            
+            // load the motions
+            for motion in motions {
+                let motionNode = MotionNode(
+                    motion: motion.value,
+                    looped: motionSceneNames[motion.key]!.0,
+                    clamped: motionSceneNames[motion.key]!.1
+                )
+                characterNode.attach(node: motionNode)
+                self.motionNodes.append(motionNode)
+                
+                // play the motion
+                motionNode.play(attack: 0.0)
             }
             
             // position the character node
