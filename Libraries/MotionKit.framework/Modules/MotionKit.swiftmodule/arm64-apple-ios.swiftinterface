@@ -56,8 +56,8 @@ public class MotionNode : NodeKit.Node {
         get
     }
     public init(motion: MotionKit.Motion, looped: Swift.Bool, clamped: Swift.Bool)
-    public func play(attack: Swift.Float)
-    public func play(attack: (Swift.Float, Swift.Float))
+    public func play(weight: Swift.Float, attack: Swift.Float)
+    public func play(weight: Swift.Float, attack: (Swift.Float, Swift.Float))
     public func stop(attack: Swift.Float)
     public func stop()
     @objc deinit

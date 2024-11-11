@@ -10,11 +10,11 @@
         </data>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.abi.json</key>
         <data>
-        KHB2LPtB6HW27eRhhrpCbnICF0Y=
+        ZGySlqnxVTB2wXHu0/YsA8t8d/c=
         </data>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.private.swiftinterface</key>
         <data>
-        20geMhfspSoUOT7sSgiJSL6Qxz8=
+        foZyM5L2yB9p2nLw6E5wbYuskws=
         </data>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.swiftdoc</key>
         <data>
@@ -22,11 +22,11 @@
         </data>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.swiftinterface</key>
         <data>
-        20geMhfspSoUOT7sSgiJSL6Qxz8=
+        foZyM5L2yB9p2nLw6E5wbYuskws=
         </data>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.swiftmodule</key>
         <data>
-        4BBSj0yzkhVKpp4Cl4TQwhlk/us=
+        coA4YjxBrMLOQBHkzEAhJsl889g=
         </data>
     </dict>
     <key>files2</key>
@@ -35,22 +35,22 @@
         <dict>
             <key>hash</key>
             <data>
-            KHB2LPtB6HW27eRhhrpCbnICF0Y=
+            ZGySlqnxVTB2wXHu0/YsA8t8d/c=
             </data>
             <key>hash2</key>
             <data>
-            ZqvZ7mdZ5q6Qj77RxaxqYevn4KeXjxDNkqNfWeY1gCY=
+            qWqZUr2R5gKJzNWIYJJui2wA0h38sa5Gv5ottqTCQmE=
             </data>
         </dict>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.private.swiftinterface</key>
         <dict>
             <key>hash</key>
             <data>
-            20geMhfspSoUOT7sSgiJSL6Qxz8=
+            foZyM5L2yB9p2nLw6E5wbYuskws=
             </data>
             <key>hash2</key>
             <data>
-            ZHRvtk7rhddRnecX7+RmAJjNyXCZ79DdhApSyldZOSc=
+            ltYNyhb+uTMe6lkkyXzGyV76vThpAnmKOzM9hfvLdXw=
             </data>
         </dict>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.swiftdoc</key>
@@ -68,22 +68,22 @@
         <dict>
             <key>hash</key>
             <data>
-            20geMhfspSoUOT7sSgiJSL6Qxz8=
+            foZyM5L2yB9p2nLw6E5wbYuskws=
             </data>
             <key>hash2</key>
             <data>
-            ZHRvtk7rhddRnecX7+RmAJjNyXCZ79DdhApSyldZOSc=
+            ltYNyhb+uTMe6lkkyXzGyV76vThpAnmKOzM9hfvLdXw=
             </data>
         </dict>
         <key>Modules/MotionKit.swiftmodule/arm64-apple-ios.swiftmodule</key>
         <dict>
             <key>hash</key>
             <data>
-            4BBSj0yzkhVKpp4Cl4TQwhlk/us=
+            coA4YjxBrMLOQBHkzEAhJsl889g=
             </data>
             <key>hash2</key>
             <data>
-            ruCe0YD3Zv3M4j/g+ppjSx0HRVJDvg3uy8KZxMIBY98=
+            qTwusmgaFQP5+PlKcvGgymCnBTD6Jq2OIipLWlCiEtg=
             </data>
         </dict>
     </dict>
