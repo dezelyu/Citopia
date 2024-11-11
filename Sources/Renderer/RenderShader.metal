@@ -12,10 +12,10 @@ struct VisibleCharacterData {
     uint4 data;
     
     // define the indices of the female mesh nodes
-    float4 femaleMeshNodeIndices;
+    uint4 femaleMeshNodeIndices;
     
     // define the indices of the male mesh nodes
-    float4 maleMeshNodeIndices;
+    uint4 maleMeshNodeIndices;
     
     // define the transform of the visible character
     float4x4 transform;
@@ -38,6 +38,19 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
         return;
     }
     
+    // acquire the current character
+    VisibleCharacterData character = characters[index];
+    
+    // update the character mesh based on the character sex
+    nodes[character.femaleMeshNodeIndices.x].node.w = character.data.x == 0 ? character.data.w : -1;
+    nodes[character.femaleMeshNodeIndices.y].node.w = character.data.x == 0 ? character.data.w : -1;
+    nodes[character.femaleMeshNodeIndices.z].node.w = character.data.x == 0 ? character.data.w : -1;
+    nodes[character.femaleMeshNodeIndices.w].node.w = character.data.x == 0 ? character.data.w : -1;
+    nodes[character.maleMeshNodeIndices.x].node.w = character.data.x != 0 ? character.data.w : -1;
+    nodes[character.maleMeshNodeIndices.y].node.w = character.data.x != 0 ? character.data.w : -1;
+    nodes[character.maleMeshNodeIndices.z].node.w = character.data.x != 0 ? character.data.w : -1;
+    nodes[character.maleMeshNodeIndices.w].node.w = character.data.x != 0 ? character.data.w : -1;
+    
     // update the character node index
-    nodes[characters[index].data.w].matrix = characters[index].transform;
+    nodes[character.data.w].matrix = character.transform;
 }

@@ -76,7 +76,7 @@ class Renderer {
         
         // create the camera node
         self.cameraNode = CameraNode(
-            category: 1, angle: 60.0, near: 0.01, far: 1000.0
+            category: 1, angle: 60.0, near: 0.01, far: 500.0
         )
         
         // create the directional feedback nodes
@@ -127,6 +127,15 @@ class Renderer {
         self.updateComputePipeline = ComputePipeline(
             function: Function(library: library, name: "UpdateFunction")
         )
+        
+        // create the ground plane
+        let groundSceneAsset = SceneAsset(name: "Assets.scnassets/Elements/Ground.scn")
+        let groundMeshAsset = groundSceneAsset.meshes.first!
+        let groundMesh = Mesh(asset: groundMeshAsset)
+        let groundMeshNode = MeshNode(mesh: groundMesh, category: 1)
+        groundMeshNode.scale = simd_float3(repeating: 10000.0)
+        NodeManager.attach(node: groundMeshNode)
+        self.meshNodes.append(groundMeshNode)
     }
     
     // define the character creator
@@ -189,13 +198,13 @@ class Renderer {
         
         // define the names of the motion scene assets to load
         let motionSceneNames = [
-            "Assets.scnassets/Motions/Idle0.scn" : (true, false),
-            "Assets.scnassets/Motions/Walk0.scn" : (true, false),
+            ("Assets.scnassets/Motions/Idle0.scn", true, false),
+            ("Assets.scnassets/Motions/Walk0.scn", true, false),
         ]
         
         // load the motion scene assets
-        let motionSceneAssets = motionSceneNames.keys.map { motionSceneName in
-            return SceneAsset(name: motionSceneName)
+        let motionSceneAssets = motionSceneNames.map { motionSceneName in
+            return SceneAsset(name: motionSceneName.0)
         }
         
         // load the motion assets
@@ -204,11 +213,9 @@ class Renderer {
         }
         
         // load the motions
-        let motions = Dictionary(uniqueKeysWithValues: zip(
-            motionSceneNames.keys, motionAssets.map { motionAsset in
-                return Motion(asset: motionAsset)
-            }
-        ))
+        let motions = motionAssets.map { motionAsset in
+            return Motion(asset: motionAsset)
+        }
         
         // iterate from one to the visible character count
         for index in 1...max(1, visibleCharacterCount) {
@@ -246,17 +253,17 @@ class Renderer {
             }
             
             // load the motions
-            for motion in motions {
+            for (index, motion) in motions.enumerated() {
                 let motionNode = MotionNode(
-                    motion: motion.value,
-                    looped: motionSceneNames[motion.key]!.0,
-                    clamped: motionSceneNames[motion.key]!.1
+                    motion: motion,
+                    looped: motionSceneNames[index].1,
+                    clamped: motionSceneNames[index].2
                 )
                 characterNode.attach(node: motionNode)
                 self.motionNodes.append(motionNode)
                 
                 // play the motion
-                motionNode.play(attack: 0.0)
+                motionNode.play(weight: 1.0, attack: 0.0)
             }
             
             // position the character node
