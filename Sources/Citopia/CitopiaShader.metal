@@ -4,8 +4,9 @@
 using namespace metal;
 
 constant float PI = 3.1415926535f;
-constant float EPSILON = 0.01f;
+constant float EPSILON = 0.0001f;
 constant float3 MAP_DIMENSIONS = float3(30.0f);
+constant float WALKING0_SPEED = 0.027f;
 
 // define the frame data
 struct FrameData {
@@ -36,14 +37,14 @@ struct CharacterData {
     // define the position of the character
     float4 position;
     
-    // .x is the current anticlockwise angle in radians
-    // .y is the target anticlockwise rotation angle in radians
+    // rotation.x is the current anticlockwise angle in radians
+    // rotation.y is the target anticlockwise rotation angle in radians
     float4 rotation;
     
-    // .x is gender
-    // .y is speed
-    // .z is current time threshold
-    // .w is the accumulated time threshold
+    // information.x is gender
+    // information.y is speed
+    // information.z is current time threshold
+    // information.w is the accumulated time threshold
     float4 information;
 };
 
@@ -102,7 +103,7 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         characters[index].position.xyz = float3(rand3D.x, EPSILON, rand3D.y) * MAP_DIMENSIONS;
         characters[index].rotation.y = rand3D.z * PI;
         characters[index].information.x = uint(rand3D.x + 1.0f);
-        characters[index].information.y = 0.03f;
+        characters[index].information.y = WALKING0_SPEED;
         
         visibleCharacters[index].data.x = characters[index].information.x;
     }
