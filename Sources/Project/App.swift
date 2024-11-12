@@ -81,6 +81,8 @@ import CameraKit
             visibleCharacterCount: self.visibleCharacterCount,
             visibleCharacterBuffer: self.renderer.visibleCharacterBuffer.0
         )
+        
+        self.simulator.createGrids()
     }
     
     // define the update behavior

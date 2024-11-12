@@ -16,6 +16,13 @@ struct FrameData {
     
     // define the position of the observer
     var observerPosition: simd_float4 = .zero
+    
+    // define the grid data
+    //  - gridData.x = gridDimX
+    //  - gridData.y = gridDimZ
+    //  - gridData.z = maxNumCharactersPerGrid
+    //  - gridData.w = width/height
+    var gridData: simd_float4 = .zero
 }
 
 // define the character data
@@ -33,6 +40,15 @@ class Citopia {
     
     // define the total number of visible characters
     var visibleCharacterCount: Int = 0
+    
+    // define the grid dimension X
+    var gridDimensionX: Int = 10
+    
+    // define the grid dimension Z
+    var gridDimensionZ: Int = 10
+    
+    // define the max number of characters per grid
+    var maxNumCharactersPerGrid: Int = 100
     
     // define the graphics device
     var device: MTLDevice!
@@ -52,8 +68,20 @@ class Citopia {
     // define the buffer for the visible characters
     var visibleCharacterBuffer: MTLBuffer!
     
+    // define the storage buffer for the character count per grid data
+    var characterCountPerGridBuffer: MTLBuffer!
+    
+    // define the storage buffer for the initial character count per grid data
+    var initialCharacterCountPerGridBuffer: MTLBuffer!
+    
+    // define the storage buffer for the character index buffer per grid
+    var characterIndexBufferPerGrid: MTLBuffer!
+    
     // define the naive simulation pipeline
     var naiveSimulationPipeline: MTLComputePipelineState!
+    
+    // define the compute grid pipeline
+    var computeGridPipeline: MTLComputePipelineState!
     
     // define the position of the observer
     var observerPosition: simd_float3 = .zero
@@ -72,6 +100,9 @@ class Citopia {
         
         // create the naive simulation pipeline
         self.createNaiveSimulationPipeline()
+        
+        // create the compute grid pipeline
+        self.createComputeGridPipeline()
     }
     
     // define the character creator
@@ -93,11 +124,29 @@ class Citopia {
         self.visibleCharacterBuffer = visibleCharacterBuffer
     }
     
+    // define the grid data creator
+    func createGrids(){
+        
+        //create the grid data buffers
+        self.createGridDataBuffer()
+        
+        //create the character index buffer per grid
+        self.createCharacterIndexBufferPerGrid()
+    }
+    
     // define the simulation behavior
     func simulate(time: Float, commandBuffer: MTLCommandBuffer) {
         
         // update the frame buffer
         self.updateFrameBuffer(time: time)
+        
+        let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
+        blitEncoder.copy(
+            from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
+            to: self.characterCountPerGridBuffer, destinationOffset: 0,
+            size: self.characterCountPerGridBuffer.length
+        )
+        blitEncoder.endEncoding()
         
         // create a new compute command encoder
         let encoder = commandBuffer.makeComputeCommandEncoder()!
@@ -111,6 +160,19 @@ class Citopia {
         encoder.dispatchThreadgroups(
             MTLSizeMake(self.characterCount / (self.naiveSimulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
             threadsPerThreadgroup: MTLSizeMake(self.naiveSimulationPipeline.threadExecutionWidth * 2, 1, 1)
+        )
+        
+        // configure the compute grid pipeline
+        encoder.setComputePipelineState(self.computeGridPipeline)
+        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+        encoder.setBuffer(self.characterCountPerGridBuffer,  offset: 0, index: 2)
+        encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
+        
+        // perform the compute grid pipeline
+        encoder.dispatchThreadgroups(
+            MTLSizeMake(self.characterCount / (self.computeGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+            threadsPerThreadgroup: MTLSizeMake(self.computeGridPipeline.threadExecutionWidth * 2, 1, 1)
         )
         
         // finish encoding

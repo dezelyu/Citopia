@@ -38,6 +38,23 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the compute grid pipeline
+    func createComputeGridPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "ComputeGridFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.computeGridPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the character buffer
     func createCharacterBuffer() {
         
@@ -90,5 +107,53 @@ extension Citopia {
         pointer.pointee.observerPosition = simd_float4(
             self.observerPosition, 1.0
         )
+        
+        pointer.pointee.gridData = simd_float4(
+            Float32(self.gridDimensionX),
+            Float32(self.gridDimensionZ),
+            Float32(self.maxNumCharactersPerGrid),
+            100.0
+        )
+    }
+    
+    // define the function that creates the grid data buffer
+    func createGridDataBuffer() {
+        
+        // create a private storage buffer
+        self.characterCountPerGridBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt>.stride * self.gridDimensionX * self.gridDimensionZ,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the visible character index buffer
+        self.characterCountPerGridBuffer.label = "CharacterCountPerGridBuffer"
+        
+        // create a private storage buffer
+        self.initialCharacterCountPerGridBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt>.stride * self.gridDimensionX * self.gridDimensionZ,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the visible character index buffer
+        self.initialCharacterCountPerGridBuffer.label = "InitialCharacterCountPerGridBuffer"
+    }
+    
+    // define the function that creates the character index buffer per grid
+    func createCharacterIndexBufferPerGrid() {
+        
+        // create a private storage buffer
+        self.characterIndexBufferPerGrid = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.gridDimensionX * self.gridDimensionZ * self.maxNumCharactersPerGrid,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the visible character index buffer
+        self.characterIndexBufferPerGrid.label = "CharacterIndexBufferPerGrid"
     }
 }
