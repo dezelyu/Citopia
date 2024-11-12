@@ -162,15 +162,16 @@ kernel void ComputeGridFunction(constant FrameData& frame [[buffer(0)]],
         return;
     }
     
-    const float4 characterPosition = clamp(characters[index].position + float4(50.0f, 0.0f, 50.0f, 0.0f),
-                                           float4(0.0f, 0.0f, 0.0f, 0.0f),
-                                           float4(100.0f, 0.0f, 100.0f, 0.0f));
-    const uint maxNumCharactersPerGrid = uint(frame.gridData.z);
     const uint width = uint(frame.gridData.w);
     
+    const float4 gridCenter = float4(width / 2.0f, 0.0f, width / 2.0f, 0.0f);
+    const float4 characterPosition = characters[index].position + gridCenter;
+    const uint maxNumCharactersPerGrid = uint(frame.gridData.z);
+    
     const uint2 gridOffset = uint2(width) / uint2(gridDimX, gridDimZ);
-    const uint gridIndexX = uint(characterPosition.x) % gridOffset.x;
-    const uint gridIndexZ = uint(characterPosition.z) % gridOffset.y;
+    const uint gridIndexX = uint(characterPosition.x) / gridOffset.x;
+    const uint gridIndexZ = uint(characterPosition.z) / gridOffset.y;
+    
     const uint gridIndex = gridIndexX + gridIndexZ * gridDimX;
     const uint prevIndex = atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
     if (prevIndex < maxNumCharactersPerGrid) {
