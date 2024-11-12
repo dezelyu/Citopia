@@ -164,8 +164,10 @@ kernel void ComputeGridFunction(constant FrameData& frame [[buffer(0)]],
     
     const uint width = uint(frame.gridData.w);
     
-    const float4 gridCenter = float4(width / 2.0f, 0.0f, width / 2.0f, 0.0f);
-    const float4 characterPosition = characters[index].position + gridCenter;
+    const float3 gridCenter = float3(width / 2.0f, 0.0f, width / 2.0f);
+    const float3 characterPosition = clamp(characters[index].position.xyz + gridCenter,
+                                           float3(0.0f, 0.0f, 0.0f),
+                                           float3(width, 0.0f, width));
     const uint maxNumCharactersPerGrid = uint(frame.gridData.z);
     
     const uint2 gridOffset = uint2(width) / uint2(gridDimX, gridDimZ);
