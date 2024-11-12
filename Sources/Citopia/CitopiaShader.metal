@@ -64,6 +64,12 @@ struct VisibleCharacterData {
     
     // define the transform of the visible character
     float4x4 transform;
+    
+    // define the motion controller indices
+    int motionControllerIndices[100];
+    
+    // define the motion controllers
+    float4 motionControllers[100];
 };
 
 float hash1D(float n) {

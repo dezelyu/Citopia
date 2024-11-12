@@ -24,6 +24,106 @@ struct VisibleCharacterData {
     
     // define the transform of the visible character
     var transform: simd_float4x4 = simd_float4x4(1.0)
+    
+    // define the motion controller indices
+    var motionControllerIndices: (
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32
+    ) = (
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+    )
+    
+    // define the motion controllers
+    var motionController: (
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4,
+        simd_float4, simd_float4, simd_float4, simd_float4, simd_float4
+    ) = (
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0),
+        simd_float4(repeating: -1.0), simd_float4(repeating: -1.0)
+    )
 }
 
 // define the class for rendering the simulation
@@ -280,8 +380,22 @@ class Renderer {
                 characterNode.attach(node: motionNode)
                 self.motionNodes.append(motionNode)
                 
-                // play the motion
-                motionNode.play(weight: 1.0, attack: 0.0)
+                // play the first motion
+                if (index == 0) {
+                    motionNode.speed = Float.random(in: 90...110) * 0.01
+                    motionNode.play(weight: 1.0, attack: 0.0)
+                }
+                
+                // register the motion controllers
+                switch (index - 1) {
+                    case 0:
+                        visibleCharacterData.motionControllerIndices.0 = Int32(
+                            motionNode.data.1
+                        )
+                        break
+                    default:
+                        break
+                }
             }
             
             // position the character node
@@ -332,6 +446,7 @@ class Renderer {
             descriptors: [
                 self.visibleCharacterBuffer.1,
                 LocalNodeBuffer.buffer,
+                MotionControllerBuffer.buffer,
             ], workload: self.visibleCharacterCount
         )
         self.commands[self.phase].wait()
