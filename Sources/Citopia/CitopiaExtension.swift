@@ -121,7 +121,7 @@ extension Citopia {
         
         // create a private storage buffer
         self.characterCountPerGridBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt>.stride * self.gridDimensionX * self.gridDimensionZ,
+            length: MemoryLayout<UInt32>.stride * self.gridDimensionX * self.gridDimensionZ,
             options: [
                 .storageModePrivate,
             ]
@@ -132,7 +132,7 @@ extension Citopia {
         
         // create a private storage buffer
         self.initialCharacterCountPerGridBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt>.stride * self.gridDimensionX * self.gridDimensionZ,
+            length: MemoryLayout<UInt32>.stride * self.gridDimensionX * self.gridDimensionZ,
             options: [
                 .storageModePrivate,
             ]

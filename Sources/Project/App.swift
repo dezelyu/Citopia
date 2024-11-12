@@ -12,7 +12,7 @@ import CameraKit
 @main class App: Application {
     
     // define the total number of characters to simulate
-    let characterCount: Int = 1000000
+    let characterCount: Int = 400
     
     // define the total number of visible characters
     let visibleCharacterCount: Int = 400

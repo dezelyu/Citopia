@@ -29,7 +29,18 @@ struct FrameData {
 struct CharacterData {
     
     // define the position of the character
+    // .xyz position of the character
     var position: simd_float4 = .zero
+    
+    // .x is the current anticlockwise angle in radians
+    // .y is the target anticlockwise rotation angle in radians
+    var rotation: simd_float4 = .zero
+
+    // .x is gender
+    // .y is speed
+    // .z is current time threshold
+    // .w is the accumulated time threshold
+    var information: simd_float4 = .zero
 }
 
 // define the class for performing the simulation
@@ -155,6 +166,7 @@ class Citopia {
         encoder.setComputePipelineState(self.naiveSimulationPipeline)
         encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
         encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+        encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
         
         // perform the naive simulation
         encoder.dispatchThreadgroups(
