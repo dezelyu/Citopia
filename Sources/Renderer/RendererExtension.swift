@@ -51,6 +51,12 @@ extension Renderer {
         self.targetRotation.x += Float(delta.dy) * sensitivity
     }
     
+    // define the function that updates the position of the ground
+    func updateGroundPosition() {
+        self.groundNode.position.x = Float(Int(self.cameraNode.position.x) / 100) * 100.0
+        self.groundNode.position.z = Float(Int(self.cameraNode.position.z) / 100) * 100.0
+    }
+    
     // define the function that stores the new active key
     func start(press: String) {
         self.activeKeys.insert(press.lowercased())

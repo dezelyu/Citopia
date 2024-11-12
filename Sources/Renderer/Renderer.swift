@@ -71,6 +71,9 @@ class Renderer {
     // define the container for all the motion nodes
     var motionNodes: [MotionNode] = []
     
+    // define the ground node
+    var groundNode: Node!
+    
     // define the constructor
     init() {
         
@@ -128,14 +131,29 @@ class Renderer {
             function: Function(library: library, name: "UpdateFunction")
         )
         
-        // create the ground plane
+        // create the ground node
+        self.groundNode = Node()
+        NodeManager.attach(node: self.groundNode)
+        
+        // create the ground planes
         let groundSceneAsset = SceneAsset(name: "Assets.scnassets/Elements/Ground.scn")
         let groundMeshAsset = groundSceneAsset.meshes.first!
         let groundMesh = Mesh(asset: groundMeshAsset)
-        let groundMeshNode = MeshNode(mesh: groundMesh, category: 1)
-        groundMeshNode.scale = simd_float3(repeating: 10000.0)
-        NodeManager.attach(node: groundMeshNode)
-        self.meshNodes.append(groundMeshNode)
+        for x in (-10)...10 {
+            for z in (-10)...10 {
+                let groundMeshNode = MeshNode(
+                    mesh: groundMesh, category: 1
+                )
+                groundMeshNode.position = simd_float3(
+                    Float(x) * 100.0, 0.0, Float(z) * 100.0
+                )
+                groundMeshNode.scale = simd_float3(
+                    repeating: 100.0
+                )
+                self.meshNodes.append(groundMeshNode)
+                self.groundNode.attach(node: groundMeshNode)
+            }
+        }
     }
     
     // define the character creator
@@ -303,6 +321,9 @@ class Renderer {
         // move and rotate the camera smoothly
         self.cameraNode.position += (self.targetPosition - self.cameraNode.position) * 0.2
         self.cameraNode.rotation += (self.targetRotation - self.cameraNode.rotation) * 0.2
+        
+        // update the position of the ground
+        self.updateGroundPosition()
         
         // perform rendering
         MeshManager.update()
