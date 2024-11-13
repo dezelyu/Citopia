@@ -3,10 +3,22 @@
 #include <metal_stdlib>
 using namespace metal;
 
+// math constants
 constant float PI = 3.1415926535f;
 constant float EPSILON = 0.0001f;
+
+// global constants
 constant float3 MAP_DIMENSIONS = float3(30.0f);
-constant float WALKING0_SPEED = 0.027f;
+constant float CHARACTER_SCALE = 0.01f;
+
+// motion constants
+constant float STOP_PROBABILITY = 0.05f;
+constant float SPEED_DAMP_FACTOR = 0.1f;
+constant float ROTATION_DAMP_FACTOR = 0.05f;
+
+//animation constants
+constant float WALK0_SPEED = 0.027f;
+constant float WALK0_ATTACK = 0.3f;
 
 // define the frame data
 struct FrameData {
@@ -34,18 +46,19 @@ struct FrameData {
 // define the character data
 struct CharacterData {
     
+    // characterInformation.x is gender
+    // characterInformation.z is current time threshold
+    // characterInformation.w is the accumulated time threshold
+    float4 characterInformation;
+    
     // define the position of the character
     float4 position;
     
-    // rotation.x is the current anticlockwise angle in radians
-    // rotation.y is the target anticlockwise rotation angle in radians
-    float4 rotation;
-    
-    // information.x is gender
-    // information.y is speed
-    // information.z is current time threshold
-    // information.w is the accumulated time threshold
-    float4 information;
+    // motionInformation.x is the current speed
+    // motionInformation.y is the target speed
+    // motionInformation.z is the current anticlockwise angle in radians
+    // motionInformation.w is the target anticlockwise rotation angle in radians
+    float4 motionInformation;
 };
 
 // define the visible character data
@@ -100,49 +113,58 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         return;
     }
     
-    const float curTime = frame.data.x;
+    const float currentTime = frame.data.x;
     // initailise data
     // should be in a different kernel
-    if (curTime == 0.0f) {
+    if (currentTime == 0.0f) {
         const float3 rand3D = 2.0f * hash3D(index) - 1.0f;
         // So far we assume that the character's position is only on the xz plane
+        characters[index].characterInformation.x = uint(rand3D.x + 1.0f);
         characters[index].position.xyz = float3(rand3D.x, EPSILON, rand3D.y) * MAP_DIMENSIONS;
-        characters[index].rotation.y = rand3D.z * PI;
-        characters[index].information.x = uint(rand3D.x + 1.0f);
-        characters[index].information.y = WALKING0_SPEED;
-        
-        visibleCharacters[index].data.x = characters[index].information.x;
+        characters[index].motionInformation.y = WALK0_SPEED;
+        characters[index].motionInformation.w = rand3D.z * PI;
+
+        visibleCharacters[index].data.x = characters[index].characterInformation.x;
     }
 
-    const float walkingSpeed = characters[index].information.y;
-    
-    if (curTime > characters[index].information.w) {
+    if (currentTime > characters[index].characterInformation.w) {
+        const float3 rand3D = hash3D(index + currentTime);
         const float minTime = 2.0f;
         const float maxTime = 4.0f;
-        const float2 rand2D = hash2D(index + curTime);
-        const float updatedAngle = (2.0f * rand2D.x - 1.0f) * PI;
+        const float updatedAngle = (2.0f * rand3D.y - 1.0f) * PI;
+        const bool shouldStop = rand3D.x < STOP_PROBABILITY;
+        const float blendWeight = shouldStop ? 0.0f : 1.0f;
         
-        characters[index].rotation.y = updatedAngle;
-        characters[index].information.z = minTime + rand2D.y * maxTime;
-        characters[index].information.w += characters[index].information.z;
+        characters[index].motionInformation.y = shouldStop ? 0.0f : WALK0_SPEED;
+        characters[index].motionInformation.w = shouldStop ? characters[index].motionInformation.w : updatedAngle;
+        characters[index].characterInformation.z = minTime + rand3D.z * maxTime;
+        characters[index].characterInformation.w += characters[index].characterInformation.z;
+        
+        visibleCharacters[index].motionControllers[0] = float4(currentTime, blendWeight, WALK0_ATTACK, WALK0_ATTACK);
     }
     
-    const float angle = characters[index].rotation.x;
-    const float3 walkingDirection = normalize(float3(cos(angle), 0.0f, sin(angle)));
-    characters[index].position.xyz += walkingDirection * walkingSpeed;
+    const float currentWalkingSpeed = characters[index].motionInformation.x;
+    const float targetWalkingSpeed = characters[index].motionInformation.y;
+    const float currentAngle = characters[index].motionInformation.z;
+    const float targetAngle = characters[index].motionInformation.w;
+    const float3 walkingDirection = normalize(float3(cos(currentAngle), 0.0f, sin(currentAngle)));
     
-    while (characters[index].rotation.y - characters[index].rotation.x > PI) {
-        characters[index].rotation.y -= PI * 2.0f;
+    // gradual speeding
+    characters[index].motionInformation.x += (targetWalkingSpeed - currentWalkingSpeed) * SPEED_DAMP_FACTOR;
+    characters[index].position.xyz += walkingDirection * characters[index].motionInformation.x;
+    
+    // gradual rotation
+    while (targetAngle - currentAngle > PI) {
+        characters[index].motionInformation.w -= PI * 2.0f;
     }
-    while (characters[index].rotation.x - characters[index].rotation.y > PI) {
-        characters[index].rotation.y += PI * 2.0f;
+    while (currentAngle - targetAngle > PI) {
+        characters[index].motionInformation.w += PI * 2.0f;
     }
+
+    characters[index].motionInformation.z += (characters[index].motionInformation.w - currentAngle) * ROTATION_DAMP_FACTOR;
     
-    characters[index].rotation.x += min((characters[index].rotation.y - characters[index].rotation.x) * 0.05f, 0.05f);
-    
-    const float matrixAngle = PI * 0.5f - characters[index].rotation.x;
-    const float scale = 0.01f;
-    const float3x3 rotationMatrixY = scale * float3x3(
+    const float matrixAngle = PI * 0.5f - characters[index].motionInformation.z;
+    const float3x3 rotationMatrixY = CHARACTER_SCALE * float3x3(
       cos(matrixAngle), 0.0f, -sin(matrixAngle),
       0.0f, 1.0f, 0.0f,
       sin(matrixAngle), 0.0f, cos(matrixAngle)

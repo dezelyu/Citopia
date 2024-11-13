@@ -28,19 +28,20 @@ struct FrameData {
 // define the character data
 struct CharacterData {
     
+    // characterInformation.x is gender
+    // characterInformation.z is current time threshold
+    // characterInformation.w is the accumulated time threshold
+    var characterInformation: simd_float4 = .zero
+    
     // define the position of the character
     // .xyz position of the character
     var position: simd_float4 = .zero
     
-    // .x is the current anticlockwise angle in radians
-    // .y is the target anticlockwise rotation angle in radians
-    var rotation: simd_float4 = .zero
-
-    // .x is gender
-    // .y is speed
-    // .z is current time threshold
-    // .w is the accumulated time threshold
-    var information: simd_float4 = .zero
+    // motionInformation.x is the current speed
+    // motionInformation.y is the target speed
+    // motionInformation.z is the current anticlockwise angle in radians
+    // motionInformation.w is the target anticlockwise rotation angle in radians
+    var motionInformation: simd_float4 = .zero
 }
 
 // define the class for performing the simulation
