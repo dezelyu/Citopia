@@ -66,4 +66,55 @@ extension Renderer {
     func remove(press: String) {
         self.activeKeys.remove(press.lowercased())
     }
+    
+    // define the function that generates the frustum planes
+    func generateFrustumPlanes() -> [simd_float4] {
+        let view = self.cameraNode.transform.inverse
+        let projection = simd_float4x4(self.camera.projectionTransform(withViewportSize: self.size))
+        let projectionView = projection * view
+        var frustumPlane0 = simd_float4.zero
+        var frustumPlane1 = simd_float4.zero
+        var frustumPlane2 = simd_float4.zero
+        var frustumPlane3 = simd_float4.zero
+        var frustumPlane4 = simd_float4.zero
+        var frustumPlane5 = simd_float4.zero
+        frustumPlane0.x = projectionView[0].w - projectionView[0].y;
+        frustumPlane0.y = projectionView[1].w - projectionView[1].y;
+        frustumPlane0.z = projectionView[2].w - projectionView[2].y;
+        frustumPlane0.w = projectionView[3].w - projectionView[3].y;
+        frustumPlane0 = frustumPlane0 / sqrt(dot(frustumPlane0, frustumPlane0));
+        frustumPlane1.x = projectionView[0].w + projectionView[0].y;
+        frustumPlane1.y = projectionView[1].w + projectionView[1].y;
+        frustumPlane1.z = projectionView[2].w + projectionView[2].y;
+        frustumPlane1.w = projectionView[3].w + projectionView[3].y;
+        frustumPlane1 = frustumPlane1 / sqrt(dot(frustumPlane1, frustumPlane1));
+        frustumPlane2.x = projectionView[0].w - projectionView[0].x;
+        frustumPlane2.y = projectionView[1].w - projectionView[1].x;
+        frustumPlane2.z = projectionView[2].w - projectionView[2].x;
+        frustumPlane2.w = projectionView[3].w - projectionView[3].x;
+        frustumPlane2 = frustumPlane2 / sqrt(dot(frustumPlane2, frustumPlane2));
+        frustumPlane3.x = projectionView[0].w + projectionView[0].x;
+        frustumPlane3.y = projectionView[1].w + projectionView[1].x;
+        frustumPlane3.z = projectionView[2].w + projectionView[2].x;
+        frustumPlane3.w = projectionView[3].w + projectionView[3].x;
+        frustumPlane3 = frustumPlane3 / sqrt(dot(frustumPlane3, frustumPlane3));
+        frustumPlane4.x = projectionView[0].w + projectionView[0].z;
+        frustumPlane4.y = projectionView[1].w + projectionView[1].z;
+        frustumPlane4.z = projectionView[2].w + projectionView[2].z;
+        frustumPlane4.w = projectionView[3].w + projectionView[3].z;
+        frustumPlane4 = frustumPlane4 / sqrt(dot(frustumPlane4, frustumPlane4));
+        frustumPlane5.x = projectionView[0].w - projectionView[0].z;
+        frustumPlane5.y = projectionView[1].w - projectionView[1].z;
+        frustumPlane5.z = projectionView[2].w - projectionView[2].z;
+        frustumPlane5.w = projectionView[3].w - projectionView[3].z;
+        frustumPlane5 = frustumPlane5 / sqrt(dot(frustumPlane5, frustumPlane5));
+        return [
+            frustumPlane0,
+            frustumPlane1,
+            frustumPlane2,
+            frustumPlane3,
+            frustumPlane4,
+            frustumPlane5,
+        ]
+    }
 }

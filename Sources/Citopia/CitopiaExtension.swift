@@ -96,6 +96,10 @@ extension Citopia {
         // update the time
         pointer.pointee.data.x = time
         
+        // update the delta time scale factor
+        pointer.pointee.data.y = (time - self.previousTime) / (1.0 / 60.0)
+        self.previousTime = time
+        
         // update the character data
         pointer.pointee.characterData = simd_uint4(
             UInt32(self.characterCount),

@@ -62,6 +62,9 @@ class Citopia {
     // define the max number of characters per grid
     var maxNumCharactersPerGrid: Int = 100
     
+    // define the previous time
+    var previousTime: Float = .zero
+    
     // define the graphics device
     var device: MTLDevice!
     
@@ -97,6 +100,9 @@ class Citopia {
     
     // define the position of the observer
     var observerPosition: simd_float3 = .zero
+    
+    // define the frustum planes
+    var frustumPlanes: [simd_float4] = []
     
     // define the constructor
     init(device: MTLDevice) {

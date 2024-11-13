@@ -105,6 +105,9 @@ import CameraKit
             
             // perform rendering
             self.renderer.render()
+            
+            // transfer the frustum planes
+            self.simulator.frustumPlanes = self.renderer.generateFrustumPlanes()
         }
     }
     

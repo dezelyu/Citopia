@@ -25,6 +25,7 @@ struct FrameData {
     
     // define the general frame data
     //  - data.x = time
+    //  - data.y = delta time scale factor
     float4 data;
     
     // define the character data

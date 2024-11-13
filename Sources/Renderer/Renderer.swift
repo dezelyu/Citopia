@@ -144,6 +144,12 @@ class Renderer {
     // define the camera node
     var cameraNode: CameraNode!
     
+    // define the camera instance
+    var camera: SCNCamera!
+    
+    // define the viewport size
+    var size: CGSize!
+    
     // define the directional feedback nodes
     var centerNode: FeedbackNode!
     var forwardNode: FeedbackNode!
@@ -181,6 +187,15 @@ class Renderer {
         self.cameraNode = CameraNode(
             category: 1, angle: 60.0, near: 0.01, far: 500.0
         )
+        
+        // create the camera instance
+        self.camera = SCNCamera()
+        self.camera.fieldOfView = 60.0
+        self.camera.zNear = 0.01
+        self.camera.zFar = 500.0
+        
+        // acquire the viewport size
+        self.size = Application.view!.frame.size
         
         // create the directional feedback nodes
         self.centerNode = FeedbackNode()
