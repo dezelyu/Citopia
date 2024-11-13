@@ -76,7 +76,13 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
         if (time >= 0.0f) {
             float4x2 controller = controllers[motionControllerIndex].controller;
             float2 weights = controller[1];
-            const float2 duration = float2(time - controller[3][0], time - controller[3][1]);
+            float2 duration = float2(time - controller[3][0], time - controller[3][1]);
+            if (controller[0][0] < 0.0f && duration[0] > abs(controller[0][0])) {
+                controllers[motionControllerIndex].controller[1] = float2(0.0f);
+                controllers[motionControllerIndex].controller[2] = float2(0.0f);
+                controllers[motionControllerIndex].controller[3] = float2(0.0f);
+                duration = float2(time);
+            }
             const float progress = controller[0][0] > 0.0f ? fmod(duration[0], abs(controller[0][0])) : min(duration[0], abs(controller[0][0]));
             if (duration[1] < attacks[0]) {
                 const float factor = 0.5f - cos(duration[1] / attacks[0] * 3.1415926535f) * 0.5f;
@@ -88,11 +94,6 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
             controller[2] = attacks;
             controller[3] = float2(time - (weights[0] == 0.0f ? 0.0f : progress), time);
             controllers[motionControllerIndex].controller = controller;
-            if (controller[0][0] > 0.0f && duration[0] > abs(controller[0][0])) {
-                controllers[motionControllerIndex].controller[1] = float2(0.0f);
-                controllers[motionControllerIndex].controller[2] = float2(0.0f);
-                controllers[motionControllerIndex].controller[3] = float2(0.0f);
-            }
         }
     }
 }
