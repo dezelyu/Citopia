@@ -198,6 +198,15 @@ extension Citopia {
             Float32(self.maxNumCharactersPerGrid),
             100.0
         )
+        
+        pointer.pointee.frustumData = (
+            frustumPlanes[0],
+            frustumPlanes[1],
+            frustumPlanes[2],
+            frustumPlanes[3],
+            frustumPlanes[4],
+            frustumPlanes[5]
+        )
     }
     
     // define the function that creates the grid data buffer

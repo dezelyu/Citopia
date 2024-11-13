@@ -397,7 +397,6 @@ class Renderer {
                 
                 // play the first motion
                 if (index == 0) {
-                    motionNode.speed = Float.random(in: 90...110) * 0.01
                     motionNode.play(weight: 1.0, attack: 0.0)
                 }
                 

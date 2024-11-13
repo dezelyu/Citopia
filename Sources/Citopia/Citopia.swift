@@ -26,6 +26,16 @@ struct FrameData {
     //  - gridData.z = maxNumCharactersPerGrid
     //  - gridData.w = width/height
     var gridData: simd_float4 = .zero
+    
+    var frustumData: (
+        simd_float4, simd_float4,
+        simd_float4, simd_float4,
+        simd_float4, simd_float4
+    ) = (
+        simd_float4(repeating: 0.0), simd_float4(repeating: 0.0),
+        simd_float4(repeating: 0.0), simd_float4(repeating: 0.0),
+        simd_float4(repeating: 0.0), simd_float4(repeating: 0.0)
+    )
 }
 
 // define the character data
@@ -129,7 +139,7 @@ class Citopia {
     var observerPosition: simd_float3 = .zero
     
     // define the frustum planes
-    var frustumPlanes: [simd_float4] = []
+    var frustumPlanes: [simd_float4] = [simd_float4](repeating: .zero, count: 6)
     
     // define the constructor
     init(device: MTLDevice) {

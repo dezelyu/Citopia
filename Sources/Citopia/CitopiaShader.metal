@@ -8,7 +8,7 @@ constant float PI = 3.1415926535f;
 constant float EPSILON = 0.0001f;
 
 // global constants
-constant float3 MAP_DIMENSIONS = float3(30.0f);
+constant float3 MAP_DIMENSIONS = float3(1000.0f);
 constant float CHARACTER_SCALE = 0.01f;
 
 // motion constants
@@ -42,6 +42,9 @@ struct FrameData {
     //  - gridData.z = maxNumCharactersPerGrid
     //  - gridData.w = width/height
     float4 gridData;
+    
+    // define the frustrum data
+    float4 frustumData[6];
 };
 
 // define the character data
@@ -210,13 +213,32 @@ kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]
         return;
     }
     
-    const float maxVisibleDistance = frame.data.z;
-    const float distance = length(frame.observerPosition.xyz - characters[index].position.xyz);
-    if (distance <= maxVisibleDistance) {
-        const uint prevIndex = atomic_fetch_add_explicit(&visibleCharacterCount[0], 1, memory_order_relaxed);
-        potentiallyVisibleCharacterIndexBuffer[prevIndex] = index;
-        visibleCharacterDistanceToObserverBuffer[prevIndex] = distance;
+    const float3 characterPosition = characters[index].position.xyz;
+    const float4 center = float4(characterPosition.x, characterPosition.y + 1.0f, characterPosition.z, 1.0f);
+    const float radius = 0.0;
+    if (dot(frame.frustumData[0], center) < radius){
+        return;
     }
+    if (dot(frame.frustumData[1], center) < radius){
+        return;
+    }
+    if (dot(frame.frustumData[2], center) < radius){
+        return;
+    }
+    if (dot(frame.frustumData[3], center) < radius){
+        return;
+    }
+    if (dot(frame.frustumData[4], center) < radius){
+        return;
+    }
+    if (dot(frame.frustumData[5], center) < radius){
+        return;
+    }
+    
+    const float distance = length(frame.observerPosition.xyz - characters[index].position.xyz);
+    const uint prevIndex = atomic_fetch_add_explicit(&visibleCharacterCount[0], 1, memory_order_relaxed);
+    potentiallyVisibleCharacterIndexBuffer[prevIndex] = index;
+    visibleCharacterDistanceToObserverBuffer[prevIndex] = distance;
 }
 
 // define the simulate visible character function
