@@ -88,7 +88,11 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
             controller[2] = attacks;
             controller[3] = float2(time - (weights[0] == 0.0f ? 0.0f : progress), time);
             controllers[motionControllerIndex].controller = controller;
-            character.motionControllers[i] = float4(-1.0f);
+            if (controller[0][0] > 0.0f && duration[0] > abs(controller[0][0])) {
+                controllers[motionControllerIndex].controller[1] = float2(0.0f);
+                controllers[motionControllerIndex].controller[2] = float2(0.0f);
+                controllers[motionControllerIndex].controller[3] = float2(0.0f);
+            }
         }
     }
 }
