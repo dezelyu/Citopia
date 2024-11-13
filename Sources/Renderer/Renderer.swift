@@ -411,7 +411,7 @@ class Renderer {
             NodeManager.attach(node: characterNode)
             
             // store the new visible character data
-            pointer[index] = visibleCharacterData
+            pointer[index - 1] = visibleCharacterData
         }
         
         // save the visible character buffer
