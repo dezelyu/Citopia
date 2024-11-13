@@ -124,8 +124,6 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         characters[index].position.xyz = float3(rand3D.x, EPSILON, rand3D.y) * MAP_DIMENSIONS;
         characters[index].motionInformation.y = WALK0_SPEED;
         characters[index].motionInformation.w = rand3D.z * PI;
-
-        visibleCharacters[index].data.x = characters[index].characterInformation.x;
     }
 
     if (currentTime > characters[index].characterInformation.w) {
@@ -141,7 +139,7 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         characters[index].characterInformation.z = minTime + rand3D.z * maxTime;
         characters[index].characterInformation.w += characters[index].characterInformation.z;
         
-        visibleCharacters[index].motionControllers[0] = float4(currentTime, blendWeight, WALK0_ATTACK, WALK0_ATTACK);
+        // visibleCharacters[index].motionControllers[0] = float4(currentTime, blendWeight, WALK0_ATTACK, WALK0_ATTACK);
     }
     
     const float currentWalkingSpeed = characters[index].motionInformation.x;
@@ -163,18 +161,6 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
 
     characters[index].motionInformation.z += (characters[index].motionInformation.w - currentAngle) * ROTATION_DAMP_FACTOR;
-    
-    const float matrixAngle = PI * 0.5f - characters[index].motionInformation.z;
-    const float3x3 rotationMatrixY = CHARACTER_SCALE * float3x3(
-      cos(matrixAngle), 0.0f, -sin(matrixAngle),
-      0.0f, 1.0f, 0.0f,
-      sin(matrixAngle), 0.0f, cos(matrixAngle)
-    );
-    
-    visibleCharacters[index].transform[0] = float4(rotationMatrixY[0], 0.0f);
-    visibleCharacters[index].transform[1] = float4(rotationMatrixY[1], 0.0f);
-    visibleCharacters[index].transform[2] = float4(rotationMatrixY[2], 0.0f);
-    visibleCharacters[index].transform[3].xyz = characters[index].position.xyz;
 }
 
 // define the compute grid function
@@ -208,5 +194,60 @@ kernel void ComputeGridFunction(constant FrameData& frame [[buffer(0)]],
     const uint prevIndex = atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
     if (prevIndex < maxNumCharactersPerGrid) {
         characterIndexBuffer[gridIndex * maxNumCharactersPerGrid + prevIndex] = index;
+    }
+}
+
+// define the find visible characters function
+kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]],
+                                          const device CharacterData* characters [[buffer(1)]],
+                                          device atomic_uint* visibleCharacterCount [[buffer(2)]],
+                                          device uint* potentiallyVisibleCharacterIndexBuffer [[buffer(3)]],
+                                          device float* visibleCharacterDistanceToObserverBuffer [[buffer(4)]],
+                                          const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (index >= frame.characterData.x) {
+        return;
+    }
+    
+    const float maxVisibleDistance = frame.data.z;
+    const float distance = length(frame.observerPosition.xyz - characters[index].position.xyz);
+    if (distance <= maxVisibleDistance) {
+        const uint prevIndex = atomic_fetch_add_explicit(&visibleCharacterCount[0], 1, memory_order_relaxed);
+        potentiallyVisibleCharacterIndexBuffer[prevIndex] = index;
+        visibleCharacterDistanceToObserverBuffer[prevIndex] = distance;
+    }
+}
+
+// define the simulate visible character function
+kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(0)]],
+                                             const device CharacterData* characters [[buffer(1)]],
+                                             device VisibleCharacterData* visibleCharacters[[buffer(2)]],
+                                             const device uint* visibleCharacterIndexBuffer [[buffer(3)]],
+                                             const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of visible characters
+    if (index >= frame.characterData.y) {
+        return;
+    }
+    
+    uint visibleCharacterIndex = visibleCharacterIndexBuffer[index];
+    
+    visibleCharacters[index].data.x = characters[visibleCharacterIndex].characterInformation.x;
+    
+    const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].motionInformation.z;
+    const float3x3 rotationMatrixY = CHARACTER_SCALE * float3x3(
+      cos(matrixAngle), 0.0f, -sin(matrixAngle),
+      0.0f, 1.0f, 0.0f,
+      sin(matrixAngle), 0.0f, cos(matrixAngle)
+    );
+    
+    visibleCharacters[index].transform[0] = float4(rotationMatrixY[0], 0.0f);
+    visibleCharacters[index].transform[1] = float4(rotationMatrixY[1], 0.0f);
+    visibleCharacters[index].transform[2] = float4(rotationMatrixY[2], 0.0f);
+    visibleCharacters[index].transform[3].xyz = characters[visibleCharacterIndex].position.xyz;
+    
+    if (index >= frame.characterData.z){
+        visibleCharacters[index].transform[3].y = -10000.0f;
     }
 }

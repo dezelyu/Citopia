@@ -108,6 +108,12 @@ import CameraKit
             
             // transfer the frustum planes
             self.simulator.frustumPlanes = self.renderer.generateFrustumPlanes()
+            
+            // update observer position
+            self.simulator.observerPosition = self.renderer.cameraNode.position
+            
+            // perform sorting
+            self.simulator.sortVisibleCharacterIndexBufferByDistance()
         }
     }
     

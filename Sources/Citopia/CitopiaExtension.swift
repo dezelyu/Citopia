@@ -55,6 +55,39 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the find visible character pipeline
+    func createFindVisibleCharacterPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "FindVisibleCharactersFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.findVisibleCharacterPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
+    // define the function that creates the create visible character simulation pipeline
+    func createVisibleCharacterSimulationPipeline(){
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "SimulateVisibleCharacterFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.simulateVisibleCharacterPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the character buffer
     func createCharacterBuffer() {
         
@@ -73,16 +106,59 @@ extension Citopia {
     // define the function that creates the visible character index buffer
     func createVisibleCharacterIndexBuffer() {
         
-        // create a private storage buffer
+        // create a shared storage buffer
+        self.potentiallyVisibleCharacterIndexBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.characterCount,
+            options: [
+                .storageModeShared
+            ]
+        )!
+        // update the label of the potentially visible character index buffer
+        self.potentiallyVisibleCharacterIndexBuffer.label = "PotentiallyVisibleCharacterIndexBuffer"
+        
+        // create a shared storage buffer
         self.visibleCharacterIndexBuffer = self.device.makeBuffer(
             length: MemoryLayout<UInt32>.stride * self.visibleCharacterCount,
             options: [
-                .storageModePrivate,
+                .storageModeShared,
             ]
         )!
         
         // update the label of the visible character index buffer
         self.visibleCharacterIndexBuffer.label = "VisibleCharacterIndexBuffer"
+        
+        // create a private storage buffer
+        self.initialVisibleCharacterCountBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * 1,
+            options: [
+                .storageModePrivate
+            ]
+        )!
+        
+        // update the label of the initial atomic int visible character count buffer
+        self.initialVisibleCharacterCountBuffer.label = "InitialVisibleCharacterCount"
+        
+        // create a private storage buffer
+        self.visibleCharacterCountBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * 1,
+            options: [
+                .storageModeShared,
+            ]
+        )!
+        
+        // update the label of the initial atomic int visible character count buffer
+        self.visibleCharacterCountBuffer.label = "VisibleCharacterCount"
+        
+        // create a shared storage buffer
+        self.visibleCharacterDistanceToObserverBuffer = self.device.makeBuffer(
+            length: MemoryLayout<Float32>.stride * characterCount,
+            options: [
+                .storageModeShared,
+            ]
+        )!
+        
+        // update the label of visible character distance to observer buffer
+        self.visibleCharacterDistanceToObserverBuffer.label = "VisibleCharacterDistanceToObserver"
     }
     
     // define the function that updates the frame buffer
@@ -100,11 +176,15 @@ extension Citopia {
         pointer.pointee.data.y = (time - self.previousTime) / (1.0 / 60.0)
         self.previousTime = time
         
+        // update the maxVisibleDistance
+        pointer.pointee.data.z = self.maxVisibleDistance
+        
         // update the character data
         pointer.pointee.characterData = simd_uint4(
             UInt32(self.characterCount),
             UInt32(self.visibleCharacterCount),
-            0, 0
+            UInt32(self.actualVisibleCharacterCount),
+            0
         )
         
         // update the position of the observer
@@ -159,5 +239,55 @@ extension Citopia {
         
         // update the label of the visible character index buffer
         self.characterIndexBufferPerGrid.label = "CharacterIndexBufferPerGrid"
+    }
+    
+    // define the sort character index process
+    func sortVisibleCharacterIndexBufferByDistance() {
+        
+        var hostVisibleCharacterCount = [UInt32](repeating: 0, count: 1)
+        memcpy(
+            &hostVisibleCharacterCount,
+            self.visibleCharacterCountBuffer.contents(),
+            MemoryLayout<UInt32>.stride * 1
+        )
+        self.actualVisibleCharacterCount = Int(hostVisibleCharacterCount[0])
+        
+        // copy device characterDistanceToObserverBuffer to host
+        var hostCharacterDistanceToObserverBuffer = [Float32](
+            repeating: 0.0, count: self.actualVisibleCharacterCount
+        )
+        memcpy(
+            &hostCharacterDistanceToObserverBuffer,
+            self.visibleCharacterDistanceToObserverBuffer.contents(),
+            MemoryLayout<Float32>.stride * self.actualVisibleCharacterCount
+        )
+        
+        // copy device potentiallyVisibleCharacterIndexBuffer to host
+        var hostCharacterIndexBufferUInt32 = [UInt32](
+            repeating: 0, count: self.actualVisibleCharacterCount
+        )
+        memcpy(
+            &hostCharacterIndexBufferUInt32,
+            self.potentiallyVisibleCharacterIndexBuffer.contents(),
+            MemoryLayout<UInt32>.stride * self.actualVisibleCharacterCount
+        )
+        
+        // perform sorting
+        let sortedIndices = zip(hostCharacterDistanceToObserverBuffer, hostCharacterIndexBufferUInt32).sorted {
+            $0.0 < $1.0
+        }
+        
+        hostCharacterIndexBufferUInt32 = sortedIndices.map { element in
+            return UInt32(element.1)
+        }
+        
+        self.actualVisibleCharacterCount = min(self.actualVisibleCharacterCount, self.visibleCharacterCount)
+        
+        // copy host visibleCharacterIndexBuffer to device
+        memcpy(
+            self.visibleCharacterIndexBuffer.contents(),
+            hostCharacterIndexBufferUInt32,
+            MemoryLayout<UInt32>.stride * self.actualVisibleCharacterCount
+        )
     }
 }

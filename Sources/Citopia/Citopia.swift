@@ -7,11 +7,14 @@ struct FrameData {
     
     // define the general frame data
     //  - data.x = time
+    //  - data.y = delta time scale factor
+    //  - data.z = maxVisibleDistance
     var data: simd_float4 = .zero
     
     // define the character data
     //  - characterData.x = characterCount
     //  - characterData.y = visibleCharacterCount
+    //  - characterData.z = actualVisibleCharacterCount
     var characterData: simd_uint4 = .zero
     
     // define the position of the observer
@@ -53,6 +56,9 @@ class Citopia {
     // define the total number of visible characters
     var visibleCharacterCount: Int = 0
     
+    // define the actual number of visible characters within maxVisibleDistance
+    var actualVisibleCharacterCount: Int = 0
+    
     // define the grid dimension X
     var gridDimensionX: Int = 10
     
@@ -61,6 +67,9 @@ class Citopia {
     
     // define the max number of characters per grid
     var maxNumCharactersPerGrid: Int = 100
+    
+    // define the max visible distance
+    var maxVisibleDistance: Float = 100.0
     
     // define the previous time
     var previousTime: Float = .zero
@@ -77,6 +86,12 @@ class Citopia {
     // define the storage buffer for the character data
     var characterBuffer: MTLBuffer!
     
+    // define the storage buffer for the indices of the potentially visible characters
+    var potentiallyVisibleCharacterIndexBuffer: MTLBuffer!
+    
+    // define the storage buffer for the visible character's distance to observer buffer
+    var visibleCharacterDistanceToObserverBuffer: MTLBuffer!
+    
     // define the storage buffer for the indices of the visible characters
     var visibleCharacterIndexBuffer: MTLBuffer!
     
@@ -92,11 +107,23 @@ class Citopia {
     // define the storage buffer for the character index buffer per grid
     var characterIndexBufferPerGrid: MTLBuffer!
     
+    // define the initial atomic int for counting visible characters
+    var initialVisibleCharacterCountBuffer: MTLBuffer!
+    
+    // define the atomic int for counting visible characters
+    var visibleCharacterCountBuffer: MTLBuffer!
+    
     // define the naive simulation pipeline
     var naiveSimulationPipeline: MTLComputePipelineState!
     
     // define the compute grid pipeline
     var computeGridPipeline: MTLComputePipelineState!
+    
+    // define the find visible character pipeline
+    var findVisibleCharacterPipeline: MTLComputePipelineState!
+    
+    // define the simulate visible character pipeline
+    var simulateVisibleCharacterPipeline: MTLComputePipelineState!
     
     // define the position of the observer
     var observerPosition: simd_float3 = .zero
@@ -121,6 +148,12 @@ class Citopia {
         
         // create the compute grid pipeline
         self.createComputeGridPipeline()
+        
+        // create the find visible character pipeline
+        self.createFindVisibleCharacterPipeline()
+        
+        // create the visible character simulation pipeline
+        self.createVisibleCharacterSimulationPipeline()
     }
     
     // define the character creator
@@ -164,10 +197,28 @@ class Citopia {
             to: self.characterCountPerGridBuffer, destinationOffset: 0,
             size: self.characterCountPerGridBuffer.length
         )
+        blitEncoder.copy(
+            from: self.initialVisibleCharacterCountBuffer, sourceOffset: 0,
+            to: self.visibleCharacterCountBuffer, destinationOffset: 0,
+            size: MemoryLayout<UInt32>.stride
+        )
         blitEncoder.endEncoding()
         
         // create a new compute command encoder
         let encoder = commandBuffer.makeComputeCommandEncoder()!
+        
+        // configure the simulate visible character pipeline
+        encoder.setComputePipelineState(self.simulateVisibleCharacterPipeline)
+        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+        encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
+        encoder.setBuffer(self.visibleCharacterIndexBuffer, offset: 0, index: 3)
+        
+        // perform the simulate visible character pipeline
+        encoder.dispatchThreadgroups(
+            MTLSizeMake(self.visibleCharacterCount / (self.simulateVisibleCharacterPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+            threadsPerThreadgroup: MTLSizeMake(self.simulateVisibleCharacterPipeline.threadExecutionWidth * 2, 1, 1)
+        )
         
         // configure the naive simulation pipeline
         encoder.setComputePipelineState(self.naiveSimulationPipeline)
@@ -192,6 +243,20 @@ class Citopia {
         encoder.dispatchThreadgroups(
             MTLSizeMake(self.characterCount / (self.computeGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
             threadsPerThreadgroup: MTLSizeMake(self.computeGridPipeline.threadExecutionWidth * 2, 1, 1)
+        )
+        
+        // configure the find visible character pipeline
+        encoder.setComputePipelineState(self.findVisibleCharacterPipeline)
+        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+        encoder.setBuffer(self.visibleCharacterCountBuffer,  offset: 0, index: 2)
+        encoder.setBuffer(self.potentiallyVisibleCharacterIndexBuffer, offset: 0, index: 3)
+        encoder.setBuffer(self.visibleCharacterDistanceToObserverBuffer, offset: 0, index: 4)
+        
+        // perform the find visible character pipeline
+        encoder.dispatchThreadgroups(
+            MTLSizeMake(self.characterCount / (self.findVisibleCharacterPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+            threadsPerThreadgroup: MTLSizeMake(self.findVisibleCharacterPipeline.threadExecutionWidth * 2, 1, 1)
         )
         
         // finish encoding
