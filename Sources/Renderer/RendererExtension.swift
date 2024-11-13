@@ -14,6 +14,9 @@ extension Renderer {
     // define the function that updates the target rotation of the camera
     func updateTargetPosition() {
         
+        // compute the speed factor
+        let speed = Float(self.activeKeys.contains(" ") ? 10.0 : 1.0)
+        
         // compute the directional vectors
         let forward = self.forwardNode.feedback()[3] - self.centerNode.feedback()[3]
         let left = self.leftNode.feedback()[3] - self.centerNode.feedback()[3]
@@ -21,22 +24,22 @@ extension Renderer {
         
         // update the target position of the camera
         if (self.activeKeys.contains("w")) {
-            self.targetPosition += simd_float3(forward.x, forward.y, forward.z)
+            self.targetPosition += simd_float3(forward.x, forward.y, forward.z) * speed
         }
         if (self.activeKeys.contains("s")) {
-            self.targetPosition -= simd_float3(forward.x, forward.y, forward.z)
+            self.targetPosition -= simd_float3(forward.x, forward.y, forward.z) * speed
         }
         if (self.activeKeys.contains("a")) {
-            self.targetPosition += simd_float3(left.x, left.y, left.z)
+            self.targetPosition += simd_float3(left.x, left.y, left.z) * speed
         }
         if (self.activeKeys.contains("d")) {
-            self.targetPosition -= simd_float3(left.x, left.y, left.z)
+            self.targetPosition -= simd_float3(left.x, left.y, left.z) * speed
         }
         if (self.activeKeys.contains("e")) {
-            self.targetPosition += simd_float3(up.x, up.y, up.z)
+            self.targetPosition += simd_float3(up.x, up.y, up.z) * speed
         }
         if (self.activeKeys.contains("q")) {
-            self.targetPosition -= simd_float3(up.x, up.y, up.z)
+            self.targetPosition -= simd_float3(up.x, up.y, up.z) * speed
         }
     }
     

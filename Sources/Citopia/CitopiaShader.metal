@@ -63,6 +63,9 @@ struct CharacterData {
     // motionInformation.z is the current anticlockwise angle in radians
     // motionInformation.w is the target anticlockwise rotation angle in radians
     float4 motionInformation;
+    
+    // define the motion controllers
+    float4 motionControllers[100];
 };
 
 // define the visible character data
@@ -142,26 +145,28 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         characters[index].characterInformation.z = minTime + rand3D.z * maxTime;
         characters[index].characterInformation.w += characters[index].characterInformation.z;
         
-        // visibleCharacters[index].motionControllers[0] = float4(currentTime, blendWeight, WALK0_ATTACK, WALK0_ATTACK);
+        characters[index].motionControllers[0].x = currentTime;
+        characters[index].motionControllers[0].y = blendWeight;
     }
     
     const float currentWalkingSpeed = characters[index].motionInformation.x;
     const float targetWalkingSpeed = characters[index].motionInformation.y;
     const float currentAngle = characters[index].motionInformation.z;
-    const float targetAngle = characters[index].motionInformation.w;
+    float targetAngle = characters[index].motionInformation.w;
     const float3 walkingDirection = normalize(float3(cos(currentAngle), 0.0f, sin(currentAngle)));
     
     // gradual speeding
     characters[index].motionInformation.x += (targetWalkingSpeed - currentWalkingSpeed) * SPEED_DAMP_FACTOR;
-    characters[index].position.xyz += walkingDirection * characters[index].motionInformation.x;
+    characters[index].position.xyz += walkingDirection * characters[index].motionInformation.x * frame.data.y;
     
     // gradual rotation
     while (targetAngle - currentAngle > PI) {
-        characters[index].motionInformation.w -= PI * 2.0f;
+        targetAngle -= PI * 2.0f;
     }
     while (currentAngle - targetAngle > PI) {
-        characters[index].motionInformation.w += PI * 2.0f;
+        targetAngle += PI * 2.0f;
     }
+    characters[index].motionInformation.w = targetAngle;
 
     characters[index].motionInformation.z += (characters[index].motionInformation.w - currentAngle) * ROTATION_DAMP_FACTOR;
 }
@@ -215,7 +220,7 @@ kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]
     
     const float3 characterPosition = characters[index].position.xyz;
     const float4 center = float4(characterPosition.x, characterPosition.y + 1.0f, characterPosition.z, 1.0f);
-    const float radius = 0.0;
+    const float radius = -2.0f;
     if (dot(frame.frustumData[0], center) < radius){
         return;
     }
@@ -271,5 +276,11 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     
     if (index >= frame.characterData.z){
         visibleCharacters[index].transform[3].y = -10000.0f;
+    }
+    
+    // synchronize the motion controllers
+    for (int motionIndex = 0; motionIndex < 100; motionIndex += 1) {
+        const float4 controller = characters[visibleCharacterIndex].motionControllers[motionIndex];
+        visibleCharacters[index].motionControllers[motionIndex] = controller;
     }
 }
