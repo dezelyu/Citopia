@@ -8,7 +8,7 @@ constant float PI = 3.1415926535f;
 constant float EPSILON = 0.0001f;
 
 // global constants
-constant float3 MAP_DIMENSIONS = float3(1000.0f);
+constant float CHARACTER_SPACING = 3.0f;
 constant float CHARACTER_SCALE = 0.01f;
 
 // motion constants
@@ -127,13 +127,17 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         const float3 rand3D = 2.0f * hash3D(index) - 1.0f;
         // So far we assume that the character's position is only on the xz plane
         characters[index].characterInformation.x = uint(rand3D.x + 1.0f);
-        characters[index].position.xyz = float3(rand3D.x, EPSILON, rand3D.y) * MAP_DIMENSIONS;
         characters[index].motionInformation.y = WALK0_SPEED;
         characters[index].motionInformation.w = rand3D.z * PI;
+        
+        const int characterCount = int(sqrt(float(frame.characterData.x)));
+        const int halfCharacterCount = characterCount / 2;
+        characters[index].position.x = float(int(index) % characterCount - halfCharacterCount) * CHARACTER_SPACING;
+        characters[index].position.z = float(int(index) / characterCount - halfCharacterCount) * CHARACTER_SPACING;
     }
 
     if (currentTime > characters[index].characterInformation.w) {
-        const float3 rand3D = hash3D(index + currentTime);
+        const float3 rand3D = hash3D(characters[index].position.xyz + float3(currentTime));
         const float minTime = 2.0f;
         const float maxTime = 4.0f;
         const float updatedAngle = (2.0f * rand3D.y - 1.0f) * PI;
