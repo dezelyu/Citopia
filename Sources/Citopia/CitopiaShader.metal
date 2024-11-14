@@ -5,7 +5,6 @@ using namespace metal;
 
 // math constants
 constant float PI = 3.1415926535f;
-constant float EPSILON = 0.0001f;
 
 // global constants
 constant float CHARACTER_SPACING = 3.0f;
@@ -18,7 +17,6 @@ constant float ROTATION_DAMP_FACTOR = 0.05f;
 
 //animation constants
 constant float WALK0_SPEED = 0.027f;
-constant float WALK0_ATTACK = 0.3f;
 
 // define the frame data
 struct FrameData {
