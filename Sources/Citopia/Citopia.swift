@@ -216,6 +216,13 @@ class Citopia {
     // define the frustum planes
     var frustumPlanes: [simd_float4] = [simd_float4](repeating: .zero, count: 6)
     
+    // define the foundational building blocks to render
+    var foundationalBuildingBlocks: [(simd_float2, simd_float3)] = [
+        
+        // add an element for testing
+        (simd_float2(10.0, 20.0), simd_float3(10.0, 20.0, 30.0)),
+    ]
+    
     // define the constructor
     init(device: MTLDevice) {
         

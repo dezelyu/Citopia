@@ -83,6 +83,11 @@ import CameraKit
         )
         
         self.simulator.createGrids()
+        
+        // create the foundational buildings
+        self.renderer.createFoundationalBuildings(
+            foundationalBuildingBlocks: self.simulator.foundationalBuildingBlocks
+        )
     }
     
     // define the update behavior

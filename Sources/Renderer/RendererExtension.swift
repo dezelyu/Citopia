@@ -120,4 +120,27 @@ extension Renderer {
             frustumPlane5,
         ]
     }
+    
+    // define the function that generates the foundational buildings
+    func createFoundationalBuildings(foundationalBuildingBlocks: [(simd_float2, simd_float3)]) {
+        let blockSceneAsset = SceneAsset(name: "Assets.scnassets/Elements/Block.scn")
+        let blockMeshAsset = blockSceneAsset.meshes.first!
+        let blockMesh = Mesh(asset: blockMeshAsset)
+        for foundationalBuildingBlock in foundationalBuildingBlocks {
+            let groundMeshNode = MeshNode(
+                mesh: blockMesh, category: 1
+            )
+            groundMeshNode.position = simd_float3(
+                Float(foundationalBuildingBlock.0.x), 0.0,
+                Float(foundationalBuildingBlock.0.y)
+            )
+            groundMeshNode.scale = simd_float3(
+                Float(foundationalBuildingBlock.1.x),
+                Float(foundationalBuildingBlock.1.y),
+                Float(foundationalBuildingBlock.1.z)
+            )
+            self.meshNodes.append(groundMeshNode)
+            NodeManager.attach(node: groundMeshNode)
+        }
+    }
 }
