@@ -8,7 +8,7 @@ This project is licensed under the Creative Commons Attribution-NonCommercial 4.
 #
 ### Milestones
 For Milestone 1, we implemented a simulation of 100,000 characters on a flat plane, with characters of different genders either standing still or walking in random directions at varying intervals. Our system efficiently selects visible characters within the camera frustum, sorts them by distance, and renders between 400 and 1,000 characters closest to the camera, adapting to platform capabilities such as mobile and desktop. The characters move and rotate smoothly, achieving responsive, real-time performance. We also developed an acceleration structure that organizes characters in a grid based on their current positions, although it has yet to be fully utilized. Additionally, we encountered an issue with abrupt transitions between idle and walking animations in the custom game engine’s animation system, which we plan to address in future milestones.
-![](Assets/Screenshot1.png)
+![](Assets/Milestone1.gif)
 #
 ### Setup Instructions
 To build and run this project, use Xcode version 15.4 or later. Open the Xcode project file located in the Sources folder, and ensure an appropriate development team is selected in the Signing & Capabilities settings to enable local execution. If you encounter an error related to AVKit, you may need to remove and re-add the AVKit framework under “Link Binary with Libraries” in the Build Phases settings.
