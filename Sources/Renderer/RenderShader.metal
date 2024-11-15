@@ -21,10 +21,10 @@ struct VisibleCharacterData {
     float4x4 transform;
     
     // define the motion controller indices
-    int motionControllerIndices[100];
+    int motionControllerIndices[50];
     
     // define the motion controllers
-    float4 motionControllers[100];
+    float4x2 motionControllers[50];
 };
 
 // define the node data
@@ -67,33 +67,13 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
     nodes[character.data.w].matrix = character.transform;
     
     // update the motions
-    for (int i = 0; i < 100; i += 1) {
+    for (int i = 0; i < 50; i += 1) {
         const int motionControllerIndex = character.motionControllerIndices[i];
-        const float4 motionController = character.motionControllers[i];
-        const float time = motionController.x;
-        const float weight = motionController.y;
-        const float2 attacks = float2(0.3f);
-        if (time >= 0.0f) {
-            float4x2 controller = controllers[motionControllerIndex].controller;
-            float2 weights = controller[1];
-            float2 duration = float2(time - motionController.z, time - motionController.w);
-            if (controller[0][0] < 0.0f && duration[0] > abs(controller[0][0])) {
-                controllers[motionControllerIndex].controller[1] = float2(0.0f);
-                controllers[motionControllerIndex].controller[2] = float2(0.0f);
-                duration = float2(time);
-            }
-            const float progress = controller[0][0] > 0.0f ? fmod(duration[0], abs(controller[0][0])) : min(duration[0], abs(controller[0][0]));
-            if (duration[1] < attacks[0]) {
-                const float factor = 0.5f - cos(duration[1] / attacks[0] * 3.1415926535f) * 0.5f;
-                weights = float2(weights[0] * (1.0f - factor) + weights[1] * factor, weight);
-            } else {
-                weights = float2(weights[1], weight);
-            }
-            controller[1] = weights;
-            controller[2] = attacks;
-            character.motionControllers[i].z = time - (weights[0] == 0.0f ? 0.0f : progress);
-            character.motionControllers[i].w = time;
-            controllers[motionControllerIndex].controller = controller;
+        if (motionControllerIndex == -1) {
+            break;
         }
+        controllers[motionControllerIndex].controller[1] = character.motionControllers[i][1];
+        controllers[motionControllerIndex].controller[2] = character.motionControllers[i][2];
+        controllers[motionControllerIndex].controller[3] = character.motionControllers[i][3];
     }
 }

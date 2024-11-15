@@ -16,6 +16,8 @@ constant float SPEED_DAMP_FACTOR = 0.1f;
 constant float ROTATION_DAMP_FACTOR = 0.05f;
 
 //animation constants
+constant float WALK0_DURATION = 1.033333f;
+constant float WALK0_ATTACK = 0.4f;
 constant float WALK0_SPEED = 0.027f;
 
 // define the frame data
@@ -63,7 +65,7 @@ struct CharacterData {
     float4 motionInformation;
     
     // define the motion controllers
-    float4 motionControllers[100];
+    float4x2 motionControllers[50];
 };
 
 // define the visible character data
@@ -84,10 +86,10 @@ struct VisibleCharacterData {
     float4x4 transform;
     
     // define the motion controller indices
-    int motionControllerIndices[100];
+    int motionControllerIndices[50];
     
     // define the motion controllers
-    float4 motionControllers[100];
+    float4x2 motionControllers[50];
 };
 
 float hash1D(float n) {
@@ -105,6 +107,23 @@ float3 hash3D(float3 p) {
     return float3(fract(sin(n) * 43758.5453123f),
                   fract(cos(n) * 43758.5453123f),
                   fract(sin(n + PI) * 43758.5453123f));
+}
+
+// update a looped motion
+float4x2 updateLoopedMotion(float4x2 controller, const float duration,
+                            const float weight, const float attack, const float time) {
+    const float offset = time - controller[3][1];
+    if (offset < attack) {
+        const float factor = 0.5f - cos(offset / attack * PI) * 0.5f;
+        controller[1][0] = controller[1][0] * (1.0 - factor) + controller[1][1] * factor;
+    } else {
+        controller[1][0] = controller[1][1];
+    }
+    const float progress = fmod(time - controller[3][0], duration);
+    controller[1][1] = clamp(weight, 0.0001f, 1.0f);
+    controller[2] = float2(attack);
+    controller[3] = float2(time - (controller[1][0] <= 0.0001f ? 0.0f : progress), time);
+    return controller;
 }
 
 // define the naive simulation function
@@ -147,8 +166,14 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         characters[index].characterInformation.z = minTime + rand3D.z * maxTime;
         characters[index].characterInformation.w += characters[index].characterInformation.z;
         
-        characters[index].motionControllers[0].x = currentTime;
-        characters[index].motionControllers[0].y = blendWeight;
+        // acquire the walk motion controller
+        float4x2 motionController = characters[index].motionControllers[0];
+        
+        // update the walk motion controller with the new parameters
+        motionController = updateLoopedMotion(motionController, WALK0_DURATION, blendWeight, WALK0_ATTACK, currentTime);
+        
+        // store the new walk motion controller
+        characters[index].motionControllers[0] = motionController;
     }
     
     const float currentWalkingSpeed = characters[index].motionInformation.x;
@@ -281,8 +306,8 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     }
     
     // synchronize the motion controllers
-    for (int motionIndex = 0; motionIndex < 100; motionIndex += 1) {
-        const float4 controller = characters[visibleCharacterIndex].motionControllers[motionIndex];
+    for (int motionIndex = 0; motionIndex < 50; motionIndex += 1) {
+        const float4x2 controller = characters[visibleCharacterIndex].motionControllers[motionIndex];
         visibleCharacters[index].motionControllers[motionIndex] = controller;
     }
 }
