@@ -181,12 +181,20 @@ class Citopia {
     // define the frustum planes
     var frustumPlanes: [simd_float4] = [simd_float4](repeating: .zero, count: 6)
     
+    // define the number of blocks per row of the map
+    var blockCount: Int = 0
+    
+    // define the side length of the block in meters
+    var blockSideLength: Float = 0
+    
+    // define the distance between two blocks in meters
+    var blockDistance: Float = 0
+    
+    // define the exterior connection data
+    var exteriorConnectionData: Set<String> = []
+    
     // define the foundational building blocks to render
-    var foundationalBuildingBlocks: [(simd_float2, simd_float3)] = [
-        
-        // add an element for testing
-        (simd_float2(10.0, 20.0), simd_float3(10.0, 20.0, 30.0)),
-    ]
+    var foundationalBuildingBlocks: [(simd_float2, simd_float3)] = []
     
     // define the constructor
     init(device: MTLDevice) {

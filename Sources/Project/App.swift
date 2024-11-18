@@ -17,6 +17,15 @@ import CameraKit
     // define the total number of visible characters
     let visibleCharacterCount: Int = 400
     
+    // define the number of blocks per row of the map
+    let blockCount: Int = 100
+    
+    // define the side length of the block in meters
+    let blockSideLength: Float = 15
+    
+    // define the distance between two blocks in meters
+    let blockDistance: Float = 10
+    
     // define the graphics device
     var device: MTLDevice!
     
@@ -74,6 +83,13 @@ import CameraKit
         
         // create a new simulation instance
         self.simulator = Citopia(device: self.device)
+        
+        // generate the exterior map
+        self.simulator.generateExteriorMap(
+            blockCount: self.blockCount,
+            blockSideLength: self.blockSideLength,
+            blockDistance: self.blockDistance
+        )
         
         // create the simulation characters
         self.simulator.createCharacters(
