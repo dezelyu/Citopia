@@ -111,5 +111,8 @@ extension Citopia {
                 }
             }
         }
+        
+        // create the map node buffer
+        self.createMapNodeBuffer()
     }
 }

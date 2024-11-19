@@ -179,6 +179,12 @@ extension Citopia {
         // update the maxVisibleDistance
         pointer.pointee.data.z = self.maxVisibleDistance
         
+        // update the map data
+        pointer.pointee.mapData = simd_uint4(
+            UInt32(self.blockCount),
+            0, 0, 0
+        )
+        
         // update the character data
         pointer.pointee.characterData = simd_uint4(
             UInt32(self.characterCount),
@@ -298,5 +304,86 @@ extension Citopia {
             hostCharacterIndexBufferUInt32,
             MemoryLayout<UInt32>.stride * self.actualVisibleCharacterCount
         )
+    }
+    
+    // define the function that creates the map node buffer
+    func createMapNodeBuffer() {
+        
+        // create a staging buffer with the map node data
+        let stagingBuffer = self.device.makeBuffer(
+            length: MemoryLayout<MapNodeData>.stride * (self.blockCount + 1) * (self.blockCount + 1),
+            options: [
+                .cpuCacheModeWriteCombined,
+                .storageModeShared,
+            ]
+        )!
+        
+        // acquire the pointer to the staging buffer
+        let pointer = stagingBuffer.contents().bindMemory(
+            to: MapNodeData.self, capacity: (self.blockCount + 1) * (self.blockCount + 1)
+        )
+        
+        // compute the origin to center all the blocks
+        let blockLength = Float(self.blockCount) * self.blockSideLength
+        let intervalLength = Float(self.blockCount) * self.blockDistance
+        let origin = simd_float3(
+            repeating: -(blockLength + intervalLength) * 0.5
+        )
+        
+        // initialize the map node data
+        for z in 0...self.blockCount {
+            for x in 0...self.blockCount {
+                let index = z * (self.blockCount + 1) + x
+                pointer[index].position = simd_float4(
+                    Float(x) * (self.blockSideLength + self.blockDistance) + origin.x, 0.0,
+                    Float(z) * (self.blockSideLength + self.blockDistance) + origin.z, 0.0
+                )
+                pointer[index].dimension = simd_float4(
+                    self.blockDistance, 0.0,
+                    self.blockDistance, 0.0
+                )
+                var connections: [Int32] = []
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x - 1), \(z))")) {
+                    connections.append(Int32(z * (self.blockCount + 1) + x - 1))
+                }
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x + 1), \(z))")) {
+                    connections.append(Int32(z * (self.blockCount + 1) + x + 1))
+                }
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z - 1))")) {
+                    connections.append(Int32((z - 1) * (self.blockCount + 1) + x))
+                }
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z + 1))")) {
+                    connections.append(Int32((z + 1) * (self.blockCount + 1) + x))
+                }
+                pointer[index].data.w = Int32(connections.count)
+                for (i, connection) in connections.enumerated() {
+                    pointer[index].connections[i] = connection
+                }
+            }
+        }
+        
+        // create a private storage buffer
+        self.mapNodeBuffer = self.device.makeBuffer(
+            length: MemoryLayout<MapNodeData>.stride * (self.blockCount + 1) * (self.blockCount + 1),
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the map node buffer
+        self.mapNodeBuffer.label = "MapNodeBuffer"
+        
+        // copy data from the staging buffer to the private storage buffer
+        let commandQueue = self.device.makeCommandQueue()!
+        let command = commandQueue.makeCommandBuffer()!
+        let encoder = command.makeBlitCommandEncoder()!
+        encoder.copy(
+            from: stagingBuffer, sourceOffset: 0, 
+            to: self.mapNodeBuffer, destinationOffset: 0,
+            size: stagingBuffer.length
+        )
+        encoder.endEncoding()
+        command.commit()
+        command.waitUntilCompleted()
     }
 }

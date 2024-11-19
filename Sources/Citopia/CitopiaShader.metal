@@ -28,6 +28,10 @@ struct FrameData {
     //  - data.y = delta time scale factor
     float4 data;
     
+    // define the map data
+    //  - mapData.x = blockCount
+    uint4 mapData;
+    
     // define the character data
     //  - characterData.x = characterCount
     //  - characterData.y = visibleCharacterCount
@@ -92,6 +96,24 @@ struct VisibleCharacterData {
     float4x2 motionControllers[50];
 };
 
+// define the map node data
+struct MapNodeData {
+    
+    // define the general map node data
+    //  - data.x = type
+    //  - data.w = connection count
+    int4 data;
+    
+    // define the position of the map node
+    float4 position;
+    
+    // define the dimension of the map node
+    float4 dimension;
+    
+    // define the connections of the map node
+    int connections[16];
+};
+
 float hash1D(float n) {
     return fract(sin(n) * 43758.5453123f);
 }
@@ -129,7 +151,8 @@ float4x2 updateLoopedMotion(float4x2 controller, const float duration,
 // define the naive simulation function
 kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
                                     device CharacterData* characters [[buffer(1)]],
-                                    device VisibleCharacterData* visibleCharacters[[buffer(2)]],
+                                    device VisibleCharacterData* visibleCharacters [[buffer(2)]],
+                                    device MapNodeData* mapNodes [[buffer(3)]],
                                     const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters

@@ -11,6 +11,10 @@ struct FrameData {
     //  - data.z = maxVisibleDistance
     var data: simd_float4 = .zero
     
+    // define the map data
+    //  - mapData.x = blockCount
+    var mapData: simd_uint4 = .zero
+    
     // define the character data
     //  - characterData.x = characterCount
     //  - characterData.y = visibleCharacterCount
@@ -95,6 +99,24 @@ struct CharacterData {
         simd_float4x2(0.0), simd_float4x2(0.0),
         simd_float4x2(0.0), simd_float4x2(0.0)
     )
+}
+
+// define the map node data
+struct MapNodeData {
+    
+    // define the general map node data
+    //  - data.x = type
+    //  - data.w = connection count
+    var data: simd_int4 = .zero
+    
+    // define the position of the map node
+    var position: simd_float4 = .zero
+    
+    // define the dimension of the map node
+    var dimension: simd_float4 = .zero
+    
+    // define the connections of the map node
+    var connections: simd_int16 = simd_int16(repeating: -1)
 }
 
 // define the class for performing the simulation
@@ -196,6 +218,9 @@ class Citopia {
     // define the foundational building blocks to render
     var foundationalBuildingBlocks: [(simd_float2, simd_float3)] = []
     
+    // define the storage buffer for the map node data
+    var mapNodeBuffer: MTLBuffer!
+    
     // define the constructor
     init(device: MTLDevice) {
         
@@ -290,6 +315,7 @@ class Citopia {
         encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
         encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
         encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
+        encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 3)
         
         // perform the naive simulation
         encoder.dispatchThreadgroups(
