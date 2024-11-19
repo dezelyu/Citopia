@@ -45,19 +45,22 @@ struct FrameData {
 // define the character data
 struct CharacterData {
     
-    // characterInformation.x is gender
-    // characterInformation.z is current time threshold
-    // characterInformation.w is the accumulated time threshold
-    var characterInformation: simd_float4 = .zero
+    // define the integer data of the character
+    //  - data.x = gender (0: female, 1: male)
+    //  - data.w = destination
+    var data: simd_uint4 = .zero
     
     // define the position of the character
-    // .xyz position of the character
     var position: simd_float4 = .zero
     
-    // motionInformation.x is the current speed
-    // motionInformation.y is the target speed
-    // motionInformation.z is the current anticlockwise angle in radians
-    // motionInformation.w is the target anticlockwise rotation angle in radians
+    // define the destination of the character
+    var destination: simd_float4 = .zero
+    
+    // define the motion information of the character
+    //   - motionInformation.x = current speed
+    //   - motionInformation.y = target speed
+    //   - motionInformation.z = current anticlockwise angle in radians
+    //   - motionInformation.w = target anticlockwise rotation angle in radians
     var motionInformation: simd_float4 = .zero
     
     // define the motion controllers

@@ -91,6 +91,48 @@ extension Citopia {
     // define the function that creates the character buffer
     func createCharacterBuffer() {
         
+        // create a staging buffer with the map node data
+        let stagingBuffer = self.device.makeBuffer(
+            length: MemoryLayout<CharacterData>.stride * self.characterCount,
+            options: [
+                .cpuCacheModeWriteCombined,
+                .storageModeShared,
+            ]
+        )!
+        
+        // acquire the pointer to the staging buffer
+        let pointer = stagingBuffer.contents().bindMemory(
+            to: CharacterData.self, capacity: self.characterCount
+        )
+        
+        for index in 0...self.characterCount {
+            
+            // initialize gender
+            pointer[index].data.x = UInt32.random(in: 0...1)
+            
+            // initialize position
+            let mapNodeIndex = index % ((self.blockCount + 1) * (self.blockCount + 1))
+            let blockLength = Float(self.blockCount) * self.blockSideLength
+            let intervalLength = Float(self.blockCount) * self.blockDistance
+            let origin = simd_float3(
+                repeating: -(blockLength + intervalLength) * 0.5
+            )
+            let x = mapNodeIndex % (self.blockCount + 1)
+            let z = mapNodeIndex / (self.blockCount + 1)
+            pointer[index].position = simd_float4(
+                Float(x) * (self.blockSideLength + self.blockDistance) + origin.x, 0.0,
+                Float(z) * (self.blockSideLength + self.blockDistance) + origin.z, 0.0
+            )
+            pointer[index].position.x += self.blockSideLength * Float.random(in: -0.4...0.4)
+            pointer[index].position.z += self.blockSideLength * Float.random(in: -0.4...0.4)
+            
+            // initialize destination
+            pointer[index].destination = pointer[index].position
+            pointer[index].destination.x += 0.1
+            pointer[index].destination.z += 0.1
+            pointer[index].data.w = UInt32(mapNodeIndex)
+        }
+        
         // create a private storage buffer
         self.characterBuffer = self.device.makeBuffer(
             length: MemoryLayout<CharacterData>.stride * self.characterCount,
@@ -101,6 +143,19 @@ extension Citopia {
         
         // update the label of the character buffer
         self.characterBuffer.label = "CharacterBuffer"
+        
+        // copy data from the staging buffer to the private storage buffer
+        let commandQueue = self.device.makeCommandQueue()!
+        let command = commandQueue.makeCommandBuffer()!
+        let encoder = command.makeBlitCommandEncoder()!
+        encoder.copy(
+            from: stagingBuffer, sourceOffset: 0,
+            to: self.characterBuffer, destinationOffset: 0,
+            size: stagingBuffer.length
+        )
+        encoder.endEncoding()
+        command.commit()
+        command.waitUntilCompleted()
     }
     
     // define the function that creates the visible character index buffer

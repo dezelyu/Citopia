@@ -54,18 +54,22 @@ struct FrameData {
 // define the character data
 struct CharacterData {
     
-    // characterInformation.x is gender
-    // characterInformation.z is current time threshold
-    // characterInformation.w is the accumulated time threshold
-    float4 characterInformation;
+    // define the integer data of the character
+    //  - data.x = gender (0: female, 1: male)
+    //  - data.w = destination
+    uint4 data;
     
     // define the position of the character
     float4 position;
     
-    // motionInformation.x is the current speed
-    // motionInformation.y is the target speed
-    // motionInformation.z is the current anticlockwise angle in radians
-    // motionInformation.w is the target anticlockwise rotation angle in radians
+    // define the destination of the character
+    float4 destination;
+    
+    // define the motion information of the character
+    //   - motionInformation.x = current speed
+    //   - motionInformation.y = target speed
+    //   - motionInformation.z = current anticlockwise angle in radians
+    //   - motionInformation.w = target anticlockwise rotation angle in radians
     float4 motionInformation;
     
     // define the motion controllers
@@ -76,7 +80,7 @@ struct CharacterData {
 struct VisibleCharacterData {
     
     // define the general visible character data
-    //  - data.x = sex
+    //  - data.x = gender
     //  - data.w = character node index
     uint4 data;
     
@@ -161,42 +165,38 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     const float currentTime = frame.data.x;
-    // initailise data
-    // should be in a different kernel
-    if (currentTime == 0.0f) {
-        const float3 rand3D = 2.0f * hash3D(index) - 1.0f;
-        // So far we assume that the character's position is only on the xz plane
-        characters[index].characterInformation.x = uint(rand3D.x + 1.0f);
-        characters[index].motionInformation.y = WALK0_SPEED;
-        characters[index].motionInformation.w = rand3D.z * PI;
-        
-        const int characterCount = int(sqrt(float(frame.characterData.x)));
-        const int halfCharacterCount = characterCount / 2;
-        characters[index].position.x = float(int(index) % characterCount - halfCharacterCount) * CHARACTER_SPACING;
-        characters[index].position.z = float(int(index) / characterCount - halfCharacterCount) * CHARACTER_SPACING;
-    }
 
-    if (currentTime > characters[index].characterInformation.w) {
-        const float3 rand3D = hash3D(characters[index].position.xyz + float3(currentTime));
-        const float minTime = 2.0f;
-        const float maxTime = 4.0f;
-        const float updatedAngle = (2.0f * rand3D.y - 1.0f) * PI;
-        const bool shouldStop = rand3D.x < STOP_PROBABILITY;
-        const float blendWeight = shouldStop ? 0.0f : 1.0f;
-        
-        characters[index].motionInformation.y = shouldStop ? 0.0f : WALK0_SPEED;
-        characters[index].motionInformation.w = shouldStop ? characters[index].motionInformation.w : updatedAngle;
-        characters[index].characterInformation.z = minTime + rand3D.z * maxTime;
-        characters[index].characterInformation.w += characters[index].characterInformation.z;
-        
-        // acquire the walk motion controller
-        float4x2 motionController = characters[index].motionControllers[0];
-        
-        // update the walk motion controller with the new parameters
-        motionController = updateLoopedMotion(motionController, WALK0_DURATION, blendWeight, WALK0_ATTACK, currentTime);
-        
-        // store the new walk motion controller
-        characters[index].motionControllers[0] = motionController;
+    const float3 destination = characters[index].destination.xyz;
+    const float3 position = characters[index].position.xyz;
+
+    if (length(destination - position) < 1.0f) {
+        const MapNodeData currentMapNode = mapNodes[characters[index].data.w];
+        const int currentMapNodeConnectionCount = currentMapNode.data.w;
+        if (currentMapNodeConnectionCount > 0) {
+            const float3 random = hash3D(fract(position) + float3(currentTime));
+            const int connectionIndex = int(float(currentMapNodeConnectionCount) * random.y);
+            const int newMapNodeIndex = currentMapNode.connections[connectionIndex];
+            const MapNodeData mapNode = mapNodes[newMapNodeIndex];
+            characters[index].destination.xyz = mapNode.position.xyz;
+            characters[index].destination.x += (2.0f * random.x - 1.0f) * mapNode.dimension.x * 0.4f;
+            characters[index].destination.z += (2.0f * random.z - 1.0f) * mapNode.dimension.z * 0.4f;
+            characters[index].data.w = uint(newMapNodeIndex);
+            
+            // acquire the walk motion controller
+            float4x2 motionController = characters[index].motionControllers[0];
+                    
+            // update the walk motion controller with the new parameters
+            motionController = updateLoopedMotion(motionController, WALK0_DURATION, 1, WALK0_ATTACK, currentTime);
+                    
+            // store the new walk motion controller
+            characters[index].motionControllers[0] = motionController;
+
+            const float3 target = normalize(characters[index].destination.xyz - position);
+            const float targetAngle = atan2(target.z, target.x);
+            characters[index].motionInformation.w = targetAngle;
+            
+            characters[index].motionInformation.y = WALK0_SPEED;
+        }
     }
     
     const float currentWalkingSpeed = characters[index].motionInformation.x;
@@ -310,7 +310,7 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     
     uint visibleCharacterIndex = visibleCharacterIndexBuffer[index];
     
-    visibleCharacters[index].data.x = characters[visibleCharacterIndex].characterInformation.x;
+    visibleCharacters[index].data.x = characters[visibleCharacterIndex].data.x;
     
     const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].motionInformation.z;
     const float3x3 rotationMatrixY = CHARACTER_SCALE * float3x3(
