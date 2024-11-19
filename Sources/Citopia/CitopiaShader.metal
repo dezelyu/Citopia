@@ -7,11 +7,9 @@ using namespace metal;
 constant float PI = 3.1415926535f;
 
 // global constants
-constant float CHARACTER_SPACING = 3.0f;
 constant float CHARACTER_SCALE = 0.01f;
 
 // motion constants
-constant float STOP_PROBABILITY = 0.05f;
 constant float SPEED_DAMP_FACTOR = 0.1f;
 constant float ROTATION_DAMP_FACTOR = 0.05f;
 
@@ -56,6 +54,7 @@ struct CharacterData {
     
     // define the integer data of the character
     //  - data.x = gender (0: female, 1: male)
+    //  - data.z = color
     //  - data.w = destination
     uint4 data;
     
@@ -81,6 +80,7 @@ struct VisibleCharacterData {
     
     // define the general visible character data
     //  - data.x = gender
+    //  - data.z = color
     //  - data.w = character node index
     uint4 data;
     
@@ -311,6 +311,7 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     uint visibleCharacterIndex = visibleCharacterIndexBuffer[index];
     
     visibleCharacters[index].data.x = characters[visibleCharacterIndex].data.x;
+    visibleCharacters[index].data.z = characters[visibleCharacterIndex].data.z;
     
     const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].motionInformation.z;
     const float3x3 rotationMatrixY = CHARACTER_SCALE * float3x3(

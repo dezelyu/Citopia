@@ -120,6 +120,9 @@ class Renderer {
     // define the update compute pipeline
     var updateComputePipeline: ComputePipeline!
     
+    // define the present pipeline
+    var presentPipeline: RenderPipeline!
+    
     // define the total number of visible characters
     var visibleCharacterCount: Int = 0
     
@@ -182,23 +185,17 @@ class Renderer {
             Command(),
         ]
         
-        // configure the present behavior
-        CameraManager.present(
-            camera: self.cameraNode,
-            attachment: self.attachment,
-            prerequisite: (
-                [self.commands[0]],
-                [self.commands[1]],
-                [self.commands[2]]
-            )
-        )
-        
         // create a new library
         let library = Library(bundle: Bundle(for: Renderer.self))
         
         // create the update compute pipeline
         self.updateComputePipeline = ComputePipeline(
             function: Function(library: library, name: "UpdateFunction")
+        )
+        
+        // create the present pipeline
+        self.presentPipeline = RenderPipeline(
+            function: Function(library: library, name: "PresentFragmentFunction")
         )
         
         // create the ground node
@@ -220,10 +217,25 @@ class Renderer {
                 groundMeshNode.scale = simd_float3(
                     repeating: 100.0
                 )
+                groundMeshNode.data.2 = 1
                 self.meshNodes.append(groundMeshNode)
                 self.groundNode.attach(node: groundMeshNode)
             }
         }
+        
+        // configure the present behavior
+        Presenter.configure(
+            pipeline: self.presentPipeline,
+            descriptors: [
+                CameraBuffer.buffer,
+                self.attachment.0,
+                self.attachment.1,
+            ], prerequisite: (
+                [self.commands[0]],
+                [self.commands[1]],
+                [self.commands[2]]
+            )
+        )
     }
     
     // define the character creator
