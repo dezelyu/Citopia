@@ -110,6 +110,9 @@ extension Citopia {
             // initialize gender
             pointer[index].data.x = UInt32.random(in: 0...1)
             
+            // initialize age
+            pointer[index].data.y = UInt32.random(in: 20...40)
+            
             // initialize position
             let mapNodeIndex = index % ((self.blockCount + 1) * (self.blockCount + 1))
             let blockLength = Float(self.blockCount) * self.blockSideLength
@@ -123,8 +126,8 @@ extension Citopia {
                 Float(x) * (self.blockSideLength + self.blockDistance) + origin.x, 0.0,
                 Float(z) * (self.blockSideLength + self.blockDistance) + origin.z, 0.0
             )
-            pointer[index].position.x += self.blockSideLength * Float.random(in: -0.4...0.4)
-            pointer[index].position.z += self.blockSideLength * Float.random(in: -0.4...0.4)
+            pointer[index].position.x += self.blockSideLength * Float.random(in: -0.3...0.3)
+            pointer[index].position.z += self.blockSideLength * Float.random(in: -0.3...0.3)
             
             // initialize destination
             pointer[index].destination = pointer[index].position

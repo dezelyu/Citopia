@@ -54,6 +54,7 @@ struct CharacterData {
     
     // define the integer data of the character
     //  - data.x = gender (0: female, 1: male)
+    //  - data.y = age (20 - 40)
     //  - data.z = color
     //  - data.w = destination
     uint4 data;
@@ -164,61 +165,73 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
         return;
     }
     
+    // acquire the current time
     const float currentTime = frame.data.x;
-
-    const float3 destination = characters[index].destination.xyz;
-    const float3 position = characters[index].position.xyz;
-
+    
+    // acquire the current character
+    CharacterData character = characters[index];
+    
+    // acquire the destination and position of the character
+    const float3 destination = character.destination.xyz;
+    const float3 position = character.position.xyz;
+    
+    // update the destination when the character reaches the current destination
     if (length(destination - position) < 1.0f) {
-        const MapNodeData currentMapNode = mapNodes[characters[index].data.w];
+        const MapNodeData currentMapNode = mapNodes[character.data.w];
         const int currentMapNodeConnectionCount = currentMapNode.data.w;
         if (currentMapNodeConnectionCount > 0) {
             const float3 random = hash3D(fract(position) + float3(currentTime));
             const int connectionIndex = int(float(currentMapNodeConnectionCount) * random.y);
             const int newMapNodeIndex = currentMapNode.connections[connectionIndex];
             const MapNodeData mapNode = mapNodes[newMapNodeIndex];
-            characters[index].destination.xyz = mapNode.position.xyz;
-            characters[index].destination.x += (2.0f * random.x - 1.0f) * mapNode.dimension.x * 0.4f;
-            characters[index].destination.z += (2.0f * random.z - 1.0f) * mapNode.dimension.z * 0.4f;
-            characters[index].data.w = uint(newMapNodeIndex);
+            character.destination.xyz = mapNode.position.xyz;
+            character.destination.x += (2.0f * random.x - 1.0f) * mapNode.dimension.x * 0.3f;
+            character.destination.z += (2.0f * random.z - 1.0f) * mapNode.dimension.z * 0.3f;
+            character.data.w = uint(newMapNodeIndex);
             
             // acquire the walk motion controller
-            float4x2 motionController = characters[index].motionControllers[0];
-                    
+            float4x2 motionController = character.motionControllers[0];
+            
             // update the walk motion controller with the new parameters
             motionController = updateLoopedMotion(motionController, WALK0_DURATION, 1, WALK0_ATTACK, currentTime);
-                    
-            // store the new walk motion controller
-            characters[index].motionControllers[0] = motionController;
-
-            const float3 target = normalize(characters[index].destination.xyz - position);
-            const float targetAngle = atan2(target.z, target.x);
-            characters[index].motionInformation.w = targetAngle;
             
-            characters[index].motionInformation.y = WALK0_SPEED;
+            // store the new walk motion controller
+            character.motionControllers[0] = motionController;
+            
+            // update the target speed
+            const float scale = 0.6f + float(character.data.y) * 0.01f;
+            character.motionInformation.y = scale * WALK0_SPEED;
         }
     }
     
-    const float currentWalkingSpeed = characters[index].motionInformation.x;
-    const float targetWalkingSpeed = characters[index].motionInformation.y;
-    const float currentAngle = characters[index].motionInformation.z;
-    float targetAngle = characters[index].motionInformation.w;
-    const float3 walkingDirection = normalize(float3(cos(currentAngle), 0.0f, sin(currentAngle)));
-    
-    // gradual speeding
-    characters[index].motionInformation.x += (targetWalkingSpeed - currentWalkingSpeed) * SPEED_DAMP_FACTOR;
-    characters[index].position.xyz += walkingDirection * characters[index].motionInformation.x * frame.data.y;
-    
-    // gradual rotation
+    // update the target angle
+    const float3 direction = normalize(destination - position);
+    float targetAngle = atan2(direction.z, direction.x);
+    float currentAngle = character.motionInformation.z;
     while (targetAngle - currentAngle > PI) {
         targetAngle -= PI * 2.0f;
     }
     while (currentAngle - targetAngle > PI) {
         targetAngle += PI * 2.0f;
     }
-    characters[index].motionInformation.w = targetAngle;
-
-    characters[index].motionInformation.z += (characters[index].motionInformation.w - currentAngle) * ROTATION_DAMP_FACTOR;
+    character.motionInformation.w = targetAngle;
+    
+    // update the current angle
+    character.motionInformation.z += (character.motionInformation.w - currentAngle) * ROTATION_DAMP_FACTOR;
+    
+    // compute the current angle
+    const float currentWalkingSpeed = character.motionInformation.x;
+    const float targetWalkingSpeed = character.motionInformation.y;
+    
+    // compute the current speed
+    const float3 walkingDirection = normalize(float3(cos(currentAngle), 0.0f, sin(currentAngle)));
+    character.motionInformation.x += (targetWalkingSpeed - currentWalkingSpeed) * SPEED_DAMP_FACTOR;
+    
+    // update the position
+    character.position.xyz += walkingDirection * character.motionInformation.x * frame.data.y;
+    
+    // store the new character data
+    characters[index] = character;
 }
 
 // define the compute grid function
@@ -314,7 +327,8 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     visibleCharacters[index].data.z = characters[visibleCharacterIndex].data.z;
     
     const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].motionInformation.z;
-    const float3x3 rotationMatrixY = CHARACTER_SCALE * float3x3(
+    const float scale = 0.6f + float(characters[visibleCharacterIndex].data.y) * 0.01f;
+    const float3x3 rotationMatrixY = scale * CHARACTER_SCALE * float3x3(
       cos(matrixAngle), 0.0f, -sin(matrixAngle),
       0.0f, 1.0f, 0.0f,
       sin(matrixAngle), 0.0f, cos(matrixAngle)

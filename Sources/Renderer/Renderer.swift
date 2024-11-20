@@ -13,6 +13,7 @@ struct VisibleCharacterData {
     
     // define the general visible character data
     //  - data.x = sex
+    //  - data.z = color
     //  - data.w = character node index
     var data: simd_uint4 = .zero
     

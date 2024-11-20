@@ -47,6 +47,8 @@ struct CharacterData {
     
     // define the integer data of the character
     //  - data.x = gender (0: female, 1: male)
+    //  - data.y = age (20 - 40)
+    //  - data.z = color
     //  - data.w = destination
     var data: simd_uint4 = .zero
     
