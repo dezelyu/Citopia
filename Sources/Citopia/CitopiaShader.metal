@@ -137,19 +137,20 @@ float3 hash3D(float3 p) {
 }
 
 // update a looped motion
-float4x2 updateLoopedMotion(float4x2 controller, const float duration,
+float4x2 updateLoopedMotion(float4x2 controller, const float duration, const float speed,
                             const float weight, const float attack, const float time) {
-    const float offset = time - controller[3][1];
+    const float offset = speed * (time - controller[3][1]);
     if (offset < attack) {
         const float factor = 0.5f - cos(offset / attack * PI) * 0.5f;
         controller[1][0] = controller[1][0] * (1.0 - factor) + controller[1][1] * factor;
     } else {
         controller[1][0] = controller[1][1];
     }
-    const float progress = fmod(time - controller[3][0], duration);
+    const float progress = fmod(speed * (time - controller[3][0]), duration);
+    controller[0] = float2(duration, speed);
     controller[1][1] = clamp(weight, 0.0001f, 1.0f);
     controller[2] = float2(attack);
-    controller[3] = float2(time - (controller[1][0] <= 0.0001f ? 0.0f : progress), time);
+    controller[3] = float2(time - (controller[1][0] <= 0.0001f ? 0.0f : progress) / speed, time);
     return controller;
 }
 
@@ -193,14 +194,16 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
             float4x2 motionController = character.motionControllers[0];
             
             // update the walk motion controller with the new parameters
-            motionController = updateLoopedMotion(motionController, WALK0_DURATION, 1, WALK0_ATTACK, currentTime);
+            const float animationSpeed = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
+            motionController = updateLoopedMotion(motionController, WALK0_DURATION, animationSpeed,
+                                                  1, WALK0_ATTACK, currentTime);
             
             // store the new walk motion controller
             character.motionControllers[0] = motionController;
             
             // update the target speed
             const float scale = 0.6f + float(character.data.y) * 0.01f;
-            character.motionInformation.y = scale * WALK0_SPEED;
+            character.motionInformation.y = animationSpeed * scale * WALK0_SPEED;
         }
     }
     
@@ -284,22 +287,22 @@ kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]
     const float3 characterPosition = characters[index].position.xyz;
     const float4 center = float4(characterPosition.x, characterPosition.y + 1.0f, characterPosition.z, 1.0f);
     const float radius = -2.0f;
-    if (dot(frame.frustumData[0], center) < radius){
+    if (dot(frame.frustumData[0], center) < radius) {
         return;
     }
-    if (dot(frame.frustumData[1], center) < radius){
+    if (dot(frame.frustumData[1], center) < radius) {
         return;
     }
-    if (dot(frame.frustumData[2], center) < radius){
+    if (dot(frame.frustumData[2], center) < radius) {
         return;
     }
-    if (dot(frame.frustumData[3], center) < radius){
+    if (dot(frame.frustumData[3], center) < radius) {
         return;
     }
-    if (dot(frame.frustumData[4], center) < radius){
+    if (dot(frame.frustumData[4], center) < radius) {
         return;
     }
-    if (dot(frame.frustumData[5], center) < radius){
+    if (dot(frame.frustumData[5], center) < radius) {
         return;
     }
     
@@ -329,9 +332,9 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].motionInformation.z;
     const float scale = 0.6f + float(characters[visibleCharacterIndex].data.y) * 0.01f;
     const float3x3 rotationMatrixY = scale * CHARACTER_SCALE * float3x3(
-      cos(matrixAngle), 0.0f, -sin(matrixAngle),
-      0.0f, 1.0f, 0.0f,
-      sin(matrixAngle), 0.0f, cos(matrixAngle)
+        cos(matrixAngle), 0.0f, -sin(matrixAngle),
+        0.0f, 1.0f, 0.0f,
+        sin(matrixAngle), 0.0f, cos(matrixAngle)
     );
     
     visibleCharacters[index].transform[0] = float4(rotationMatrixY[0], 0.0f);
@@ -339,7 +342,7 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     visibleCharacters[index].transform[2] = float4(rotationMatrixY[2], 0.0f);
     visibleCharacters[index].transform[3].xyz = characters[visibleCharacterIndex].position.xyz;
     
-    if (index >= frame.characterData.z){
+    if (index >= frame.characterData.z) {
         visibleCharacters[index].transform[3].y = -10000.0f;
     }
     

@@ -102,9 +102,7 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
         if (motionControllerIndex == -1) {
             break;
         }
-        controllers[motionControllerIndex].controller[1] = character.motionControllers[i][1];
-        controllers[motionControllerIndex].controller[2] = character.motionControllers[i][2];
-        controllers[motionControllerIndex].controller[3] = character.motionControllers[i][3];
+        controllers[motionControllerIndex].controller = character.motionControllers[i];
     }
 }
 
