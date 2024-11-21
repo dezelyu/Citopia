@@ -94,6 +94,9 @@ import CameraKit
             blockDistance: self.blockDistance
         )
         
+        // create the map node buffer
+        self.simulator.createMapNodeBuffer()
+        
         // create the simulation characters
         self.simulator.createCharacters(
             characterCount: self.characterCount,

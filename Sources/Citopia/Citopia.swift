@@ -125,7 +125,7 @@ struct MapNodeData {
     var dimension: simd_float4 = .zero
     
     // define the connections of the map node
-    var connections: simd_int16 = simd_int16(repeating: -1)
+    var connections: simd_int8 = simd_int8(repeating: -1)
 }
 
 struct GridData {
@@ -260,6 +260,9 @@ class Citopia {
     
     // define the foundational building blocks to render
     var foundationalBuildingBlocks: [(simd_float2, simd_float3)] = []
+    
+    // define an array of all the map nodes
+    var mapNodes: [MapNodeData] = []
     
     // define the storage buffer for the map node data
     var mapNodeBuffer: MTLBuffer!

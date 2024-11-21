@@ -120,7 +120,7 @@ struct MapNodeData {
     float4 dimension;
     
     // define the connections of the map node
-    int connections[16];
+    int connections[8];
 };
 
 // define the grid data

@@ -112,13 +112,45 @@ extension Citopia {
             }
         }
         
+        // initialize the map node data
+        for z in 0...self.blockCount {
+            for x in 0...self.blockCount {
+                
+                // create a new map node
+                var mapNode = MapNodeData()
+                mapNode.position = simd_float4(
+                    Float(x) * (self.blockSideLength + self.blockDistance) + origin.x, 0.0,
+                    Float(z) * (self.blockSideLength + self.blockDistance) + origin.y, 0.0
+                )
+                mapNode.dimension = simd_float4(
+                    self.blockDistance, 0.0,
+                    self.blockDistance, 0.0
+                )
+                var connections: [Int32] = []
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x - 1), \(z))")) {
+                    connections.append(Int32(z * (self.blockCount + 1) + x - 1))
+                }
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x + 1), \(z))")) {
+                    connections.append(Int32(z * (self.blockCount + 1) + x + 1))
+                }
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z - 1))")) {
+                    connections.append(Int32((z - 1) * (self.blockCount + 1) + x))
+                }
+                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z + 1))")) {
+                    connections.append(Int32((z + 1) * (self.blockCount + 1) + x))
+                }
+                mapNode.data.w = Int32(connections.count)
+                for (i, connection) in connections.enumerated() {
+                    mapNode.connections[i] = connection
+                }
+                self.mapNodes.append(mapNode)
+            }
+        }
+        
         // save the grid dimension data
         let sideCount = Int(ceil(Float(self.blockCount + 2) / 2.0))
         self.mapGridCount = sideCount * sideCount
         self.gridLengthX = 2 * (self.blockSideLength + self.blockDistance)
         self.gridLengthZ = 2 * (self.blockSideLength + self.blockDistance)
-        
-        // create the map node buffer
-        self.createMapNodeBuffer()
     }
 }
