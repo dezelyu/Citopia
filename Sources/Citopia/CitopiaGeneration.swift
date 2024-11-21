@@ -112,6 +112,12 @@ extension Citopia {
             }
         }
         
+        // save the grid dimension data
+        let sideCount = Int(ceil(Float(self.blockCount + 2) / 2.0))
+        self.mapGridCount = sideCount * sideCount
+        self.gridLengthX = 2 * (self.blockSideLength + self.blockDistance)
+        self.gridLengthZ = 2 * (self.blockSideLength + self.blockDistance)
+        
         // create the map node buffer
         self.createMapNodeBuffer()
     }

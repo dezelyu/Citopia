@@ -39,11 +39,15 @@ struct FrameData {
     float4 observerPosition;
     
     // define the grid data
-    //  - gridData.x = gridDimensionX
-    //  - gridData.y = gridDimensionZ
+    //  - gridData.x = mapGridCount
+    //  - gridData.y = linkedGridCount
     //  - gridData.z = maxNumCharactersPerGrid
-    //  - gridData.w = width/height
-    float4 gridData;
+    uint4 gridData;
+    
+    // define the grid dimension data
+    //  - gridLengthData.x = gridLengthX
+    //  - gridLengthData.y = gridLengthZ
+    float4 gridLengthData;
     
     // define the frustrum data
     float4 frustumData[6];
@@ -119,6 +123,14 @@ struct MapNodeData {
     int connections[16];
 };
 
+// define the grid data
+struct GridData {
+    
+    // define the index of the next grid, used to store additional characters
+    //  - next.x = next grid index
+    int4 next;
+};
+
 float hash1D(float n) {
     return fract(sin(n) * 43758.5453123f);
 }
@@ -159,6 +171,9 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
                                     device CharacterData* characters [[buffer(1)]],
                                     device VisibleCharacterData* visibleCharacters [[buffer(2)]],
                                     device MapNodeData* mapNodes [[buffer(3)]],
+                                    const device GridData* gridData [[buffer(4)]],
+                                    const device uint* characterIndexBuffer [[buffer(5)]],
+                                    const device uint* characterCountPerGrid [[buffer(6)]],
                                     const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -241,33 +256,100 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
 kernel void ComputeGridFunction(constant FrameData& frame [[buffer(0)]],
                                 const device CharacterData* characters [[buffer(1)]],
                                 device atomic_uint* characterCountPerGrid [[buffer(2)]],
-                                device uint* characterIndexBuffer [[buffer(3)]],
                                 const uint index [[thread_position_in_grid]]) {
-    
-    const uint gridDimX = uint(frame.gridData.x);
-    const uint gridDimZ = uint(frame.gridData.y);
     
     // avoid execution when the index exceeds the total number of characters
     if (index >= frame.characterData.x) {
         return;
     }
     
-    const uint width = uint(frame.gridData.w);
+    const float gridLengthX = frame.gridLengthData.x;
+    const float gridLengthZ = frame.gridLengthData.y;
     
-    const float3 gridCenter = float3(width / 2.0f, 0.0f, width / 2.0f);
+    const uint gridDim = uint(sqrt(float(frame.gridData.x)));
+    const float width = gridLengthX * gridDim;
+    const float height = gridLengthZ * gridDim;
+    
+    const float3 gridCenter = float3(width / 2.0f, 0.0f, height / 2.0f);
     const float3 characterPosition = clamp(characters[index].position.xyz + gridCenter,
                                            float3(0.0f, 0.0f, 0.0f),
-                                           float3(width, 0.0f, width));
-    const uint maxNumCharactersPerGrid = uint(frame.gridData.z);
+                                           float3(width, 0.0f, height));
     
-    const uint2 gridOffset = uint2(width) / uint2(gridDimX, gridDimZ);
-    const uint gridIndexX = uint(characterPosition.x) / gridOffset.x;
-    const uint gridIndexZ = uint(characterPosition.z) / gridOffset.y;
+    const uint gridIndexX = uint(characterPosition.x / gridLengthX);
+    const uint gridIndexZ = uint(characterPosition.z / gridLengthZ);
+    const uint gridIndex = gridIndexX + gridIndexZ * gridDim;
     
-    const uint gridIndex = gridIndexX + gridIndexZ * gridDimX;
+    atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
+}
+
+// define the assign linked grid function
+kernel void AssignLinkedGridFunction(constant FrameData& frame [[buffer(0)]],
+                                     const device uint* characterCountPerGrid [[buffer(1)]],
+                                     device GridData* gridData [[buffer(2)]],
+                                     device atomic_uint* nextAvailableGridIndex [[buffer(3)]],
+                                     const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of map grids
+    if (index >= frame.gridData.x) {
+        return;
+    }
+    
+    const uint maxNumCharactersPerGrid = frame.gridData.z;
+    const uint charactersInGrid = characterCountPerGrid[index];
+    if (charactersInGrid > maxNumCharactersPerGrid) {
+        const uint numLinked = charactersInGrid / maxNumCharactersPerGrid;
+        uint nextGridIndex = atomic_fetch_add_explicit(&nextAvailableGridIndex[0], numLinked, memory_order_relaxed);
+        uint linkedGridIndex = index;
+        for (uint i = 0; i < numLinked; ++i){
+            gridData[linkedGridIndex].next.x = nextGridIndex;
+            linkedGridIndex = nextGridIndex;
+            nextGridIndex++;
+        }
+    }
+}
+
+// define the set character index per grid
+kernel void SetCharacterIndexPerGridFunction(constant FrameData& frame [[buffer(0)]],
+                                             const device CharacterData* characters [[buffer(1)]],
+                                             device atomic_uint* characterCountPerGrid [[buffer(2)]],
+                                             device uint* characterIndexBuffer [[buffer(3)]],
+                                             const device GridData* gridData [[buffer(4)]],
+                                             const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (index >= frame.characterData.x) {
+        return;
+    }
+    
+    const float gridLengthX = frame.gridLengthData.x;
+    const float gridLengthZ = frame.gridLengthData.y;
+    
+    const uint gridDim = uint(sqrt(float(frame.gridData.x)));
+    const float width = gridLengthX * gridDim;
+    const float height = gridLengthZ * gridDim;
+    
+    const float3 gridCenter = float3(width / 2.0f, 0.0f, height / 2.0f);
+    const float3 characterPosition = clamp(characters[index].position.xyz + gridCenter,
+                                           float3(0.0f, 0.0f, 0.0f),
+                                           float3(width, 0.0f, height));
+    const uint maxNumCharactersPerGrid = frame.gridData.z;
+    
+    const uint gridIndexX = uint(characterPosition.x / gridLengthX);
+    const uint gridIndexZ = uint(characterPosition.z / gridLengthZ);
+    const uint gridIndex = gridIndexX + gridIndexZ * gridDim;
+    
     const uint prevIndex = atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
     if (prevIndex < maxNumCharactersPerGrid) {
         characterIndexBuffer[gridIndex * maxNumCharactersPerGrid + prevIndex] = index;
+    } else {
+        const uint numLinked = prevIndex / maxNumCharactersPerGrid;
+        const uint indexInLinkedGrid = prevIndex % maxNumCharactersPerGrid;
+        uint linkedGridIndex = gridIndex;
+        for (uint i = 0; i < numLinked; ++i) {
+            linkedGridIndex = gridData[linkedGridIndex].next.x;
+        }
+        characterIndexBuffer[linkedGridIndex * maxNumCharactersPerGrid + indexInLinkedGrid] = index;
+        atomic_fetch_add_explicit(&characterCountPerGrid[linkedGridIndex], 1, memory_order_relaxed);
     }
 }
 

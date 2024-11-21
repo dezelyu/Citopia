@@ -25,11 +25,15 @@ struct FrameData {
     var observerPosition: simd_float4 = .zero
     
     // define the grid data
-    //  - gridData.x = gridDimX
-    //  - gridData.y = gridDimZ
+    //  - gridData.x = mapGridCount
+    //  - gridData.y = linkedGridCount
     //  - gridData.z = maxNumCharactersPerGrid
-    //  - gridData.w = width/height
-    var gridData: simd_float4 = .zero
+    var gridData: simd_uint4 = .zero
+    
+    // define the grid dimension data
+    //  - gridLengthData.x = gridLengthX
+    //  - gridLengthData.y = gridLengthZ
+    var gridLengthData: simd_float4 = .zero
     
     var frustumData: (
         simd_float4, simd_float4,
@@ -124,6 +128,13 @@ struct MapNodeData {
     var connections: simd_int16 = simd_int16(repeating: -1)
 }
 
+struct GridData {
+    
+    // define the index of the next grid, used to store additional characters
+    //  - next.x = next grid index
+    var next: simd_int4 = .zero
+}
+
 // define the class for performing the simulation
 class Citopia {
     
@@ -136,14 +147,20 @@ class Citopia {
     // define the actual number of visible characters within maxVisibleDistance
     var actualVisibleCharacterCount: Int = 0
     
-    // define the grid dimension X
-    var gridDimensionX: Int = 10
+    // define the map grid count
+    var mapGridCount: Int = 0
     
-    // define the grid dimension Z
-    var gridDimensionZ: Int = 10
+    // define the grid count for storing additional characters
+    var linkedGridCount: Int = 0
+    
+    // define the grid dimension in x
+    var gridLengthX: Float = 0
+    
+    // define the grid dimension in z
+    var gridLengthZ: Float = 0
     
     // define the max number of characters per grid
-    var maxNumCharactersPerGrid: Int = 100
+    var maxNumCharactersPerGrid: Int = 0
     
     // define the max visible distance
     var maxVisibleDistance: Float = 100.0
@@ -178,11 +195,26 @@ class Citopia {
     // define the storage buffer for the character count per grid data
     var characterCountPerGridBuffer: MTLBuffer!
     
+    // define the storage buffer for the character count per linked grid data
+    var characterCountPerLinkedGridBuffer: MTLBuffer!
+    
     // define the storage buffer for the initial character count per grid data
     var initialCharacterCountPerGridBuffer: MTLBuffer!
     
     // define the storage buffer for the character index buffer per grid
     var characterIndexBufferPerGrid: MTLBuffer!
+    
+    // define the storage buffer for the initial grid data structure
+    var initialGridDataBuffer: MTLBuffer!
+    
+    // define the storage buffer for the grid data structure
+    var gridDataBuffer: MTLBuffer!
+    
+    // define the initial atomic int for tracking next available grid index
+    var initialNextAvailableGridBuffer: MTLBuffer!
+    
+    // define the atomic int for tracking next available grid index
+    var nextAvailableGridBuffer: MTLBuffer!
     
     // define the initial atomic int for counting visible characters
     var initialVisibleCharacterCountBuffer: MTLBuffer!
@@ -195,6 +227,12 @@ class Citopia {
     
     // define the compute grid pipeline
     var computeGridPipeline: MTLComputePipelineState!
+    
+    // define the assign linked grid pipeline
+    var assignLinkedGridPipeline: MTLComputePipelineState!
+    
+    // define the set character index per grid pipeline
+    var setCharacterIndexPerGridPipeline: MTLComputePipelineState!
     
     // define the find visible character pipeline
     var findVisibleCharacterPipeline: MTLComputePipelineState!
@@ -244,6 +282,12 @@ class Citopia {
         // create the compute grid pipeline
         self.createComputeGridPipeline()
         
+        // create the assign linked grid pipeline
+        self.createAssignLinkedGridPipeline()
+        
+        // create the set character index per grid pipeline
+        self.createSetCharacterIndexPerGridPipeline()
+        
         // create the find visible character pipeline
         self.createFindVisibleCharacterPipeline()
         
@@ -271,12 +315,15 @@ class Citopia {
     }
     
     // define the grid data creator
-    func createGrids(){
+    func createGrids(maxNumCharactersPerGrid: Int) {
         
-        //create the grid data buffers
+        // set the max number of characters per grid
+        self.maxNumCharactersPerGrid = maxNumCharactersPerGrid
+        
+        // create the grid data buffers
         self.createGridDataBuffer()
         
-        //create the character index buffer per grid
+        // create the character index buffer per grid
         self.createCharacterIndexBufferPerGrid()
     }
     
@@ -286,76 +333,138 @@ class Citopia {
         // update the frame buffer
         self.updateFrameBuffer(time: time)
         
-        let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
-        blitEncoder.copy(
-            from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
-            to: self.characterCountPerGridBuffer, destinationOffset: 0,
-            size: self.characterCountPerGridBuffer.length
-        )
-        blitEncoder.copy(
-            from: self.initialVisibleCharacterCountBuffer, sourceOffset: 0,
-            to: self.visibleCharacterCountBuffer, destinationOffset: 0,
-            size: MemoryLayout<UInt32>.stride
-        )
-        blitEncoder.endEncoding()
+        if let encoder = commandBuffer.makeBlitCommandEncoder() {
+            encoder.copy(
+                from: self.initialVisibleCharacterCountBuffer, sourceOffset: 0,
+                to: self.visibleCharacterCountBuffer, destinationOffset: 0,
+                size: MemoryLayout<UInt32>.stride
+            )
+            encoder.copy(
+                from: self.initialNextAvailableGridBuffer, sourceOffset: 0,
+                to: self.nextAvailableGridBuffer, destinationOffset: 0,
+                size: MemoryLayout<UInt32>.stride
+            )
+            encoder.endEncoding()
+        } else {
+            fatalError()
+        }
         
         // create a new compute command encoder
-        let encoder = commandBuffer.makeComputeCommandEncoder()!
+        if let encoder = commandBuffer.makeComputeCommandEncoder() {
+            // configure the simulate visible character pipeline
+            encoder.setComputePipelineState(self.simulateVisibleCharacterPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.visibleCharacterIndexBuffer, offset: 0, index: 3)
+            
+            // perform the simulate visible character pipeline
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.visibleCharacterCount / (self.simulateVisibleCharacterPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.simulateVisibleCharacterPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            // configure the naive simulation pipeline
+            encoder.setComputePipelineState(self.naiveSimulationPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 4)
+            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
+            encoder.setBuffer(self.characterCountPerLinkedGridBuffer, offset: 0, index: 6)
+            
+            // perform the naive simulation
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.characterCount / (self.naiveSimulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.naiveSimulationPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            encoder.endEncoding()
+        } else {
+            fatalError()
+        }
         
-        // configure the simulate visible character pipeline
-        encoder.setComputePipelineState(self.simulateVisibleCharacterPipeline)
-        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
-        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-        encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
-        encoder.setBuffer(self.visibleCharacterIndexBuffer, offset: 0, index: 3)
+        if let encoder = commandBuffer.makeBlitCommandEncoder() {
+            encoder.copy(
+                from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
+                to: self.characterCountPerGridBuffer, destinationOffset: 0,
+                size: self.characterCountPerGridBuffer.length
+            )
+            encoder.copy(
+                from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
+                to: self.characterCountPerLinkedGridBuffer, destinationOffset: 0,
+                size: self.characterCountPerLinkedGridBuffer.length
+            )
+            encoder.copy(
+                from: self.initialGridDataBuffer, sourceOffset: 0,
+                to: self.gridDataBuffer, destinationOffset: 0,
+                size: self.gridDataBuffer.length
+            )
+            encoder.endEncoding()
+        } else {
+            fatalError()
+        }
         
-        // perform the simulate visible character pipeline
-        encoder.dispatchThreadgroups(
-            MTLSizeMake(self.visibleCharacterCount / (self.simulateVisibleCharacterPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-            threadsPerThreadgroup: MTLSizeMake(self.simulateVisibleCharacterPipeline.threadExecutionWidth * 2, 1, 1)
-        )
-        
-        // configure the naive simulation pipeline
-        encoder.setComputePipelineState(self.naiveSimulationPipeline)
-        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
-        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-        encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
-        encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 3)
-        
-        // perform the naive simulation
-        encoder.dispatchThreadgroups(
-            MTLSizeMake(self.characterCount / (self.naiveSimulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-            threadsPerThreadgroup: MTLSizeMake(self.naiveSimulationPipeline.threadExecutionWidth * 2, 1, 1)
-        )
-        
-        // configure the compute grid pipeline
-        encoder.setComputePipelineState(self.computeGridPipeline)
-        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
-        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-        encoder.setBuffer(self.characterCountPerGridBuffer,  offset: 0, index: 2)
-        encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
-        
-        // perform the compute grid pipeline
-        encoder.dispatchThreadgroups(
-            MTLSizeMake(self.characterCount / (self.computeGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-            threadsPerThreadgroup: MTLSizeMake(self.computeGridPipeline.threadExecutionWidth * 2, 1, 1)
-        )
-        
-        // configure the find visible character pipeline
-        encoder.setComputePipelineState(self.findVisibleCharacterPipeline)
-        encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
-        encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-        encoder.setBuffer(self.visibleCharacterCountBuffer,  offset: 0, index: 2)
-        encoder.setBuffer(self.potentiallyVisibleCharacterIndexBuffer, offset: 0, index: 3)
-        encoder.setBuffer(self.visibleCharacterDistanceToObserverBuffer, offset: 0, index: 4)
-        
-        // perform the find visible character pipeline
-        encoder.dispatchThreadgroups(
-            MTLSizeMake(self.characterCount / (self.findVisibleCharacterPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-            threadsPerThreadgroup: MTLSizeMake(self.findVisibleCharacterPipeline.threadExecutionWidth * 2, 1, 1)
-        )
-        
-        // finish encoding
-        encoder.endEncoding()
+        if let encoder = commandBuffer.makeComputeCommandEncoder() {
+            
+            // configure the compute grid pipeline
+            encoder.setComputePipelineState(self.computeGridPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.characterCountPerGridBuffer,  offset: 0, index: 2)
+            
+            // perform the compute grid pipeline
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.characterCount / (self.computeGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.computeGridPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            // configure the assign linked grid piepline
+            encoder.setComputePipelineState(self.assignLinkedGridPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterCountPerGridBuffer,  offset: 0, index: 1)
+            encoder.setBuffer(self.gridDataBuffer,  offset: 0, index: 2)
+            encoder.setBuffer(self.nextAvailableGridBuffer,  offset: 0, index: 3)
+            
+            // perform the assign linked grid pipeline
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.mapGridCount / (self.assignLinkedGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.assignLinkedGridPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            // configure the set character index per grid
+            encoder.setComputePipelineState(self.setCharacterIndexPerGridPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.characterCountPerLinkedGridBuffer,  offset: 0, index: 2)
+            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
+            encoder.setBuffer(self.gridDataBuffer,  offset: 0, index: 4)
+            
+            // perform the assign linked grid pipeline
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.characterCount / (self.setCharacterIndexPerGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.setCharacterIndexPerGridPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            // configure the find visible character pipeline
+            encoder.setComputePipelineState(self.findVisibleCharacterPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.visibleCharacterCountBuffer,  offset: 0, index: 2)
+            encoder.setBuffer(self.potentiallyVisibleCharacterIndexBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.visibleCharacterDistanceToObserverBuffer, offset: 0, index: 4)
+            
+            // perform the find visible character pipeline
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.characterCount / (self.findVisibleCharacterPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.findVisibleCharacterPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            // finish encoding
+            encoder.endEncoding()
+        } else {
+            fatalError()
+        }
     }
 }

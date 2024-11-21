@@ -55,6 +55,40 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the assign linked grid pipeline
+    func createAssignLinkedGridPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "AssignLinkedGridFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.assignLinkedGridPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
+    // define the function that creates the set character index per grid pipeline
+    func createSetCharacterIndexPerGridPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "SetCharacterIndexPerGridFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.setCharacterIndexPerGridPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the find visible character pipeline
     func createFindVisibleCharacterPipeline() {
         
@@ -256,11 +290,18 @@ extension Citopia {
             self.observerPosition, 1.0
         )
         
-        pointer.pointee.gridData = simd_float4(
-            Float32(self.gridDimensionX),
-            Float32(self.gridDimensionZ),
-            Float32(self.maxNumCharactersPerGrid),
-            100.0
+        pointer.pointee.gridData = simd_uint4(
+            UInt32(self.mapGridCount),
+            UInt32(self.linkedGridCount),
+            UInt32(self.maxNumCharactersPerGrid),
+            0
+        )
+        
+        pointer.pointee.gridLengthData = simd_float4(
+            Float32(self.gridLengthX),
+            Float32(self.gridLengthZ),
+            0.0,
+            0.0
         )
         
         pointer.pointee.frustumData = (
@@ -275,28 +316,96 @@ extension Citopia {
     
     // define the function that creates the grid data buffer
     func createGridDataBuffer() {
+        self.linkedGridCount = (self.characterCount + self.maxNumCharactersPerGrid - 1) / self.maxNumCharactersPerGrid
         
         // create a private storage buffer
         self.characterCountPerGridBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt32>.stride * self.gridDimensionX * self.gridDimensionZ,
+            length: MemoryLayout<UInt32>.stride * (self.mapGridCount + self.linkedGridCount),
             options: [
                 .storageModePrivate,
             ]
         )!
         
-        // update the label of the visible character index buffer
+        // update the label of the character count per grid buffer
         self.characterCountPerGridBuffer.label = "CharacterCountPerGridBuffer"
         
         // create a private storage buffer
-        self.initialCharacterCountPerGridBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt32>.stride * self.gridDimensionX * self.gridDimensionZ,
+        self.characterCountPerLinkedGridBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * (self.mapGridCount + self.linkedGridCount),
             options: [
                 .storageModePrivate,
             ]
         )!
         
-        // update the label of the visible character index buffer
+        // update the label of the character count per linked grid buffer
+        self.characterCountPerLinkedGridBuffer.label = "CharacterCountPerLinkedGridBuffer"
+        
+        // create a private storage buffer
+        self.initialCharacterCountPerGridBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * (self.mapGridCount + self.linkedGridCount),
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the initial character count per grid buffer
         self.initialCharacterCountPerGridBuffer.label = "InitialCharacterCountPerGridBuffer"
+        
+        // create a private storage buffer
+        self.gridDataBuffer = self.device.makeBuffer(
+            length: MemoryLayout<GridData>.stride * (self.mapGridCount + self.linkedGridCount),
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        // update the label of the grid data buffer
+        self.gridDataBuffer.label = "GridDataBuffer"
+        
+        // create a staging buffer with the initial grid data buffer
+        let stagingBuffer = self.device.makeBuffer(
+            length: MemoryLayout<GridData>.stride * (self.mapGridCount + self.linkedGridCount),
+            options: [
+                .cpuCacheModeWriteCombined,
+                .storageModeShared,
+            ]
+        )!
+        
+        // acquire the pointer to the staging buffer
+        let pointer = stagingBuffer.contents().bindMemory(
+            to: GridData.self, capacity: (self.mapGridCount + self.linkedGridCount)
+        )
+        
+        for index in 0...(self.mapGridCount + self.linkedGridCount) {
+            pointer[index].next.x = -1
+        }
+        
+        // create a shared storage buffer
+        self.initialGridDataBuffer = self.device.makeBuffer(
+            length: MemoryLayout<GridData>.stride * (self.mapGridCount + self.linkedGridCount),
+            options: [
+                .storageModePrivate
+            ]
+        )!
+        // update the label of the initial grid data buffer
+        self.initialGridDataBuffer.label = "InitialGridDataBuffer"
+        
+        // copy data from the staging buffer to the two private storage buffers
+        let commandQueue = self.device.makeCommandQueue()!
+        let command = commandQueue.makeCommandBuffer()!
+        let encoder = command.makeBlitCommandEncoder()!
+        encoder.copy(
+            from: stagingBuffer, sourceOffset: 0,
+            to: self.initialGridDataBuffer, destinationOffset: 0,
+            size: stagingBuffer.length
+        )
+        encoder.copy(
+            from: stagingBuffer, sourceOffset: 0,
+            to: self.gridDataBuffer, destinationOffset: 0,
+            size: stagingBuffer.length
+        )
+        encoder.endEncoding()
+        command.commit()
+        command.waitUntilCompleted()
     }
     
     // define the function that creates the character index buffer per grid
@@ -304,7 +413,7 @@ extension Citopia {
         
         // create a private storage buffer
         self.characterIndexBufferPerGrid = self.device.makeBuffer(
-            length: MemoryLayout<UInt32>.stride * self.gridDimensionX * self.gridDimensionZ * self.maxNumCharactersPerGrid,
+            length: MemoryLayout<UInt32>.stride * (self.mapGridCount + self.linkedGridCount) * self.maxNumCharactersPerGrid,
             options: [
                 .storageModePrivate,
             ]
@@ -312,6 +421,57 @@ extension Citopia {
         
         // update the label of the visible character index buffer
         self.characterIndexBufferPerGrid.label = "CharacterIndexBufferPerGrid"
+        
+        // create a staging buffer with the initial atomic int for next available grid index
+        let stagingBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * 1,
+            options: [
+                .cpuCacheModeWriteCombined,
+                .storageModeShared,
+            ]
+        )!
+        
+        // acquire the pointer to the staging buffer
+        let pointer = stagingBuffer.contents().bindMemory(
+            to: UInt32.self, capacity: 1
+        )
+        
+        pointer.pointee = UInt32(mapGridCount)
+        
+        // create a private storage buffer
+        self.initialNextAvailableGridBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * 1,
+            options: [
+                .storageModePrivate
+            ]
+        )!
+        
+        // update the label of the initial atomic int next available grid buffer
+        self.initialNextAvailableGridBuffer.label = "InitialNextAvailableGridBuffer"
+        
+        // copy data from the staging buffer to the private storage buffer
+        let commandQueue = self.device.makeCommandQueue()!
+        let command = commandQueue.makeCommandBuffer()!
+        let encoder = command.makeBlitCommandEncoder()!
+        encoder.copy(
+            from: stagingBuffer, sourceOffset: 0,
+            to: self.initialNextAvailableGridBuffer, destinationOffset: 0,
+            size: stagingBuffer.length
+        )
+        encoder.endEncoding()
+        command.commit()
+        command.waitUntilCompleted()
+        
+        // create a private storage buffer
+        self.nextAvailableGridBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * 1,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the initial atomic int next available grid buffer
+        self.nextAvailableGridBuffer.label = "NextAvailableGridBuffer"
     }
     
     // define the sort character index process
