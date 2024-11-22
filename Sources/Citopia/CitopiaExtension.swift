@@ -560,6 +560,9 @@ extension Citopia {
         command.commit()
         command.waitUntilCompleted()
         
+        // clear the connection data
+        self.exteriorConnectionData.removeAll()
+        
         // clear the array of map nodes
         self.mapNodes.removeAll()
     }

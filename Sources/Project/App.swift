@@ -94,6 +94,9 @@ import CameraKit
             blockDistance: self.blockDistance
         )
         
+        // generate the buildings
+        self.simulator.generateBuildings()
+        
         // create the map node buffer
         self.simulator.createMapNodeBuffer()
         

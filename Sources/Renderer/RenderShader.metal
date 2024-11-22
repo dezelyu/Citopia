@@ -7,6 +7,7 @@ using namespace metal;
 constant float3 colors[] = {
     float3(1.0f, 1.0f, 1.0f),
     float3(0.2f, 0.2f, 0.2f),
+    float3(0.6f, 0.6f, 0.6f),
 };
 
 // define the visible character data

@@ -120,7 +120,7 @@ struct MapNodeData {
     float4 dimension;
     
     // define the connections of the map node
-    int connections[8];
+    int connections[16];
 };
 
 // define the grid data
@@ -192,7 +192,7 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
     const float3 position = character.position.xyz;
     
     // update the destination when the character reaches the current destination
-    if (length(destination - position) < 1.0f) {
+    if (length(destination - position) < 0.5f) {
         const MapNodeData currentMapNode = mapNodes[character.data.w];
         const int currentMapNodeConnectionCount = currentMapNode.data.w;
         if (currentMapNodeConnectionCount > 0) {

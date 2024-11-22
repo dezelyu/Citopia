@@ -58,6 +58,7 @@ extension Renderer {
     func updateGroundPosition() {
         self.groundNode.position.x = Float(Int(self.cameraNode.position.x) / 100) * 100.0
         self.groundNode.position.z = Float(Int(self.cameraNode.position.z) / 100) * 100.0
+        self.groundNode.position.y = -self.cameraNode.position.y * 0.01
     }
     
     // define the function that stores the new active key
@@ -122,7 +123,7 @@ extension Renderer {
     }
     
     // define the function that generates the foundational buildings
-    func createFoundationalBuildings(foundationalBuildingBlocks: [(simd_float2, simd_float3)]) {
+    func createFoundationalBuildings(foundationalBuildingBlocks: [(simd_float2, Float, simd_float3, Int)]) {
         let blockSceneAsset = SceneAsset(name: "Assets.scnassets/Elements/Block.scn")
         let blockMeshAsset = blockSceneAsset.meshes.first!
         let blockMesh = Mesh(asset: blockMeshAsset)
@@ -131,14 +132,12 @@ extension Renderer {
                 mesh: blockMesh, category: 1
             )
             groundMeshNode.position = simd_float3(
-                Float(foundationalBuildingBlock.0.x), 0.0,
-                Float(foundationalBuildingBlock.0.y)
+                foundationalBuildingBlock.0.x, 
+                foundationalBuildingBlock.1,
+                foundationalBuildingBlock.0.y
             )
-            groundMeshNode.scale = simd_float3(
-                Float(foundationalBuildingBlock.1.x),
-                Float(foundationalBuildingBlock.1.y),
-                Float(foundationalBuildingBlock.1.z)
-            )
+            groundMeshNode.scale = foundationalBuildingBlock.2
+            groundMeshNode.data.2 = foundationalBuildingBlock.3
             self.meshNodes.append(groundMeshNode)
             NodeManager.attach(node: groundMeshNode)
         }
