@@ -144,13 +144,13 @@ class Renderer {
         
         // create the camera node
         self.cameraNode = CameraNode(
-            category: 1, angle: 60.0, near: 0.01, far: 500.0
+            category: 1, angle: 60.0, near: 0.1, far: 500.0
         )
         
         // create the camera instance
         self.camera = SCNCamera()
         self.camera.fieldOfView = 60.0
-        self.camera.zNear = 0.01
+        self.camera.zNear = 0.1
         self.camera.zFar = 500.0
         
         // acquire the viewport size
