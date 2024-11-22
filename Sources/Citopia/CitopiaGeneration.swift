@@ -153,23 +153,60 @@ extension Citopia {
                 // define the color index of the building
                 let buildingColorIndex = Int(2)
                 
-                // create the floor and ceiling
+                // create the floors
                 let blockPosition = simd_float2(
                     (Float(x) + 0.5) * (self.blockSideLength + self.blockDistance),
                     (Float(z) + 0.5) * (self.blockSideLength + self.blockDistance)
                 )
+                
+                // create the first floor
                 self.foundationalBuildingBlocks.append((
                     blockPosition + origin, 0.0,
                     simd_float3(
-                        self.blockSideLength, 0.05,
-                        self.blockSideLength
+                        self.blockSideLength + 1.3, 0.05,
+                        self.blockSideLength + 1.3
                     ), buildingColorIndex
                 ))
+                
+                // create additional floors
+                let numAdditionalFloors = Int.random(in: 1...5)
+                for floor in 1...numAdditionalFloors {
+                    let offset = (floor % 2 != 0) ? 0.4 : 0.0
+                    self.foundationalBuildingBlocks.append((
+                        blockPosition + origin, 3.0 * Float(floor),
+                        simd_float3(
+                            self.blockSideLength + Float(offset), 3.0,
+                            self.blockSideLength + Float(offset)
+                        ), buildingColorIndex
+                    ))
+                }
+                
+                // create the pillars
+                var pillarOffsetX = self.blockSideLength / 2.0
+                var pillarOffsetZ = self.blockSideLength / 2.0
+                for corner in 0...3 {
+                    self.foundationalBuildingBlocks.append((
+                        blockPosition + origin + simd_float2(pillarOffsetX, pillarOffsetZ), 0.0,
+                        simd_float3(
+                            1.0,
+                            3.0 * Float(1 + numAdditionalFloors) + 0.5,
+                            1.0
+                        ), buildingColorIndex
+                    ))
+                    if (corner % 2 == 0) {
+                        pillarOffsetX *= -1.0
+                    } else {
+                        pillarOffsetZ *= -1.0
+                    }
+                }
+                
+                // create the rooftop
                 self.foundationalBuildingBlocks.append((
-                    blockPosition + origin, 3.0,
+                    blockPosition + origin, 3.0 * Float(1 + numAdditionalFloors),
                     simd_float3(
-                        self.blockSideLength, Float(Int.random(in: 0...4) * 3) + 1.0,
-                        self.blockSideLength
+                        self.blockSideLength + 1.2,
+                        0.5,
+                        self.blockSideLength + 1.2
                     ), buildingColorIndex
                 ))
                 
