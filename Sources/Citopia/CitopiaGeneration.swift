@@ -250,7 +250,7 @@ extension Citopia {
                     billboardDirections.append(3)
                 }
                 
-                // create the top billboards
+                // create the top billboards and billboards on buildings
                 if (!billboardDirections.isEmpty) {
                     for billboardDirection in billboardDirections {
                         let billboardLength = Float.random(in: 5.0...10.0)
@@ -270,6 +270,28 @@ extension Citopia {
                                     buildingColorIndex
                                 ))
                             }
+                            var floor = numAdditionalFloors
+                            while (floor > 1) {
+                                let shouldCreateSideBillboard = Int.random(in: 1...3)
+                                let upperLimit = Float(floor == 1 ? 2.5 : 5.5)
+                                let billboardScale = simd_float2(Float.random(in: 2.0...8.0), Float.random(in: 2.0...upperLimit))
+                                let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
+                                let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
+                                if (shouldCreateSideBillboard == 1) {
+                                    self.foundationalBuildingBlocks.append((
+                                        simd_float2(
+                                            blockPosition.x + origin.x + positionOffset,
+                                            blockPosition.y + origin.y - self.blockSideLength * 0.5 - 0.3
+                                        ),
+                                        3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
+                                        simd_float3(billboardScale.x, billboardScale.y, 0.15),
+                                        buildingColorIndex
+                                    ))
+                                    floor -= 2
+                                } else {
+                                    floor -= 1
+                                }
+                            }
                         } else if (billboardDirection == 1) {
                             let shouldCreateBillboard = Int.random(in: 0...4)
                             if (shouldCreateBillboard == 1) {
@@ -282,6 +304,28 @@ extension Citopia {
                                     simd_float3(0.2, 3.0, billboardLength),
                                     buildingColorIndex
                                 ))
+                            }
+                            var floor = numAdditionalFloors
+                            while (floor > 1) {
+                                let shouldCreateSideBillboard = Int.random(in: 1...3)
+                                let upperLimit = Float(floor == 1 ? 2.5 : 5.0)
+                                let billboardScale = simd_float2(Float.random(in: 2.0...8.0), Float.random(in: 2.0...upperLimit))
+                                let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
+                                let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
+                                if (shouldCreateSideBillboard == 1) {
+                                    self.foundationalBuildingBlocks.append((
+                                        simd_float2(
+                                            blockPosition.x + origin.x - self.blockSideLength * 0.5 - 0.3,
+                                            blockPosition.y + origin.y + positionOffset
+                                        ),
+                                        3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
+                                        simd_float3(0.15, billboardScale.y, billboardScale.x),
+                                        buildingColorIndex
+                                    ))
+                                    floor -= 2
+                                } else {
+                                    floor -= 1
+                                }
                             }
                         } else if (billboardDirection == 2) {
                             let shouldCreateBillboard = Int.random(in: 0...4)
@@ -296,6 +340,28 @@ extension Citopia {
                                     buildingColorIndex
                                 ))
                             }
+                            var floor = numAdditionalFloors
+                            while (floor > 1) {
+                                let shouldCreateSideBillboard = Int.random(in: 1...3)
+                                let upperLimit = Float(floor == 1 ? 2.5 : 5.0)
+                                let billboardScale = simd_float2(Float.random(in: 2.0...8.0), Float.random(in: 2.0...upperLimit))
+                                let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
+                                let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
+                                if (shouldCreateSideBillboard == 1) {
+                                    self.foundationalBuildingBlocks.append((
+                                        simd_float2(
+                                            blockPosition.x + origin.x + self.blockSideLength * 0.5 + 0.3,
+                                            blockPosition.y + origin.y + positionOffset
+                                        ),
+                                        3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
+                                        simd_float3(0.15, billboardScale.y, billboardScale.x),
+                                        buildingColorIndex
+                                    ))
+                                    floor -= 2
+                                } else {
+                                    floor -= 1
+                                }
+                            }
                         } else if (billboardDirection == 3) {
                             let shouldCreateBillboard = Int.random(in: 0...4)
                             if (shouldCreateBillboard == 1) {
@@ -308,6 +374,28 @@ extension Citopia {
                                     simd_float3(billboardLength, 3.0, 0.2),
                                     buildingColorIndex
                                 ))
+                            }
+                            var floor = numAdditionalFloors
+                            while (floor > 1) {
+                                let shouldCreateSideBillboard = Int.random(in: 1...3)
+                                let upperLimit = Float(floor == 1 ? 2.5 : 5.0)
+                                let billboardScale = simd_float2(Float.random(in: 2.0...8.0), Float.random(in: 2.0...upperLimit))
+                                let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
+                                let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
+                                if (shouldCreateSideBillboard == 1) {
+                                    self.foundationalBuildingBlocks.append((
+                                        simd_float2(
+                                            blockPosition.x + origin.x + positionOffset,
+                                            blockPosition.y + origin.y + self.blockSideLength * 0.5 + 0.3
+                                        ),
+                                        3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
+                                        simd_float3(billboardScale.x, billboardScale.y, 0.15),
+                                        buildingColorIndex
+                                    ))
+                                    floor -= 2
+                                } else {
+                                    floor -= 1
+                                }
                             }
                         }
                         
