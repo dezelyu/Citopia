@@ -18,20 +18,22 @@ extension Citopia {
             for z in 0...self.blockCount {
                 
                 // store all the possible exterior connections at the current grid point
-                var possibleExteriorConnections: [(String, String)] = []
+                var possibleExteriorConnections: [(simd_int4, simd_int4)] = []
                 
                 // if x is not 0, connect this grid point to the previous neighbor in the x direction
                 if (x != 0) {
-                    possibleExteriorConnections.append(
-                        ("(\(x), \(z)) - (\(x - 1), \(z))", "(\(x - 1), \(z)) - (\(x), \(z))")
-                    )
+                    possibleExteriorConnections.append((
+                        simd_int4(Int32(x), Int32(z), Int32(x - 1), Int32(z)),
+                        simd_int4(Int32(x - 1), Int32(z), Int32(x), Int32(z))
+                    ))
                 }
                 
                 // if z is not 0, connect this grid point to the previous neighbor in the z direction
                 if (z != 0) {
-                    possibleExteriorConnections.append(
-                        ("(\(x), \(z)) - (\(x), \(z - 1))", "(\(x), \(z - 1)) - (\(x), \(z))")
-                    )
+                    possibleExteriorConnections.append((
+                        simd_int4(Int32(x), Int32(z), Int32(x), Int32(z - 1)),
+                        simd_int4(Int32(x), Int32(z - 1), Int32(x), Int32(z))
+                    ))
                 }
                 
                 // conditionally break one connection
@@ -61,7 +63,7 @@ extension Citopia {
             for z in 0...self.blockCount {
                 
                 // break the connection along the x direction
-                if (x != 0 && !self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x - 1), \(z))")) {
+                if (x != 0 && !self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x - 1), Int32(z)))) {
                     let blockPosition = simd_float2(
                         (Float(x) - 0.5) * (self.blockSideLength + self.blockDistance),
                         Float(z) * (self.blockSideLength + self.blockDistance)
@@ -77,7 +79,7 @@ extension Citopia {
                 }
                 
                 // break the connection along the z direction
-                if (z != 0 && !self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z - 1))")) {
+                if (z != 0 && !self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x), Int32(z - 1)))) {
                     let blockPosition = simd_float2(
                         Float(x) * (self.blockSideLength + self.blockDistance),
                         (Float(z) - 0.5) * (self.blockSideLength + self.blockDistance)
@@ -109,16 +111,16 @@ extension Citopia {
                     self.blockDistance, 0.0
                 )
                 var connections: [Int32] = []
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x - 1), \(z))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x - 1), Int32(z)))) {
                     connections.append(Int32(z * (self.blockCount + 1) + x - 1))
                 }
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x + 1), \(z))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x + 1), Int32(z)))) {
                     connections.append(Int32(z * (self.blockCount + 1) + x + 1))
                 }
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z - 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x), Int32(z - 1)))) {
                     connections.append(Int32((z - 1) * (self.blockCount + 1) + x))
                 }
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z + 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x), Int32(z + 1)))) {
                     connections.append(Int32((z + 1) * (self.blockCount + 1) + x))
                 }
                 mapNode.data.w = Int32(connections.count)
@@ -145,6 +147,14 @@ extension Citopia {
         let origin = simd_float2(
             repeating: -(blockLength + intervalLength) * 0.5
         )
+        
+        // register all the valid building indices
+        var buildingIndices: Set<simd_int2> = []
+        for x in 0..<self.blockCount {
+            for z in 0..<self.blockCount {
+                buildingIndices.insert(simd_int2(Int32(x), Int32(z)))
+            }
+        }
         
         // initialize the buildings
         for x in 0..<self.blockCount {
@@ -237,16 +247,16 @@ extension Citopia {
                 var billboardDirections: [Int] = []
                 
                 // create the entrances if the side is not blocked
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x + 1), \(z))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x + 1), Int32(z)))) {
                     billboardDirections.append(0)
                 }
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z + 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x), Int32(z + 1)))) {
                     billboardDirections.append(1)
                 }
-                if (self.exteriorConnectionData.contains("(\(x + 1), \(z)) - (\(x + 1), \(z + 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x + 1), Int32(z), Int32(x + 1), Int32(z + 1)))) {
                     billboardDirections.append(2)
                 }
-                if (self.exteriorConnectionData.contains("(\(x), \(z + 1)) - (\(x + 1), \(z + 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z + 1), Int32(x + 1), Int32(z + 1)))) {
                     billboardDirections.append(3)
                 }
                 
@@ -547,16 +557,16 @@ extension Citopia {
                 var directions: [Int] = []
                 
                 // create the entrances if the side is not blocked
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x + 1), \(z))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x + 1), Int32(z)))) {
                     directions.append(0)
                 }
-                if (self.exteriorConnectionData.contains("(\(x), \(z)) - (\(x), \(z + 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z), Int32(x), Int32(z + 1)))) {
                     directions.append(1)
                 }
-                if (self.exteriorConnectionData.contains("(\(x + 1), \(z)) - (\(x + 1), \(z + 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x + 1), Int32(z), Int32(x + 1), Int32(z + 1)))) {
                     directions.append(2)
                 }
-                if (self.exteriorConnectionData.contains("(\(x), \(z + 1)) - (\(x + 1), \(z + 1))")) {
+                if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z + 1), Int32(x + 1), Int32(z + 1)))) {
                     directions.append(3)
                 }
                 
