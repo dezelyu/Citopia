@@ -253,6 +253,9 @@ class Citopia {
     // define the foundational building blocks to render
     var foundationalBuildingBlocks: [(simd_float2, Float, simd_float3, Int)] = []
     
+    // define the furniture blocks to render
+    var furnitureBlocks: [(simd_float2, Float, simd_float3, Int)] = []
+    
     // define an array of all the map nodes
     var mapNodes: [MapNodeData] = []
     

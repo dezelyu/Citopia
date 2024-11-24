@@ -128,18 +128,40 @@ extension Renderer {
         let blockMeshAsset = blockSceneAsset.meshes.first!
         let blockMesh = Mesh(asset: blockMeshAsset)
         for foundationalBuildingBlock in foundationalBuildingBlocks {
-            let groundMeshNode = MeshNode(
+            let blockMeshNode = MeshNode(
                 mesh: blockMesh, category: 1
             )
-            groundMeshNode.position = simd_float3(
-                foundationalBuildingBlock.0.x, 
-                foundationalBuildingBlock.1,
+            blockMeshNode.position = simd_float3(
+                foundationalBuildingBlock.0.x, foundationalBuildingBlock.1,
                 foundationalBuildingBlock.0.y
             )
-            groundMeshNode.scale = foundationalBuildingBlock.2
-            groundMeshNode.data.2 = foundationalBuildingBlock.3
-            self.meshNodes.append(groundMeshNode)
-            NodeManager.attach(node: groundMeshNode)
+            blockMeshNode.scale = foundationalBuildingBlock.2
+            blockMeshNode.data.2 = foundationalBuildingBlock.3
+            self.meshNodes.append(blockMeshNode)
+            NodeManager.attach(node: blockMeshNode)
+        }
+    }
+    
+    // define the function that generates the furnitures
+    func createFurnitures(furnitureBlocks: [(simd_float2, Float, simd_float3, Int)]) {
+        let blockSceneAsset = SceneAsset(name: "Assets.scnassets/Elements/Block.scn")
+        let blockMeshAsset = blockSceneAsset.meshes.first!
+        let blockMesh = Mesh(
+            asset: blockMeshAsset, scale: 1.0,
+            range: (0.0, 0.0, 100.0, 100.0)
+        )
+        for furnitureBlock in furnitureBlocks {
+            let blockMeshNode = MeshNode(
+                mesh: blockMesh, category: 1
+            )
+            blockMeshNode.position = simd_float3(
+                furnitureBlock.0.x, furnitureBlock.1,
+                furnitureBlock.0.y
+            )
+            blockMeshNode.scale = furnitureBlock.2
+            blockMeshNode.data.2 = furnitureBlock.3
+            self.meshNodes.append(blockMeshNode)
+            NodeManager.attach(node: blockMeshNode)
         }
     }
 }

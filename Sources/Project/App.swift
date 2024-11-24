@@ -112,6 +112,11 @@ import CameraKit
         self.renderer.createFoundationalBuildings(
             foundationalBuildingBlocks: self.simulator.foundationalBuildingBlocks
         )
+        
+        // create the furnitures
+        self.renderer.createFurnitures(
+            furnitureBlocks: self.simulator.furnitureBlocks
+        )
     }
     
     // define the update behavior
