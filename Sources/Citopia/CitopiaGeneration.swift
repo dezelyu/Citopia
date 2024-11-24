@@ -880,6 +880,19 @@ extension Citopia {
                 if (bedZ > 0) {
                     connect(nodeIndex, nodePositionIndexArray[bedX + (bedZ - 1) * (numBedsX + 1)].1)
                 }
+                if (bedX > 0 && bedZ > 0) {
+                    
+                    // create a map node for bed
+                    var mapNode = MapNodeData()
+                    mapNode.position += self.mapNodes[nodeIndex].position
+                    mapNode.position += self.mapNodes[nodePositionIndexArray[(bedX - 1) + bedZ * (numBedsX + 1)].1].position
+                    mapNode.position /= 2.0
+                    self.mapNodes.append(mapNode)
+                    
+                    // connect the bed node with the left and right node
+                    connect(self.mapNodes.count - 1, nodeIndex)
+                    connect(self.mapNodes.count - 1, nodePositionIndexArray[(bedX - 1) + bedZ * (numBedsX + 1)].1)
+                }
             }
         }
         

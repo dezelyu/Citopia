@@ -191,7 +191,7 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
     const float3 position = character.position.xyz;
     
     // update the destination when the character reaches the current destination
-    if (length(destination - position) < 0.5f) {
+    if (length(destination - position) < 0.25f) {
         const MapNodeData currentMapNode = mapNodes[character.data.w];
         const int currentMapNodeConnectionCount = currentMapNode.data.w;
         if (currentMapNodeConnectionCount > 0) {
