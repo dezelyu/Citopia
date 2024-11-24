@@ -518,12 +518,27 @@ extension Citopia {
             }
         }
         
+        // initialize the apartments
+        var apartmentIndices: Set<simd_int2> = []
+        let apartmentBedCount = Int(self.blockSideLength / 2.5) * Int(self.blockSideLength / 3.5)
+        let apartmentCount = self.characterCount / apartmentBedCount + 1
+        while (buildingIndices.count > 0 && apartmentIndices.count < apartmentCount) {
+            let randomBuildingIndex = buildingIndices.randomElement()!
+            buildingIndices.remove(randomBuildingIndex)
+            apartmentIndices.insert(randomBuildingIndex)
+        }
+        
         // initialize the buildings
         for x in 0..<self.blockCount {
             for z in 0..<self.blockCount {
                 
                 // define the color index of the building
-                let buildingColorIndex = Int(2)
+                var buildingColorIndex = Int(2)
+                
+                // colorize the building corresponding to its type
+                if (apartmentIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    buildingColorIndex = 0
+                }
                 
                 // generate the building decorations
                 self.generateBuildingDecorations(
@@ -536,23 +551,8 @@ extension Citopia {
                     (Float(z) + 0.5) * (self.blockSideLength + self.blockDistance)
                 )
                 
-                // define an array of the indices of the map nodes inside the building
-                var mapNodeIndices: [Int] = []
-                
-                // create a single map node at the center of the building
-                var mapNode = MapNodeData()
-                mapNode.position = simd_float4(
-                    blockPosition.x + origin.x, 0.0,
-                    blockPosition.y + origin.y, 0.0
-                )
-                mapNode.dimension = simd_float4(
-                    self.blockSideLength * 0.8, 0.0,
-                    self.blockSideLength * 0.8, 0.0
-                )
-                self.mapNodes.append(mapNode)
-                
-                // store the index of the single map node
-                mapNodeIndices.append(self.mapNodes.count - 1)
+                // define an array of the indices of the interior entrance nodes
+                var interiorEntranceNodeIndices: [Int] = []
                 
                 // define a closure for connecting two map nodes
                 let connect: (Int, Int) -> () = { a, b in
@@ -637,8 +637,8 @@ extension Citopia {
                     // connect the interior entrance node with the exterior entrance node
                     connect(self.mapNodes.count - 1, self.mapNodes.count - 2)
                     
-                    // connect the interior entrance node with the building node
-                    connect(self.mapNodes.count - 1, mapNodeIndices[0])
+                    // store the index of the interior entrance node
+                    interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
                     
                     // create a large wall
                 } else {
@@ -693,8 +693,8 @@ extension Citopia {
                     // connect the interior entrance node with the exterior entrance node
                     connect(self.mapNodes.count - 1, self.mapNodes.count - 2)
                     
-                    // connect the interior entrance node with the building node
-                    connect(self.mapNodes.count - 1, mapNodeIndices[0])
+                    // store the index of the interior entrance node
+                    interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
                     
                     // create a large wall
                 } else {
@@ -749,8 +749,8 @@ extension Citopia {
                     // connect the interior entrance node with the exterior entrance node
                     connect(self.mapNodes.count - 1, self.mapNodes.count - 2)
                     
-                    // connect the interior entrance node with the building node
-                    connect(self.mapNodes.count - 1, mapNodeIndices[0])
+                    // store the index of the interior entrance node
+                    interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
                     
                     // create a large wall
                 } else {
@@ -805,8 +805,8 @@ extension Citopia {
                     // connect the interior entrance node with the exterior entrance node
                     connect(self.mapNodes.count - 1, self.mapNodes.count - 2)
                     
-                    // connect the interior entrance node with the building node
-                    connect(self.mapNodes.count - 1, mapNodeIndices[0])
+                    // store the index of the interior entrance node
+                    interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
                     
                     // create a large wall
                 } else {
@@ -817,7 +817,40 @@ extension Citopia {
                         ), 0.0, simd_float3(self.blockSideLength, 3.0, 0.2), buildingColorIndex
                     ))
                 }
+                
+                // initialize the building as an apartment building
+                if (apartmentIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    self.initializeApartmentBuildingInterior(
+                        origin: origin, blockPosition: blockPosition,
+                        interiorEntranceNodeIndices: interiorEntranceNodeIndices,
+                        connect: connect
+                    )
+                }
             }
+        }
+    }
+    
+    // define the function that initializes the apartment building interior
+    func initializeApartmentBuildingInterior(origin: simd_float2, 
+                                             blockPosition: simd_float2,
+                                             interiorEntranceNodeIndices: [Int],
+                                             connect: (Int, Int) -> ()) {
+        
+        // create a single map node at the center of the building
+        var mapNode = MapNodeData()
+        mapNode.position = simd_float4(
+            blockPosition.x + origin.x, 0.0,
+            blockPosition.y + origin.y, 0.0
+        )
+        mapNode.dimension = simd_float4(
+            self.blockSideLength * 0.8, 0.0,
+            self.blockSideLength * 0.8, 0.0
+        )
+        self.mapNodes.append(mapNode)
+        
+        // connect the map node with the interior entrance nodes
+        for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
+            connect(interiorEntranceNodeIndex, self.mapNodes.count - 1)
         }
     }
 }
