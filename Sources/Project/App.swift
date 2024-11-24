@@ -54,7 +54,7 @@ import CameraKit
             data: String()
         )
         NodeManager.configure(
-            capacity: (1000000, 1000)
+            capacity: (2000000, 1000)
         )
         MeshManager.configure(
             capacity: (100, 1000000, 1000000, 10000, 1000000, 1)

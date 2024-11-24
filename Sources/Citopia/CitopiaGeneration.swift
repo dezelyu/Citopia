@@ -64,7 +64,7 @@ extension Citopia {
                         Float(z) * (self.blockSideLength + self.blockDistance)
                     )
                     let blockSize = simd_float3(
-                        self.blockSideLength - 1.0, Float(Int.random(in: 1...5) * 3),
+                        self.blockSideLength - 1.0, Float(Int.random(in: 1...5) * 3) - 0.2,
                         self.blockDistance
                     )
                     self.foundationalBuildingBlocks.append((
@@ -80,7 +80,7 @@ extension Citopia {
                         (Float(z) - 0.5) * (self.blockSideLength + self.blockDistance)
                     )
                     let blockSize = simd_float3(
-                        self.blockDistance, Float(Int.random(in: 1...5) * 3),
+                        self.blockDistance, Float(Int.random(in: 1...5) * 3) - 0.2,
                         self.blockSideLength - 1.0
                     )
                     self.foundationalBuildingBlocks.append((
@@ -836,21 +836,60 @@ extension Citopia {
                                              interiorEntranceNodeIndices: [Int],
                                              connect: (Int, Int) -> ()) {
         
-        // create a single map node at the center of the building
-        var mapNode = MapNodeData()
-        mapNode.position = simd_float4(
-            blockPosition.x + origin.x, 0.0,
-            blockPosition.y + origin.y, 0.0
-        )
-        mapNode.dimension = simd_float4(
-            self.blockSideLength * 0.8, 0.0,
-            self.blockSideLength * 0.8, 0.0
-        )
-        self.mapNodes.append(mapNode)
+        // create the beds
+        let numBedsX = Int(self.blockSideLength / 2.5)
+        let numBedsZ = Int(self.blockSideLength / 3.5)
+        let distanceBetweenBedsX = self.blockSideLength / Float(numBedsX + 1)
+        let distanceBetweenBedsZ = self.blockSideLength / Float(numBedsZ + 1)
+        for bedX in 1...numBedsX {
+            for bedZ in 1...numBedsZ {
+                let offsetX = distanceBetweenBedsX * Float(bedX)
+                let offsetZ = distanceBetweenBedsZ * Float(bedZ)
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ), 0.05,
+                    simd_float3(
+                        1.0, 0.2, 2.0
+                    ), 1
+                ))
+            }
+        }
+        
+        // create an array storing the node position and index
+        var nodePositionIndexArray: [(simd_float4, Int)] = []
+        
+        // create a map node for each space between beds
+        let nodeOffset = simd_float2((distanceBetweenBedsX) / 2.0, (distanceBetweenBedsZ) / 2.0)
+        for bedZ in 0...numBedsZ {
+            for bedX in 0...numBedsX {
+                let offsetX = distanceBetweenBedsX * Float(bedX)
+                let offsetZ = distanceBetweenBedsZ * Float(bedZ)
+                let nodePosition = blockPosition + origin + nodeOffset - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ)
+                var mapNode = MapNodeData()
+                mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+                self.mapNodes.append(mapNode)
+                nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
+            }
+        }
+        for bedZ in 0...numBedsZ {
+            for bedX in 0...numBedsX {
+                let nodeIndexInArray = bedX + bedZ * (numBedsX + 1)
+                let nodeIndex = nodePositionIndexArray[nodeIndexInArray].1
+                if (bedX > 0) {
+                    connect(nodeIndex, nodePositionIndexArray[(bedX - 1) + bedZ * (numBedsX + 1)].1)
+                }
+                if (bedZ > 0) {
+                    connect(nodeIndex, nodePositionIndexArray[bedX + (bedZ - 1) * (numBedsX + 1)].1)
+                }
+            }
+        }
         
         // connect the map node with the interior entrance nodes
         for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
-            connect(interiorEntranceNodeIndex, self.mapNodes.count - 1)
+            let position = self.mapNodes[interiorEntranceNodeIndex].position
+            let array = nodePositionIndexArray.sorted {
+                distance(position, $0.0) < distance(position, $1.0)
+            }
+            connect(interiorEntranceNodeIndex, array[0].1)
         }
     }
 }
