@@ -26,9 +26,6 @@ import CameraKit
     // define the distance between two blocks in meters
     let blockDistance: Float = 10
     
-    // define the maximum number of characters per grid
-    let maxNumCharactersPerGrid: Int = 40
-    
     // define the graphics device
     var device: MTLDevice!
     
@@ -108,9 +105,7 @@ import CameraKit
         )
         
         // create the grid acceleration structure
-        self.simulator.createGrids(
-            maxNumCharactersPerGrid: self.maxNumCharactersPerGrid
-        )
+        self.simulator.createGrids()
         
         // create the foundational buildings
         self.renderer.createFoundationalBuildings(

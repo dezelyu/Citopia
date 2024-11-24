@@ -130,9 +130,10 @@ struct MapNodeData {
 
 struct GridData {
     
-    // define the index of the next grid, used to store additional characters
-    //  - next.x = next grid index
-    var next: simd_int4 = .zero
+    // define the index of start and end character index
+    //  - data.x = start index
+    //  - data.y = end index
+    var data: simd_int4 = .zero
 }
 
 // define the class for performing the simulation
@@ -150,17 +151,11 @@ class Citopia {
     // define the map grid count
     var mapGridCount: Int = 0
     
-    // define the grid count for storing additional characters
-    var linkedGridCount: Int = 0
-    
     // define the grid dimension in x
     var gridLengthX: Float = 0
     
     // define the grid dimension in z
     var gridLengthZ: Float = 0
-    
-    // define the max number of characters per grid
-    var maxNumCharactersPerGrid: Int = 0
     
     // define the max visible distance
     var maxVisibleDistance: Float = 100.0
@@ -194,9 +189,6 @@ class Citopia {
     
     // define the storage buffer for the character count per grid data
     var characterCountPerGridBuffer: MTLBuffer!
-    
-    // define the storage buffer for the character count per linked grid data
-    var characterCountPerLinkedGridBuffer: MTLBuffer!
     
     // define the storage buffer for the initial character count per grid data
     var initialCharacterCountPerGridBuffer: MTLBuffer!
@@ -318,10 +310,7 @@ class Citopia {
     }
     
     // define the grid data creator
-    func createGrids(maxNumCharactersPerGrid: Int) {
-        
-        // set the max number of characters per grid
-        self.maxNumCharactersPerGrid = maxNumCharactersPerGrid
+    func createGrids() {
         
         // create the grid data buffers
         self.createGridDataBuffer()
@@ -375,7 +364,7 @@ class Citopia {
             encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 3)
             encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 4)
             encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
-            encoder.setBuffer(self.characterCountPerLinkedGridBuffer, offset: 0, index: 6)
+            encoder.setBuffer(self.characterCountPerGridBuffer, offset: 0, index: 6)
             
             // perform the naive simulation
             encoder.dispatchThreadgroups(
@@ -393,11 +382,6 @@ class Citopia {
                 from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
                 to: self.characterCountPerGridBuffer, destinationOffset: 0,
                 size: self.characterCountPerGridBuffer.length
-            )
-            encoder.copy(
-                from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
-                to: self.characterCountPerLinkedGridBuffer, destinationOffset: 0,
-                size: self.characterCountPerLinkedGridBuffer.length
             )
             encoder.copy(
                 from: self.initialGridDataBuffer, sourceOffset: 0,
@@ -436,11 +420,30 @@ class Citopia {
                 threadsPerThreadgroup: MTLSizeMake(self.assignLinkedGridPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
+            // finish encoding
+            encoder.endEncoding()
+        } else {
+            fatalError()
+        }
+        
+        if let encoder = commandBuffer.makeBlitCommandEncoder() {
+            encoder.copy(
+                from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
+                to: self.characterCountPerGridBuffer, destinationOffset: 0,
+                size: self.characterCountPerGridBuffer.length
+            )
+            encoder.endEncoding()
+        } else {
+            fatalError()
+        }
+        
+        if let encoder = commandBuffer.makeComputeCommandEncoder() {
+            
             // configure the set character index per grid
             encoder.setComputePipelineState(self.setCharacterIndexPerGridPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-            encoder.setBuffer(self.characterCountPerLinkedGridBuffer,  offset: 0, index: 2)
+            encoder.setBuffer(self.characterCountPerGridBuffer,  offset: 0, index: 2)
             encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
             encoder.setBuffer(self.gridDataBuffer,  offset: 0, index: 4)
             

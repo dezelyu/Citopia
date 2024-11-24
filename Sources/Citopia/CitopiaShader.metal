@@ -40,8 +40,6 @@ struct FrameData {
     
     // define the grid data
     //  - gridData.x = mapGridCount
-    //  - gridData.y = linkedGridCount
-    //  - gridData.z = maxNumCharactersPerGrid
     uint4 gridData;
     
     // define the grid dimension data
@@ -126,9 +124,10 @@ struct MapNodeData {
 // define the grid data
 struct GridData {
     
-    // define the index of the next grid, used to store additional characters
-    //  - next.x = next grid index
-    int4 next;
+    // define the index of start and end character index
+    //  - data.x = start index
+    //  - data.y = end index
+    uint4 data;
 };
 
 float hash1D(float n) {
@@ -294,18 +293,10 @@ kernel void AssignLinkedGridFunction(constant FrameData& frame [[buffer(0)]],
         return;
     }
     
-    const uint maxNumCharactersPerGrid = frame.gridData.z;
     const uint charactersInGrid = characterCountPerGrid[index];
-    if (charactersInGrid > maxNumCharactersPerGrid) {
-        const uint numLinked = charactersInGrid / maxNumCharactersPerGrid;
-        uint nextGridIndex = atomic_fetch_add_explicit(&nextAvailableGridIndex[0], numLinked, memory_order_relaxed);
-        uint linkedGridIndex = index;
-        for (uint i = 0; i < numLinked; ++i){
-            gridData[linkedGridIndex].next.x = nextGridIndex;
-            linkedGridIndex = nextGridIndex;
-            nextGridIndex++;
-        }
-    }
+    const uint startIndex = atomic_fetch_add_explicit(&nextAvailableGridIndex[0], charactersInGrid, memory_order_relaxed);
+    gridData[index].data.x = startIndex;
+    gridData[index].data.y = startIndex + charactersInGrid - 1;
 }
 
 // define the set character index per grid
@@ -332,25 +323,14 @@ kernel void SetCharacterIndexPerGridFunction(constant FrameData& frame [[buffer(
     const float3 characterPosition = clamp(characters[index].position.xyz + gridCenter,
                                            float3(0.0f, 0.0f, 0.0f),
                                            float3(width, 0.0f, height));
-    const uint maxNumCharactersPerGrid = frame.gridData.z;
     
     const uint gridIndexX = uint(characterPosition.x / gridLengthX);
     const uint gridIndexZ = uint(characterPosition.z / gridLengthZ);
     const uint gridIndex = gridIndexX + gridIndexZ * gridDim;
     
-    const uint prevIndex = atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
-    if (prevIndex < maxNumCharactersPerGrid) {
-        characterIndexBuffer[gridIndex * maxNumCharactersPerGrid + prevIndex] = index;
-    } else {
-        const uint numLinked = prevIndex / maxNumCharactersPerGrid;
-        const uint indexInLinkedGrid = prevIndex % maxNumCharactersPerGrid;
-        uint linkedGridIndex = gridIndex;
-        for (uint i = 0; i < numLinked; ++i) {
-            linkedGridIndex = gridData[linkedGridIndex].next.x;
-        }
-        characterIndexBuffer[linkedGridIndex * maxNumCharactersPerGrid + indexInLinkedGrid] = index;
-        atomic_fetch_add_explicit(&characterCountPerGrid[linkedGridIndex], 1, memory_order_relaxed);
-    }
+    const uint prevCount = atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
+    const uint startIndex = gridData[gridIndex].data.x;
+    characterIndexBuffer[startIndex + prevCount] = index;
 }
 
 // define the find visible characters function
