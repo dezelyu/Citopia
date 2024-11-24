@@ -260,7 +260,20 @@ class Citopia {
     var mapNodeBuffer: MTLBuffer!
     
     // define the constructor
-    init(device: MTLDevice) {
+    init(device: MTLDevice,
+         characterCount: Int, visibleCharacterCount: Int,
+         blockCount: Int, blockSideLength: Float, blockDistance: Float) {
+        
+        // save the arguments
+        let sideCount = Int(ceil(Float(self.blockCount + 2) / 2.0))
+        self.characterCount = characterCount
+        self.visibleCharacterCount = visibleCharacterCount
+        self.blockCount = blockCount
+        self.blockSideLength = blockSideLength
+        self.blockDistance = blockDistance
+        self.mapGridCount = sideCount * sideCount
+        self.gridLengthX = 2 * (self.blockSideLength + self.blockDistance)
+        self.gridLengthZ = 2 * (self.blockSideLength + self.blockDistance)
         
         // store the graphics device
         self.device = device
@@ -291,14 +304,8 @@ class Citopia {
     }
     
     // define the character creator
-    func createCharacters(characterCount: Int, visibleCharacterCount: Int, visibleCharacterBuffer: MTLBuffer) {
-        
-        // store the total number of characters to simulate
-        self.characterCount = characterCount
-        
-        // store the total number of visible characters
-        self.visibleCharacterCount = visibleCharacterCount
-        
+    func createCharacters(visibleCharacterBuffer: MTLBuffer) {
+                
         // create the character buffer
         self.createCharacterBuffer()
         

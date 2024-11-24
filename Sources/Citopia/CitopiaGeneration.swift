@@ -6,13 +6,8 @@ import MetalKit
 extension Citopia {
     
     // define the function that generates the exterior map
-    func generateExteriorMap(blockCount: Int, blockSideLength: Float, blockDistance: Float) {
-        
-        // save the arguments
-        self.blockCount = blockCount
-        self.blockSideLength = blockSideLength
-        self.blockDistance = blockDistance
-        
+    func generateExteriorMap() {
+
         // iterate through all the grid points to initialize the exterior connection data
         for x in 0...self.blockCount {
             for z in 0...self.blockCount {
@@ -130,12 +125,6 @@ extension Citopia {
                 self.mapNodes.append(mapNode)
             }
         }
-        
-        // save the grid dimension data
-        let sideCount = Int(ceil(Float(self.blockCount + 2) / 2.0))
-        self.mapGridCount = sideCount * sideCount
-        self.gridLengthX = 2 * (self.blockSideLength + self.blockDistance)
-        self.gridLengthZ = 2 * (self.blockSideLength + self.blockDistance)
     }
     
     // define the function that generates the building decorations

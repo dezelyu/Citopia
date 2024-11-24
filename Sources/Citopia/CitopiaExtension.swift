@@ -344,25 +344,20 @@ extension Citopia {
                 .storageModePrivate,
             ]
         )!
+        
         // update the label of the grid data buffer
         self.gridDataBuffer.label = "GridDataBuffer"
         
-        // create a staging buffer with the initial grid data buffer
-        let stagingBuffer = self.device.makeBuffer(
-            length: MemoryLayout<GridData>.stride * self.mapGridCount,
-            options: [
-                .cpuCacheModeWriteCombined,
-                .storageModeShared,
-            ]
-        )!
-        
-        // create a shared storage buffer
+        // create a private storage buffer
         self.initialGridDataBuffer = self.device.makeBuffer(
             length: MemoryLayout<GridData>.stride * self.mapGridCount,
             options: [
                 .storageModePrivate
             ]
         )!
+        
+        // update the label of the initial grid data buffer
+        self.initialGridDataBuffer.label = "InitialGridDataBuffer"
     }
     
     // define the function that creates the character index buffer per grid
