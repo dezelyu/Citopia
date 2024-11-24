@@ -268,7 +268,7 @@ class Citopia {
          blockCount: Int, blockSideLength: Float, blockDistance: Float) {
         
         // save the arguments
-        let sideCount = Int(ceil(Float(self.blockCount + 2) / 2.0))
+        let sideCount = Int(ceil(Float(blockCount + 2) / 2.0))
         self.characterCount = characterCount
         self.visibleCharacterCount = visibleCharacterCount
         self.blockCount = blockCount
