@@ -82,14 +82,17 @@ import CameraKit
         )
         
         // create a new simulation instance
-        self.simulator = Citopia(device: self.device)
-        
-        // generate the exterior map
-        self.simulator.generateExteriorMap(
+        self.simulator = Citopia(
+            device: self.device,
+            characterCount: self.characterCount,
+            visibleCharacterCount: self.visibleCharacterCount,
             blockCount: self.blockCount,
             blockSideLength: self.blockSideLength,
             blockDistance: self.blockDistance
         )
+        
+        // generate the exterior map
+        self.simulator.generateExteriorMap()
         
         // generate the buildings
         self.simulator.generateBuildings()
@@ -99,8 +102,6 @@ import CameraKit
         
         // create the simulation characters
         self.simulator.createCharacters(
-            characterCount: self.characterCount,
-            visibleCharacterCount: self.visibleCharacterCount,
             visibleCharacterBuffer: self.renderer.visibleCharacterBuffer.0
         )
         
