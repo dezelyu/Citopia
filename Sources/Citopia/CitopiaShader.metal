@@ -3,20 +3,22 @@
 #include <metal_stdlib>
 using namespace metal;
 
-// math constants
+// define the global constants
 constant float PI = 3.1415926535f;
+constant float characterMovementDampingFactor = 0.2f;
+constant float characterModelScale = 0.01f;
 
-// global constants
-constant float CHARACTER_SCALE = 0.01f;
-
-// motion constants
-constant float SPEED_DAMP_FACTOR = 0.1f;
-constant float ROTATION_DAMP_FACTOR = 0.05f;
-
-//animation constants
-constant float WALK0_DURATION = 1.033333f;
-constant float WALK0_ATTACK = 0.4f;
-constant float WALK0_SPEED = 0.027f;
+// define the motion controller constants
+constant uint motionCount = 1;
+constant float motionDurations[motionCount] = {
+    1.033333f,
+};
+constant float motionAttacks[motionCount] = {
+    0.4f,
+};
+constant float motionRelatedMovementSpeed[motionCount] = {
+    0.027f,
+};
 
 // define the frame data
 struct FrameData {
@@ -58,7 +60,6 @@ struct CharacterData {
     //  - data.x = gender (0: female, 1: male)
     //  - data.y = age (20 - 40)
     //  - data.z = color
-    //  - data.w = destination
     uint4 data;
     
     // define the states of the character
@@ -76,11 +77,19 @@ struct CharacterData {
     // define the stats of the character
     //  - stats[0] = energy (restored by sleeping)
     //  - stats[1] = energy restoration
+    //  - stats[2] = energy consumption
     float stats[12];
     
     // define the unique addresses of the character
     //  - addresses[0] = the bed in the apartment
     int4 addresses[4];
+    
+    // define the navigation data of the character
+    //  - navigation.x = the ultimate destination map node index
+    //  - navigation.y = the desired map node type
+    //  - navigation.z = the temporary destination map node index
+    //  - navigation.w = the previous map node index
+    int4 navigation;
     
     // define the position of the character
     float4 position;
@@ -88,12 +97,12 @@ struct CharacterData {
     // define the destination of the character
     float4 destination;
     
-    // define the motion information of the character
-    //   - motionInformation.x = current speed
-    //   - motionInformation.y = target speed
-    //   - motionInformation.z = current anticlockwise angle in radians
-    //   - motionInformation.w = target anticlockwise rotation angle in radians
-    float4 motionInformation;
+    // define the movement data of the character
+    //   - movement.x = current speed
+    //   - movement.y = target speed
+    //   - movement.z = current rotation
+    //   - movement.w = target rotation
+    float4 movement;
     
     // define the motion controllers
     float4x2 motionControllers[50];
@@ -186,33 +195,100 @@ float3 hash3D(float3 p) {
                   fract(sin(n + PI) * 43758.5453123f));
 }
 
-// update a looped motion
-float4x2 updateLoopedMotion(float4x2 controller, const float duration, const float speed,
-                            const float weight, const float attack, const float time) {
-    const float offset = speed * (time - controller[3][1]);
-    if (offset < attack) {
-        const float factor = 0.5f - cos(offset / attack * PI) * 0.5f;
+// define the function that updates a motion of a character
+void updateMotion(thread CharacterData& character, const int motionIndex,
+                  const float targetSpeed, const float targetBlendWeight,
+                  const float currentTime) {
+    float4x2 controller = character.motionControllers[motionIndex];
+    const float offset = targetSpeed * (currentTime - controller[3][1]);
+    if (offset < motionAttacks[motionIndex]) {
+        const float factor = 0.5f - cos(offset / motionAttacks[motionIndex] * PI) * 0.5f;
         controller[1][0] = controller[1][0] * (1.0 - factor) + controller[1][1] * factor;
     } else {
         controller[1][0] = controller[1][1];
     }
-    const float progress = fmod(speed * (time - controller[3][0]), duration);
-    controller[0] = float2(duration, speed);
-    controller[1][1] = clamp(weight, 0.0001f, 1.0f);
-    controller[2] = float2(attack);
-    controller[3] = float2(time - (controller[1][0] <= 0.0001f ? 0.0f : progress) / speed, time);
-    return controller;
+    const float progress = fmod(targetSpeed * (currentTime - controller[3][0]),
+                                motionDurations[motionIndex]);
+    controller[0][0] = motionDurations[motionIndex];
+    controller[0][1] = targetSpeed;
+    controller[1][1] = clamp(targetBlendWeight, 0.0001f, 1.0f);
+    controller[2][0] = motionAttacks[motionIndex];
+    controller[2][1] = motionAttacks[motionIndex];
+    controller[3][0] = currentTime - (controller[1][0] <= 0.0001f ? 0.0f : progress) / targetSpeed;
+    controller[3][1] = currentTime;
+    character.motionControllers[motionIndex] = controller;
 }
 
-// define the naive simulation function
-kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
-                                    device CharacterData* characters [[buffer(1)]],
-                                    const device MapNodeData* mapNodes [[buffer(2)]],
-                                    const device BuildingData* buildings [[buffer(3)]],
-                                    const device GridData* gridData [[buffer(4)]],
-                                    const device uint* characterIndexBuffer [[buffer(5)]],
-                                    const device uint* characterCountPerGrid [[buffer(6)]],
-                                    const uint index [[thread_position_in_grid]]) {
+// define the function that updates the navigation data of a character
+bool updateNavigation(thread CharacterData& character,
+                      const device MapNodeData* mapNodes,
+                      const float randomNumber) {
+    if (length(character.destination - character.position) > 0.25f) {
+        return false;
+    }
+    const MapNodeData mapNode = mapNodes[character.navigation.z];
+    int connections[16];
+    int connectionCount = 0;
+    int desiredMapNodeIndex = -1;
+    for (int index = 0; index < mapNode.data.w; index += 1) {
+        const int connection = mapNode.connections[index];
+        if (connection == character.navigation.x) {
+            character.navigation.w = character.navigation.z;
+            character.navigation.z = connection;
+            return true;
+        }
+        if (connection != character.navigation.w) {
+            connections[connectionCount] = connection;
+            connectionCount += 1;
+            if (mapNodes[connection].data.x == character.navigation.y) {
+                desiredMapNodeIndex = connection;
+            }
+        }
+    }
+    if (connectionCount == 0) {
+        character.navigation.w = character.navigation.z;
+        character.navigation.z = character.navigation.w;
+        return true;
+    }
+    if (desiredMapNodeIndex >= 0) {
+        character.navigation.w = character.navigation.z;
+        character.navigation.z = desiredMapNodeIndex;
+        return true;
+    }
+    character.navigation.w = character.navigation.z;
+    character.navigation.z = connections[
+        int(float(connectionCount) * fract(randomNumber))
+    ];
+    return true;
+}
+
+// define the function that updates the character movement
+void updateMovement(thread CharacterData& character, constant FrameData& frame) {
+    const float speedOffset = character.movement.y - character.movement.x;
+    character.movement.x += speedOffset * frame.data.y * characterMovementDampingFactor;
+    while (character.movement.w - character.movement.z > PI) {
+        character.movement.w -= PI * 2.0f;
+    }
+    while (character.movement.w - character.movement.z > PI) {
+        character.movement.w += PI * 2.0f;
+    }
+    const float rotationOffset = character.movement.w - character.movement.z;
+    character.movement.z += rotationOffset * frame.data.y * characterMovementDampingFactor;
+    const float directionX = cos(character.movement.z);
+    const float directionZ = sin(character.movement.z);
+    const float3 direction = normalize(float3(directionX, 0.0f, directionZ));
+    character.position.xyz += direction * character.movement.x * frame.data.y;
+}
+
+// define the simulation function
+kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
+                               device CharacterData* characters [[buffer(1)]],
+                               const device MapNodeData* mapNodes [[buffer(2)]],
+                               const device BuildingData* buildings [[buffer(3)]],
+                               const device GridData* gridData [[buffer(4)]],
+                               const device uint* characterIndexBuffer [[buffer(5)]],
+                               const device uint* characterCountPerGrid [[buffer(6)]],
+                               const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
     if (index >= frame.characterData.x) {
@@ -225,66 +301,31 @@ kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
     // acquire the current character
     CharacterData character = characters[index];
     
-    // acquire the destination and position of the character
-    const float3 destination = character.destination.xyz;
-    const float3 position = character.position.xyz;
-    
-    // update the destination when the character reaches the current destination
-    if (length(destination - position) < 0.25f) {
-        const MapNodeData currentMapNode = mapNodes[character.data.w];
-        const int currentMapNodeConnectionCount = currentMapNode.data.w;
-        if (currentMapNodeConnectionCount > 0) {
-            const float3 random = hash3D(fract(position) + float3(currentTime));
-            const int connectionIndex = int(float(currentMapNodeConnectionCount) * random.y);
-            const int newMapNodeIndex = currentMapNode.connections[connectionIndex];
-            const MapNodeData mapNode = mapNodes[newMapNodeIndex];
-            character.destination.xyz = mapNode.position.xyz;
-            character.destination.x += (2.0f * random.x - 1.0f) * mapNode.dimension.x * 0.3f;
-            character.destination.z += (2.0f * random.z - 1.0f) * mapNode.dimension.z * 0.3f;
-            character.data.w = uint(newMapNodeIndex);
-            
-            // acquire the walk motion controller
-            float4x2 motionController = character.motionControllers[0];
-            
-            // update the walk motion controller with the new parameters
-            const float animationSpeed = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
-            motionController = updateLoopedMotion(motionController, WALK0_DURATION, animationSpeed,
-                                                  1, WALK0_ATTACK, currentTime);
-            
-            // store the new walk motion controller
-            character.motionControllers[0] = motionController;
-            
-            // update the target speed
-            const float scale = 0.6f + float(character.data.y) * 0.01f;
-            character.motionInformation.y = animationSpeed * scale * WALK0_SPEED;
-        }
+    // perform destination update
+    const float3 random = hash3D(fract(character.position.xyz) + float3(currentTime));
+    if (updateNavigation(character, mapNodes, random.y)) {
+        
+        // update the destination
+        const MapNodeData mapNode = mapNodes[character.navigation.z];
+        character.destination.xyz = mapNode.position.xyz;
+        character.destination.x += (2.0f * random.x - 1.0f) * mapNode.dimension.x * 0.3f;
+        character.destination.z += (2.0f * random.z - 1.0f) * mapNode.dimension.z * 0.3f;
+        
+        // update the walk motion controller with the new parameters
+        const float animationSpeed = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
+        updateMotion(character, 0, animationSpeed, 1.0f, currentTime);
+        
+        // update the target speed
+        const float scale = 0.6f + float(character.data.y) * 0.01f;
+        character.movement.y = animationSpeed * scale * motionRelatedMovementSpeed[0];
     }
     
     // update the target angle
-    const float3 direction = normalize(destination - position);
-    float targetAngle = atan2(direction.z, direction.x);
-    float currentAngle = character.motionInformation.z;
-    while (targetAngle - currentAngle > PI) {
-        targetAngle -= PI * 2.0f;
-    }
-    while (currentAngle - targetAngle > PI) {
-        targetAngle += PI * 2.0f;
-    }
-    character.motionInformation.w = targetAngle;
+    const float4 direction = normalize(character.destination - character.position);
+    character.movement.w = atan2(direction.z, direction.x);
     
-    // update the current angle
-    character.motionInformation.z += (character.motionInformation.w - currentAngle) * ROTATION_DAMP_FACTOR;
-    
-    // compute the current angle
-    const float currentWalkingSpeed = character.motionInformation.x;
-    const float targetWalkingSpeed = character.motionInformation.y;
-    
-    // compute the current speed
-    const float3 walkingDirection = normalize(float3(cos(currentAngle), 0.0f, sin(currentAngle)));
-    character.motionInformation.x += (targetWalkingSpeed - currentWalkingSpeed) * SPEED_DAMP_FACTOR;
-    
-    // update the position
-    character.position.xyz += walkingDirection * character.motionInformation.x * frame.data.y;
+    // update the character movement
+    updateMovement(character, frame);
     
     // store the new character data
     characters[index] = character;
@@ -430,9 +471,9 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     visibleCharacters[index].data.x = characters[visibleCharacterIndex].data.x;
     visibleCharacters[index].data.z = characters[visibleCharacterIndex].data.z;
     
-    const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].motionInformation.z;
+    const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].movement.z;
     const float scale = 0.6f + float(characters[visibleCharacterIndex].data.y) * 0.01f;
-    const float3x3 rotationMatrixY = scale * CHARACTER_SCALE * float3x3(
+    const float3x3 rotationMatrixY = scale * characterModelScale * float3x3(
         cos(matrixAngle), 0.0f, -sin(matrixAngle),
         0.0f, 1.0f, 0.0f,
         sin(matrixAngle), 0.0f, cos(matrixAngle)

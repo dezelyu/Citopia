@@ -53,7 +53,6 @@ struct CharacterData {
     //  - data.x = gender (0: female, 1: male)
     //  - data.y = age (20 - 40)
     //  - data.z = color
-    //  - data.w = destination
     var data: simd_uint4 = .zero
     
     // define the states of the character
@@ -94,18 +93,25 @@ struct CharacterData {
         simd_int4(repeating: -1)
     )
     
+    // define the navigation data of the character
+    //  - navigation.x = the ultimate destination map node index
+    //  - navigation.y = the desired map node type
+    //  - navigation.z = the temporary destination map node index
+    //  - navigation.w = the previous map node index
+    var navigation: simd_int4 = .zero
+    
     // define the position of the character
     var position: simd_float4 = .zero
     
     // define the destination of the character
     var destination: simd_float4 = .zero
     
-    // define the motion information of the character
-    //   - motionInformation.x = current speed
-    //   - motionInformation.y = target speed
-    //   - motionInformation.z = current anticlockwise angle in radians
-    //   - motionInformation.w = target anticlockwise rotation angle in radians
-    var motionInformation: simd_float4 = .zero
+    // define the movement data of the character
+    //   - movement.x = current speed
+    //   - movement.y = target speed
+    //   - movement.z = current rotation
+    //   - movement.w = target rotation
+    var movement: simd_float4 = .zero
     
     // define the motion controllers
     var motionController: (
@@ -270,8 +276,8 @@ class Citopia {
     // define the atomic int for counting visible characters
     var visibleCharacterCountBuffer: MTLBuffer!
     
-    // define the naive simulation pipeline
-    var naiveSimulationPipeline: MTLComputePipelineState!
+    // define the simulation pipeline
+    var simulationPipeline: MTLComputePipelineState!
     
     // define the compute grid pipeline
     var computeGridPipeline: MTLComputePipelineState!
@@ -352,8 +358,8 @@ class Citopia {
         // create the frame buffer
         self.createFrameBuffer()
         
-        // create the naive simulation pipeline
-        self.createNaiveSimulationPipeline()
+        // create the simulation pipeline
+        self.createSimulationPipeline()
         
         // create the compute grid pipeline
         self.createComputeGridPipeline()
@@ -431,8 +437,8 @@ class Citopia {
                 threadsPerThreadgroup: MTLSizeMake(self.simulateVisibleCharacterPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
-            // configure the naive simulation pipeline
-            encoder.setComputePipelineState(self.naiveSimulationPipeline)
+            // configure the simulation pipeline
+            encoder.setComputePipelineState(self.simulationPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
             encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 2)
@@ -441,10 +447,10 @@ class Citopia {
             encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
             encoder.setBuffer(self.characterCountPerGridBuffer, offset: 0, index: 6)
             
-            // perform the naive simulation
+            // perform the simulation
             encoder.dispatchThreadgroups(
-                MTLSizeMake(self.characterCount / (self.naiveSimulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-                threadsPerThreadgroup: MTLSizeMake(self.naiveSimulationPipeline.threadExecutionWidth * 2, 1, 1)
+                MTLSizeMake(self.characterCount / (self.simulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
             encoder.endEncoding()

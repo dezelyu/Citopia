@@ -21,11 +21,11 @@ extension Citopia {
         self.frameBuffer.label = "FrameBuffer"
     }
     
-    // define the function that creates the naive simulation pipeline
-    func createNaiveSimulationPipeline() {
+    // define the function that creates the simulation pipeline
+    func createSimulationPipeline() {
         
         // acquire the function from the library
-        let function = self.library.makeFunction(name: "NaiveSimulationFunction")
+        let function = self.library.makeFunction(name: "SimulationFunction")
         
         // define the compute pipline descriptor
         let descriptor = MTLComputePipelineDescriptor()
@@ -33,7 +33,7 @@ extension Citopia {
         descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
         
         // create the compute pipeline state
-        self.naiveSimulationPipeline = try! self.device.makeComputePipelineState(
+        self.simulationPipeline = try! self.device.makeComputePipelineState(
             descriptor: descriptor, options: []
         ).0
     }
@@ -125,6 +125,9 @@ extension Citopia {
     // define the function that creates the character buffer
     func createCharacterBuffer() {
         
+        // update the total number of characters
+        self.characterCount = self.bedData.count
+        
         // create a staging buffer with the map node data
         let stagingBuffer = self.device.makeBuffer(
             length: MemoryLayout<CharacterData>.stride * self.bedData.count,
@@ -148,10 +151,6 @@ extension Citopia {
             // initialize age
             pointer[index].data.y = UInt32.random(in: 20...40)
             
-            // initialize the states
-            pointer[index].states.z = UInt32(bedData.y)
-            pointer[index].states.w = UInt32(bedData.y)
-            
             // initialize the stats
             pointer[index].stats.0 = Float.random(in: 0.0...1.0)
             pointer[index].stats.1 = 1.0 / (Float.random(in: 30.0...60.0) * 60.0)
@@ -160,14 +159,18 @@ extension Citopia {
             // initialize the addresses
             pointer[index].addresses.0 = bedData
             
+            // initialize the navigation data
+            pointer[index].navigation = simd_int4(
+                -1, -1,
+                Int32(bedData.y),
+                Int32(bedData.y)
+            )
+            
             // initialize position
             pointer[index].position = self.mapNodes[Int(bedData.y)].position
             
             // initialize destination
             pointer[index].destination = pointer[index].position
-            pointer[index].destination.x += 0.1
-            pointer[index].destination.z += 0.1
-            pointer[index].data.w = UInt32(bedData.y)
         }
         
         // create a private storage buffer
