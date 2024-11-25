@@ -307,6 +307,9 @@ class Renderer {
         let motionSceneNames = [
             ("Assets.scnassets/Motions/Idle0.scn", true, false),
             ("Assets.scnassets/Motions/Walk0.scn", true, false),
+            ("Assets.scnassets/Motions/SleepLoop.scn", true, false),
+            ("Assets.scnassets/Motions/SleepStart.scn", false, false),
+            ("Assets.scnassets/Motions/SleepEnd.scn", false, false),
         ]
         
         // load the motion scene assets
@@ -377,9 +380,16 @@ class Renderer {
                 // register the motion controllers
                 switch (index - 1) {
                     case 0:
-                        visibleCharacterData.motionControllerIndices.0 = Int32(
-                            motionNode.data.1
-                        )
+                        visibleCharacterData.motionControllerIndices.0 = Int32(motionNode.data.1)
+                        break
+                    case 1:
+                        visibleCharacterData.motionControllerIndices.1 = Int32(motionNode.data.1)
+                        break
+                    case 2:
+                        visibleCharacterData.motionControllerIndices.2 = Int32(motionNode.data.1)
+                        break
+                    case 3:
+                        visibleCharacterData.motionControllerIndices.3 = Int32(motionNode.data.1)
                         break
                     default:
                         break

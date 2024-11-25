@@ -9,15 +9,24 @@ constant float characterMovementDampingFactor = 0.1f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
-constant uint motionCount = 1;
+constant uint motionCount = 4;
 constant float motionDurations[motionCount] = {
-    1.033333f,
+    1.0f,
+    1.0f,
+    -2.0f,
+    -2.0f,
 };
 constant float motionAttacks[motionCount] = {
+    0.4f,
+    1.0f,
+    0.4f,
     0.4f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
     0.027f,
+    0.0f,
+    0.0f,
+    0.0f,
 };
 
 // define the frame data
@@ -213,6 +222,10 @@ void updateMotion(thread CharacterData& character, const int motionIndex,
                   const float targetSpeed, const float targetBlendWeight,
                   const float currentTime) {
     float4x2 controller = character.motionControllers[motionIndex];
+    if (motionDurations[motionIndex] < 0.0f) {
+        controller[3][0] = currentTime;
+        controller[3][1] = currentTime;
+    }
     const float offset = targetSpeed * (currentTime - controller[3][1]);
     if (offset < motionAttacks[motionIndex]) {
         const float factor = 0.5f - cos(offset / motionAttacks[motionIndex] * PI) * 0.5f;
@@ -223,7 +236,7 @@ void updateMotion(thread CharacterData& character, const int motionIndex,
     const float progress = fmod(targetSpeed * (currentTime - controller[3][0]),
                                 motionDurations[motionIndex]);
     controller[0][0] = motionDurations[motionIndex];
-    controller[0][1] = targetSpeed;
+    controller[0][1] = -targetSpeed;
     controller[1][1] = clamp(targetBlendWeight, 0.0001f, 1.0f);
     controller[2][0] = motionAttacks[motionIndex];
     controller[2][1] = motionAttacks[motionIndex];
@@ -480,15 +493,11 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     
     // update the character's stats
     const float sleepingFactor = (character.states.x == 1 && character.states.y == 2) ? 1.0f : 0.0f;
-    character.stats[0] += character.stats[1] * sleepingFactor * frame.data.y;
     character.stats[0] -= character.stats[2] * (1.0f - sleepingFactor) * frame.data.y;
     
     // update the character's goal based on the character's stats
     if (character.states.x != 1 && character.stats[0] <= 0.0f) {
         character.states.x = 1;
-        character.states.y = 0;
-    } else if (character.states.x == 1 && character.stats[0] >= 1.0f) {
-        character.states.x = 0;
         character.states.y = 0;
     }
     
@@ -500,16 +509,29 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             
             // perform sleeping when the character has arrived at the bed
             if (mapNode.data.x == 4 && length(character.destination - character.position) < 0.25f) {
-                
-                // stop the walk motion
                 if (character.states.y < 2) {
                     character.states.y = 2;
-                    updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
                     character.movement.y = 0.0f;
+                    updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+                    updateMotion(character, 1, motionSpeedFactor, 1.0f, currentTime);
+                    updateMotion(character, 2, motionSpeedFactor, 1.0f, currentTime);
+                } else if (character.states.y == 2) {
+                    character.stats[0] += character.stats[1];
+                    if (character.stats[0] >= 1.0f) {
+                        character.states.y = 3;
+                        updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
+                        updateMotion(character, 3, motionSpeedFactor, 1.0f, currentTime);
+                    }
+                } else if (character.states.y >= 3) {
+                    character.states.y += 1;
+                    if (character.states.y > 120) {
+                        character.states.x = 0;
+                        character.states.y = 0;
+                    }
                 }
                 
                 // update the character's movement explicitly
-                updateMovement(character, frame, character.destination, PI * 0.5f);
+                updateMovement(character, frame, character.destination, -PI * 0.5f);
                 
                 // avoid navigation and movement update
                 performNavigationUpdate = false;
