@@ -163,5 +163,5 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
     lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
     const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
-    return float4(float3(r < 1.0f ? lambert * 0.8f + 0.3f : 0.0f) * colors[material] * fog, 1.0f);
+    return float4(float3(r < 1.0f ? lambert * 0.8f + 0.2f : 0.0f) * colors[material] * fog, 1.0f);
 }

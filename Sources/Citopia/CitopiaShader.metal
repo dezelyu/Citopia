@@ -61,6 +61,18 @@ struct CharacterData {
     //  - data.w = destination
     uint4 data;
     
+    // define the states of the character
+    //  - states.x = goal
+    //      - 0 = wandering on the street
+    //      - 1 = sleeping (determined by energy)
+    //  - states.y = goal planner
+    //      - 0 = planning
+    //      - 1 = achieving
+    //      - 2 = completing
+    //      - 3 = terminating
+    //      - 4 = terminated
+    uint4 states;
+    
     // define the stats of the character
     //  - stats[0] = energy (restored by sleeping)
     //  - stats[1] = energy restoration
@@ -130,6 +142,24 @@ struct MapNodeData {
     int connections[16];
 };
 
+// define the building data
+struct BuildingData {
+    
+    // define the general building data
+    //  - data.x = type
+    //  - data.w = entrance count
+    int4 data;
+    
+    // define the position of the building
+    float4 position;
+    
+    // define the external entrances of the building
+    int externalEntrances[4];
+    
+    // define the internal entrances of the building
+    int internalEntrances[4];
+};
+
 // define the grid data
 struct GridData {
     
@@ -177,8 +207,8 @@ float4x2 updateLoopedMotion(float4x2 controller, const float duration, const flo
 // define the naive simulation function
 kernel void NaiveSimulationFunction(constant FrameData& frame [[buffer(0)]],
                                     device CharacterData* characters [[buffer(1)]],
-                                    device VisibleCharacterData* visibleCharacters [[buffer(2)]],
-                                    device MapNodeData* mapNodes [[buffer(3)]],
+                                    const device MapNodeData* mapNodes [[buffer(2)]],
+                                    const device BuildingData* buildings [[buffer(3)]],
                                     const device GridData* gridData [[buffer(4)]],
                                     const device uint* characterIndexBuffer [[buffer(5)]],
                                     const device uint* characterCountPerGrid [[buffer(6)]],

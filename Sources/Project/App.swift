@@ -100,6 +100,9 @@ import CameraKit
         // create the map node buffer
         self.simulator.createMapNodeBuffer()
         
+        // create the building buffer
+        self.simulator.createBuildingBuffer()
+        
         // create the simulation characters
         self.simulator.createCharacters(
             visibleCharacterBuffer: self.renderer.visibleCharacterBuffer.0

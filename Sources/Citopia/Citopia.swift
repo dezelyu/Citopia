@@ -56,9 +56,22 @@ struct CharacterData {
     //  - data.w = destination
     var data: simd_uint4 = .zero
     
+    // define the states of the character
+    //  - states.x = goal
+    //      - 0 = wandering on the street
+    //      - 1 = sleeping (determined by energy)
+    //  - states.y = goal planner
+    //      - 0 = planning
+    //      - 1 = achieving
+    //      - 2 = completing
+    //      - 3 = terminating
+    //      - 4 = terminated
+    var states: simd_uint4 = .zero
+    
     // define the stats of the character
     //  - stats[0] = energy (restored by sleeping)
     //  - stats[1] = energy restoration
+    //  - stats[2] = energy consumption
     var stats: (
         Float, Float, Float, Float,
         Float, Float, Float, Float,
@@ -151,6 +164,24 @@ struct MapNodeData {
     
     // define the connections of the map node
     var connections: simd_int16 = simd_int16(repeating: -1)
+}
+
+// define the building data
+struct BuildingData {
+    
+    // define the general building data
+    //  - data.x = type
+    //  - data.w = entrance count
+    var data: simd_int4 = .zero
+    
+    // define the position of the building
+    var position: simd_float4 = .zero
+    
+    // define the external entrances of the building
+    var externalEntrances: simd_int4 = simd_int4(repeating: -1)
+    
+    // define the internal entrances of the building
+    var internalEntrances: simd_int4 = simd_int4(repeating: -1)
 }
 
 struct GridData {
@@ -281,6 +312,9 @@ class Citopia {
     // define the furniture blocks to render
     var furnitureBlocks: [(simd_float2, Float, simd_float3, Int)] = []
     
+    // define an array of all the buildings
+    var buildings: [BuildingData] = []
+    
     // define the array for all the bed data
     var bedData: [simd_int4] = []
     
@@ -289,6 +323,9 @@ class Citopia {
     
     // define the storage buffer for the map node data
     var mapNodeBuffer: MTLBuffer!
+    
+    // define the storage buffer for the building data
+    var buildingBuffer: MTLBuffer!
     
     // define the constructor
     init(device: MTLDevice,
@@ -398,8 +435,8 @@ class Citopia {
             encoder.setComputePipelineState(self.naiveSimulationPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-            encoder.setBuffer(self.visibleCharacterBuffer, offset: 0, index: 2)
-            encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.buildingBuffer, offset: 0, index: 3)
             encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 4)
             encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
             encoder.setBuffer(self.characterCountPerGridBuffer, offset: 0, index: 6)

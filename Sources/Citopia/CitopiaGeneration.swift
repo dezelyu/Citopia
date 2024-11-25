@@ -523,23 +523,31 @@ extension Citopia {
         for x in 0..<self.blockCount {
             for z in 0..<self.blockCount {
                 
+                // define the block position
+                let blockPosition = simd_float2(
+                    (Float(x) + 0.5) * (self.blockSideLength + self.blockDistance),
+                    (Float(z) + 0.5) * (self.blockSideLength + self.blockDistance)
+                )
+                
+                // create a new building
+                var building = BuildingData()
+                building.position = simd_float4(
+                    blockPosition.x + origin.x, 0.0,
+                    blockPosition.y + origin.y, 0.0
+                )
+                
                 // define the color index of the building
                 var buildingColorIndex = Int(2)
                 
-                // colorize the building corresponding to its type
+                // initialize the building corresponding to its type
                 if (apartmentIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    building.data.x = 1
                     buildingColorIndex = Int.random(in: 23...28)
                 }
                 
                 // generate the building decorations
                 self.generateBuildingDecorations(
                     x: x, z: z, buildingColorIndex: buildingColorIndex
-                )
-                
-                // define the block position
-                let blockPosition = simd_float2(
-                    (Float(x) + 0.5) * (self.blockSideLength + self.blockDistance),
-                    (Float(z) + 0.5) * (self.blockSideLength + self.blockDistance)
                 )
                 
                 // define an array of the indices of the interior entrance nodes
@@ -633,6 +641,11 @@ extension Citopia {
                     // store the index of the interior entrance node
                     interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
                     
+                    // update the building data
+                    building.externalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 2)
+                    building.internalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 1)
+                    building.data.w += 1
+                    
                     // create a large wall
                 } else {
                     self.foundationalBuildingBlocks.append((
@@ -690,6 +703,11 @@ extension Citopia {
                     
                     // store the index of the interior entrance node
                     interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
+                    
+                    // update the building data
+                    building.externalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 2)
+                    building.internalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 1)
+                    building.data.w += 1
                     
                     // create a large wall
                 } else {
@@ -749,6 +767,11 @@ extension Citopia {
                     // store the index of the interior entrance node
                     interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
                     
+                    // update the building data
+                    building.externalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 2)
+                    building.internalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 1)
+                    building.data.w += 1
+                    
                     // create a large wall
                 } else {
                     self.foundationalBuildingBlocks.append((
@@ -807,6 +830,11 @@ extension Citopia {
                     // store the index of the interior entrance node
                     interiorEntranceNodeIndices.append(self.mapNodes.count - 1)
                     
+                    // update the building data
+                    building.externalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 2)
+                    building.internalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 1)
+                    building.data.w += 1
+                    
                     // create a large wall
                 } else {
                     self.foundationalBuildingBlocks.append((
@@ -820,17 +848,20 @@ extension Citopia {
                 // initialize the building as an apartment building
                 if (apartmentIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     self.initializeApartmentBuildingInterior(
-                        x: x, z: z, origin: origin, blockPosition: blockPosition,
+                        index: self.buildings.count, origin: origin, blockPosition: blockPosition,
                         interiorEntranceNodeIndices: interiorEntranceNodeIndices,
                         connect: connect
                     )
                 }
+                
+                // store the new building
+                self.buildings.append(building)
             }
         }
     }
     
     // define the function that initializes the apartment building interior
-    func initializeApartmentBuildingInterior(x: Int, z: Int,
+    func initializeApartmentBuildingInterior(index: Int,
                                              origin: simd_float2,
                                              blockPosition: simd_float2,
                                              interiorEntranceNodeIndices: [Int],
@@ -901,8 +932,7 @@ extension Citopia {
                     
                     // store the bed data
                     self.bedData.append(simd_int4(
-                        Int32(x), Int32(z),
-                        Int32(self.mapNodes.count - 1), 0
+                        Int32(index), Int32(self.mapNodes.count - 1), 0, 0
                     ))
                 }
             }

@@ -148,21 +148,26 @@ extension Citopia {
             // initialize age
             pointer[index].data.y = UInt32.random(in: 20...40)
             
+            // initialize the states
+            pointer[index].states.z = UInt32(bedData.y)
+            pointer[index].states.w = UInt32(bedData.y)
+            
             // initialize the stats
             pointer[index].stats.0 = Float.random(in: 0.0...1.0)
-            pointer[index].stats.1 = 1.0 / (Float.random(in: 10.0...20.0) * 60.0)
+            pointer[index].stats.1 = 1.0 / (Float.random(in: 30.0...60.0) * 60.0)
+            pointer[index].stats.2 = 1.0 / (Float.random(in: 300.0...600.0) * 60.0)
             
             // initialize the addresses
             pointer[index].addresses.0 = bedData
             
             // initialize position
-            pointer[index].position = self.mapNodes[Int(bedData.z)].position
+            pointer[index].position = self.mapNodes[Int(bedData.y)].position
             
             // initialize destination
             pointer[index].destination = pointer[index].position
             pointer[index].destination.x += 0.1
             pointer[index].destination.z += 0.1
-            pointer[index].data.w = UInt32(bedData.z)
+            pointer[index].data.w = UInt32(bedData.y)
         }
         
         // create a private storage buffer
@@ -486,5 +491,45 @@ extension Citopia {
         
         // clear the connection data
         self.exteriorConnectionData.removeAll()
+    }
+    
+    // define the function that creates the building buffer
+    func createBuildingBuffer() {
+        
+        // create a staging buffer with the building data
+        let stagingBuffer = self.device.makeBuffer(
+            bytes: self.buildings, length: MemoryLayout<BuildingData>.stride * self.buildings.count,
+            options: [
+                .cpuCacheModeWriteCombined,
+                .storageModeShared,
+            ]
+        )!
+        
+        // create a private storage buffer
+        self.buildingBuffer = self.device.makeBuffer(
+            length: MemoryLayout<BuildingData>.stride * self.buildings.count,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the building buffer
+        self.buildingBuffer.label = "BuildingBuffer"
+        
+        // copy data from the staging buffer to the private storage buffer
+        let commandQueue = self.device.makeCommandQueue()!
+        let command = commandQueue.makeCommandBuffer()!
+        let encoder = command.makeBlitCommandEncoder()!
+        encoder.copy(
+            from: stagingBuffer, sourceOffset: 0,
+            to: self.buildingBuffer, destinationOffset: 0,
+            size: stagingBuffer.length
+        )
+        encoder.endEncoding()
+        command.commit()
+        command.waitUntilCompleted()
+        
+        // clear the building data
+        self.buildings.removeAll()
     }
 }
