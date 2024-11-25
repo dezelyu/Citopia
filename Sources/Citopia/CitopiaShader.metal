@@ -5,7 +5,7 @@ using namespace metal;
 
 // define the global constants
 constant float PI = 3.1415926535f;
-constant float characterMovementDampingFactor = 0.15f;
+constant float characterMovementDampingFactor = 0.1f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
@@ -355,7 +355,10 @@ void updateNavigation(thread CharacterData& character,
 // define the function that updates the character movement
 void updateMovement(thread CharacterData& character, constant FrameData& frame) {
     const float speedOffset = character.movement.y - character.movement.x;
-    character.movement.x += speedOffset * frame.data.y * characterMovementDampingFactor;
+    const float speedFactor = frame.data.y * characterMovementDampingFactor;
+    character.movement.x += clamp(speedOffset * speedFactor,
+                                  -characterMovementDampingFactor,
+                                  characterMovementDampingFactor);
     while (character.movement.w - character.movement.z > PI) {
         character.movement.w -= PI * 2.0f;
     }
@@ -363,7 +366,10 @@ void updateMovement(thread CharacterData& character, constant FrameData& frame) 
         character.movement.w += PI * 2.0f;
     }
     const float rotationOffset = character.movement.w - character.movement.z;
-    character.movement.z += rotationOffset * frame.data.y * characterMovementDampingFactor;
+    const float rotationFactor = frame.data.y * characterMovementDampingFactor;
+    character.movement.z += clamp(rotationOffset * rotationFactor,
+                                  -characterMovementDampingFactor,
+                                  characterMovementDampingFactor);
     const float directionX = cos(character.movement.z);
     const float directionZ = sin(character.movement.z);
     const float3 direction = normalize(float3(directionX, 0.0f, directionZ));
