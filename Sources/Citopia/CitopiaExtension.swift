@@ -158,6 +158,7 @@ extension Citopia {
             
             // initialize the addresses
             pointer[index].addresses.0 = bedData
+            pointer[index].addresses.1 = bedData
             
             // initialize the navigation data
             pointer[index].navigation = simd_int4(

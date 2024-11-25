@@ -35,6 +35,7 @@ struct FrameData {
     //  - gridLengthData.y = gridLengthZ
     var gridLengthData: simd_float4 = .zero
     
+    // define the frustrum data
     var frustumData: (
         simd_float4, simd_float4,
         simd_float4, simd_float4,
@@ -82,7 +83,8 @@ struct CharacterData {
     )
     
     // define the unique addresses of the character
-    //  - addresses[0] = the bed in the apartment
+    //  - addresses[0] = the current address
+    //  - addresses[1] = the bed in the apartment
     var addresses: (
         simd_int4, simd_int4,
         simd_int4, simd_int4
@@ -159,6 +161,11 @@ struct MapNodeData {
     
     // define the general map node data
     //  - data.x = type
+    //      - 0 = street
+    //      - 1 = external entrance
+    //      - 2 = internal entrance
+    //      - 3 = building
+    //      - 4 = bed
     //  - data.w = connection count
     var data: simd_int4 = .zero
     

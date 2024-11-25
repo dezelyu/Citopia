@@ -945,6 +945,7 @@ extension Citopia {
                 distance(position, $0.0) < distance(position, $1.0)
             }
             connect(interiorEntranceNodeIndex, array[0].1)
+            connect(interiorEntranceNodeIndex, array[1].1)
         }
     }
 }

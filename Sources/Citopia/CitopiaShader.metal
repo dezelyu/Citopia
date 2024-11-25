@@ -81,7 +81,8 @@ struct CharacterData {
     float stats[12];
     
     // define the unique addresses of the character
-    //  - addresses[0] = the bed in the apartment
+    //  - addresses[0] = the current address
+    //  - addresses[1] = the bed in the apartment
     int4 addresses[4];
     
     // define the navigation data of the character
@@ -138,6 +139,11 @@ struct MapNodeData {
     
     // define the general map node data
     //  - data.x = type
+    //      - 0 = street
+    //      - 1 = external entrance
+    //      - 2 = internal entrance
+    //      - 3 = building
+    //      - 4 = bed
     //  - data.w = connection count
     int4 data;
     
@@ -178,21 +184,28 @@ struct GridData {
     uint4 data;
 };
 
-float hash1D(float n) {
-    return fract(sin(n) * 43758.5453123f);
-}
-
-float2 hash2D(float2 p) {
-    float n = dot(p, float2(12.9898f, 78.233f));
-    return float2(fract(sin(n) * 43758.5453123f),
-                  fract(cos(n) * 43758.5453123f));
-}
-
-float3 hash3D(float3 p) {
-    float n = dot(p, float3(12.9898f, 78.233f, 45.164f));
-    return float3(fract(sin(n) * 43758.5453123f),
-                  fract(cos(n) * 43758.5453123f),
-                  fract(sin(n + PI) * 43758.5453123f));
+// define the function that generates a random number
+float3 generateRandomNumber(const float3 input) {
+    uint3 vector = uint3(input);
+    vector.x += (vector.x << 10u);
+    vector.x ^= (vector.x >> 6u);
+    vector.x += (vector.x << 3u);
+    vector.x ^= (vector.x >> 11u);
+    vector.x += (vector.x << 15u);
+    vector.y += (vector.y << 10u);
+    vector.y ^= (vector.y >> 6u);
+    vector.y += (vector.y << 3u);
+    vector.y ^= (vector.y >> 11u);
+    vector.y += (vector.y << 15u);
+    vector.z += (vector.z << 10u);
+    vector.z ^= (vector.z >> 6u);
+    vector.z += (vector.z << 3u);
+    vector.z ^= (vector.z >> 11u);
+    vector.z += (vector.z << 15u);
+    vector.x = vector.x ^ vector.y ^ vector.z;
+    vector.y = vector.y ^ vector.z ^ vector.x;
+    vector.z = vector.z ^ vector.x ^ vector.y;
+    return float3(vector.x & 0xFFFFFFu, vector.y & 0xFFFFFFu, vector.z & 0xFFFFFFu) / 16777216.0f;
 }
 
 // define the function that updates a motion of a character
@@ -219,47 +232,124 @@ void updateMotion(thread CharacterData& character, const int motionIndex,
     character.motionControllers[motionIndex] = controller;
 }
 
+// define the function that finds the nearest external entrance
+int findNearestExternalEntrance(thread CharacterData& character,
+                                const device MapNodeData* mapNodes,
+                                const device BuildingData* buildings,
+                                const int buildingIndex) {
+    const BuildingData building = buildings[buildingIndex];
+    float distance = FLT_MAX;
+    int entrance;
+    for (int index = 0; index < building.data.w; index += 1) {
+        const MapNodeData mapNode = mapNodes[building.externalEntrances[index]];
+        const float currentDistance = length(character.position - mapNode.position);
+        if (distance > currentDistance) {
+            distance = currentDistance;
+            entrance = building.externalEntrances[index];
+        }
+    }
+    return entrance;
+}
+
+// define the function that finds the nearest internal entrance
+int findNearestInternalEntrance(thread CharacterData& character,
+                                const device MapNodeData* mapNodes,
+                                const device BuildingData* buildings,
+                                const int buildingIndex) {
+    const BuildingData building = buildings[buildingIndex];
+    float distance = FLT_MAX;
+    int entrance;
+    for (int index = 0; index < building.data.w; index += 1) {
+        const MapNodeData mapNode = mapNodes[building.internalEntrances[index]];
+        const float currentDistance = length(character.position - mapNode.position);
+        if (distance > currentDistance) {
+            distance = currentDistance;
+            entrance = building.internalEntrances[index];
+        }
+    }
+    return entrance;
+}
+
 // define the function that updates the navigation data of a character
-bool updateNavigation(thread CharacterData& character,
+void updateNavigation(thread CharacterData& character,
                       const device MapNodeData* mapNodes,
-                      const float randomNumber) {
-    if (length(character.destination - character.position) > 0.25f) {
-        return false;
+                      const float3 randomNumber) {
+    float4 destinationVector;
+    if (character.navigation.x >= 0) {
+        destinationVector = mapNodes[character.navigation.x].position - character.position;
     }
     const MapNodeData mapNode = mapNodes[character.navigation.z];
     int connections[16];
     int connectionCount = 0;
-    int desiredMapNodeIndex = -1;
+    int desiredConnections[16];
+    int desiredConnectionCount = 0;
     for (int index = 0; index < mapNode.data.w; index += 1) {
         const int connection = mapNode.connections[index];
+        const MapNodeData currentMapNode = mapNodes[connection];
         if (connection == character.navigation.x) {
             character.navigation.w = character.navigation.z;
             character.navigation.z = connection;
-            return true;
+            character.navigation.y = -1;
+            character.navigation.x = -1;
+            character.destination.xyz = currentMapNode.position.xyz;
+            character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
+            character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
+            return;
         }
-        if (connection != character.navigation.w) {
+        if (character.navigation.y >= 0) {
+            if (connection != character.navigation.w && currentMapNode.data.x == character.navigation.y) {
+                connections[connectionCount] = connection;
+                connectionCount += 1;
+                if (character.navigation.x >= 0) {
+                    const float4 vector = currentMapNode.position - character.position;
+                    if (dot(destinationVector, vector) > 0.0f) {
+                        desiredConnections[desiredConnectionCount] = connection;
+                        desiredConnectionCount += 1;
+                    }
+                }
+            }
+        } else if (connection != character.navigation.w) {
             connections[connectionCount] = connection;
             connectionCount += 1;
-            if (mapNodes[connection].data.x == character.navigation.y) {
-                desiredMapNodeIndex = connection;
+            if (character.navigation.x >= 0) {
+                const float4 vector = currentMapNode.position - character.position;
+                if (dot(destinationVector, vector) > 0.0f) {
+                    desiredConnections[desiredConnectionCount] = connection;
+                    desiredConnectionCount += 1;
+                }
             }
         }
     }
     if (connectionCount == 0) {
+        const int previousMapNodeIndex = character.navigation.w;
         character.navigation.w = character.navigation.z;
-        character.navigation.z = character.navigation.w;
-        return true;
+        character.navigation.z = previousMapNodeIndex;
+        const MapNodeData currentMapNode = mapNodes[character.navigation.z];
+        character.destination.xyz = currentMapNode.position.xyz;
+        character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
+        character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
+        return;
     }
-    if (desiredMapNodeIndex >= 0) {
+    if (desiredConnectionCount > 0) {
         character.navigation.w = character.navigation.z;
-        character.navigation.z = desiredMapNodeIndex;
-        return true;
+        character.navigation.z = desiredConnections[
+            int(float(desiredConnectionCount) * fract(randomNumber.y))
+        ];
+        const MapNodeData currentMapNode = mapNodes[character.navigation.z];
+        character.destination.xyz = currentMapNode.position.xyz;
+        character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
+        character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
+        return;
     }
     character.navigation.w = character.navigation.z;
     character.navigation.z = connections[
-        int(float(connectionCount) * fract(randomNumber))
+        int(float(connectionCount) * fract(randomNumber.y))
     ];
-    return true;
+    const MapNodeData currentMapNode = mapNodes[character.navigation.z];
+    character.destination.xyz = currentMapNode.position.xyz;
+    character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
+    character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
+    return;
 }
 
 // define the function that updates the character movement
@@ -301,23 +391,60 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     // acquire the current character
     CharacterData character = characters[index];
     
-    // perform destination update
-    const float3 random = hash3D(fract(character.position.xyz) + float3(currentTime));
-    if (updateNavigation(character, mapNodes, random.y)) {
+    // compute three random numbers based on the character position
+    const float3 randomNumber = generateRandomNumber(fract(character.position.xyz) + float3(currentTime));
+    
+    // compute the motion speed factor based on the character age
+    const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
+    
+    // compute the scale factor based on the character age
+    const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
+    
+    // update navigation when the character reaches the destination
+    if (length(character.destination - character.position) < 0.25f) {
         
-        // update the destination
+        // acquire the current map node
         const MapNodeData mapNode = mapNodes[character.navigation.z];
-        character.destination.xyz = mapNode.position.xyz;
-        character.destination.x += (2.0f * random.x - 1.0f) * mapNode.dimension.x * 0.3f;
-        character.destination.z += (2.0f * random.z - 1.0f) * mapNode.dimension.z * 0.3f;
+        
+        // update the navigation data based on the character's goal
+        switch (character.states.x) {
+                
+                // wandering on the street
+            case 0:
+                
+                // exit the current building
+                if (character.addresses[0].x >= 0) {
+                    
+                    // exit from the external entrance
+                    if (mapNode.data.x == 1) {
+                        character.addresses[0] = int4(-1);
+                        character.navigation.x = -1;
+                        character.navigation.y = 0;
+                        
+                        // move from the internal entrance to the external entrance
+                    } else if (mapNode.data.x == 2) {
+                        character.navigation.x = findNearestExternalEntrance(character, mapNodes, buildings, 
+                                                                             character.addresses[0].x);
+                        character.navigation.y = 1;
+                        
+                        // move to the internal entrance
+                    } else {
+                        character.navigation.x = findNearestInternalEntrance(character, mapNodes, buildings, 
+                                                                             character.addresses[0].x);
+                        character.navigation.y = 3;
+                    }
+                }
+                break;
+        }
+        
+        // perform navigation update
+        updateNavigation(character, mapNodes, randomNumber);
         
         // update the walk motion controller with the new parameters
-        const float animationSpeed = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
-        updateMotion(character, 0, animationSpeed, 1.0f, currentTime);
+        updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
         
         // update the target speed
-        const float scale = 0.6f + float(character.data.y) * 0.01f;
-        character.movement.y = animationSpeed * scale * motionRelatedMovementSpeed[0];
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[0];
     }
     
     // update the target angle
