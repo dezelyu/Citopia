@@ -153,8 +153,8 @@ extension Citopia {
             
             // initialize the stats
             pointer[index].stats.0 = Float.random(in: 0.0...1.0)
-            pointer[index].stats.1 = 1.0 / (Float.random(in: 30.0...60.0) * 60.0)
-            pointer[index].stats.2 = 1.0 / (Float.random(in: 300.0...600.0) * 60.0)
+            pointer[index].stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+            pointer[index].stats.2 = 1.0 / (Float.random(in: 120.0...180.0) * 60.0)
             
             // initialize the addresses
             pointer[index].addresses.0 = bedData

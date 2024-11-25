@@ -109,10 +109,10 @@ struct CharacterData {
     var destination: simd_float4 = .zero
     
     // define the movement data of the character
-    //   - movement.x = current speed
-    //   - movement.y = target speed
-    //   - movement.z = current rotation
-    //   - movement.w = target rotation
+    //  - movement.x = current speed
+    //  - movement.y = target speed
+    //  - movement.z = current rotation
+    //  - movement.w = target rotation
     var movement: simd_float4 = .zero
     
     // define the motion controllers
