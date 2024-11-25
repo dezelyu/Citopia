@@ -5,7 +5,7 @@ using namespace metal;
 
 // define the global constants
 constant float PI = 3.1415926535f;
-constant float characterMovementDampingFactor = 0.2f;
+constant float characterMovementDampingFactor = 0.15f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
@@ -269,7 +269,7 @@ void updateMovement(thread CharacterData& character, constant FrameData& frame) 
     while (character.movement.w - character.movement.z > PI) {
         character.movement.w -= PI * 2.0f;
     }
-    while (character.movement.w - character.movement.z > PI) {
+    while (character.movement.z - character.movement.w > PI) {
         character.movement.w += PI * 2.0f;
     }
     const float rotationOffset = character.movement.w - character.movement.z;
