@@ -21,10 +21,10 @@ import CameraKit
     let blockCount: Int = 100
     
     // define the side length of the block in meters
-    let blockSideLength: Float = 15
+    let blockSideLength: Float = 16
     
     // define the distance between two blocks in meters
-    let blockDistance: Float = 10
+    let blockDistance: Float = 12
     
     // define the graphics device
     var device: MTLDevice!

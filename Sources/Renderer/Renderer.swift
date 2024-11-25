@@ -144,13 +144,13 @@ class Renderer {
         
         // create the camera node
         self.cameraNode = CameraNode(
-            category: 1, angle: 60.0, near: 0.1, far: 500.0
+            category: 1, angle: 60.0, near: 0.5, far: 500.0
         )
         
         // create the camera instance
         self.camera = SCNCamera()
         self.camera.fieldOfView = 60.0
-        self.camera.zNear = 0.1
+        self.camera.zNear = 0.5
         self.camera.zFar = 500.0
         
         // acquire the viewport size
@@ -172,6 +172,12 @@ class Renderer {
         self.cameraNode.attach(node: self.forwardNode)
         self.cameraNode.attach(node: self.leftNode)
         self.cameraNode.attach(node: self.upNode)
+        
+        // specify the initial position and rotation of the camera
+        self.targetPosition.y = 100.0
+        self.targetRotation = simd_float3(-0.5, Float.pi * 0.25, 0.0)
+        self.cameraNode.position = simd_float3(500.0, 800.0, 500.0)
+        self.cameraNode.rotation = simd_float3(-0.5, Float.pi * 0.25, 0.0)
         
         // attach the camera node to the scene
         NodeManager.attach(node: self.cameraNode)

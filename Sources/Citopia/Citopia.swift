@@ -56,6 +56,31 @@ struct CharacterData {
     //  - data.w = destination
     var data: simd_uint4 = .zero
     
+    // define the stats of the character
+    //  - stats[0] = energy (restored by sleeping)
+    //  - stats[1] = energy restoration
+    var stats: (
+        Float, Float, Float, Float,
+        Float, Float, Float, Float,
+        Float, Float, Float, Float
+    ) = (
+        0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0
+    )
+    
+    // define the unique addresses of the character
+    //  - addresses[0] = the bed in the apartment
+    var addresses: (
+        simd_int4, simd_int4,
+        simd_int4, simd_int4
+    ) = (
+        simd_int4(repeating: -1),
+        simd_int4(repeating: -1),
+        simd_int4(repeating: -1),
+        simd_int4(repeating: -1)
+    )
+    
     // define the position of the character
     var position: simd_float4 = .zero
     
@@ -255,6 +280,9 @@ class Citopia {
     
     // define the furniture blocks to render
     var furnitureBlocks: [(simd_float2, Float, simd_float3, Int)] = []
+    
+    // define the array for all the bed data
+    var bedData: [simd_int4] = []
     
     // define an array of all the map nodes
     var mapNodes: [MapNodeData] = []

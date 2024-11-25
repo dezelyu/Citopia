@@ -61,6 +61,15 @@ struct CharacterData {
     //  - data.w = destination
     uint4 data;
     
+    // define the stats of the character
+    //  - stats[0] = energy (restored by sleeping)
+    //  - stats[1] = energy restoration
+    float stats[12];
+    
+    // define the unique addresses of the character
+    //  - addresses[0] = the bed in the apartment
+    int4 addresses[4];
+    
     // define the position of the character
     float4 position;
     

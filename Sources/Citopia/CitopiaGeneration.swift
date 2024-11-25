@@ -64,12 +64,11 @@ extension Citopia {
                         Float(z) * (self.blockSideLength + self.blockDistance)
                     )
                     let blockSize = simd_float3(
-                        self.blockSideLength - 1.0, Float(Int.random(in: 1...5) * 3) - 0.2,
+                        self.blockSideLength - 1.0, Float(Int.random(in: 1...5) * 3),
                         self.blockDistance
                     )
                     self.foundationalBuildingBlocks.append((
-                        blockPosition + origin,
-                        0.0, blockSize, 2
+                        blockPosition + origin, -0.2, blockSize, 2
                     ))
                 }
                 
@@ -80,12 +79,11 @@ extension Citopia {
                         (Float(z) - 0.5) * (self.blockSideLength + self.blockDistance)
                     )
                     let blockSize = simd_float3(
-                        self.blockDistance, Float(Int.random(in: 1...5) * 3) - 0.2,
+                        self.blockDistance, Float(Int.random(in: 1...5) * 3),
                         self.blockSideLength - 1.0
                     )
                     self.foundationalBuildingBlocks.append((
-                        blockPosition + origin,
-                        0.0, blockSize, 2
+                        blockPosition + origin, -0.2, blockSize, 2
                     ))
                 }
             }
@@ -153,7 +151,9 @@ extension Citopia {
         ))
         
         // create additional floors
-        let numAdditionalFloors = Int.random(in: 1...5)
+        var numAdditionalFloors = Int.random(in: (-2)...2)
+        numAdditionalFloors += Int.random(in: 1...4) * Int.random(in: 1...4)
+        numAdditionalFloors = max(1, numAdditionalFloors)
         for floor in 1...numAdditionalFloors {
             let offset = (floor % 2 != 0) ? 0.4 : 0.0
             self.foundationalBuildingBlocks.append((
@@ -171,11 +171,8 @@ extension Citopia {
         for corner in 0...3 {
             self.foundationalBuildingBlocks.append((
                 blockPosition + origin + simd_float2(pillarOffsetX, pillarOffsetZ), 0.0,
-                simd_float3(
-                    1.0,
-                    3.0 * Float(1 + numAdditionalFloors) + 0.5,
-                    1.0
-                ), buildingColorIndex
+                simd_float3(1.0, 3.0 * Float(1 + numAdditionalFloors) + 0.5, 1.0),
+                buildingColorIndex
             ))
             if (corner % 2 == 0) {
                 pillarOffsetX *= -1.0
@@ -201,19 +198,13 @@ extension Citopia {
         if (shouldCreateRooftopBuilding == 1) {
             self.foundationalBuildingBlocks.append((
                 blockPosition + origin + rooftopBuldingOffset, 3.0 * Float(1 + numAdditionalFloors) + 0.5,
-                simd_float3(
-                    rooftopBuildingSideLengthX,
-                    2.5,
-                    rooftopBuildingSideLengthZ
-                ), buildingColorIndex
+                simd_float3(rooftopBuildingSideLengthX, 2.5, rooftopBuildingSideLengthZ),
+                buildingColorIndex
             ))
             self.foundationalBuildingBlocks.append((
                 blockPosition + origin + rooftopBuldingOffset, 3.0 * Float(1 + numAdditionalFloors) + 3.0,
-                simd_float3(
-                    rooftopBuildingSideLengthX + 0.5,
-                    0.5,
-                    rooftopBuildingSideLengthZ + 0.5
-                ), buildingColorIndex
+                simd_float3(rooftopBuildingSideLengthX + 0.5, 0.5, rooftopBuildingSideLengthZ + 0.5),
+                buildingColorIndex
             ))
         }
         
@@ -265,7 +256,7 @@ extension Citopia {
                             self.foundationalBuildingBlocks.append((
                                 simd_float2(
                                     blockPosition.x + origin.x + positionOffset,
-                                    blockPosition.y + origin.y - self.blockSideLength * 0.5 - 0.3
+                                    blockPosition.y + origin.y - self.blockSideLength * 0.5 - 0.4
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(billboardScale.x, billboardScale.y, 0.15),
@@ -299,7 +290,7 @@ extension Citopia {
                         if (shouldCreateSideBillboard == 1) {
                             self.foundationalBuildingBlocks.append((
                                 simd_float2(
-                                    blockPosition.x + origin.x - self.blockSideLength * 0.5 - 0.3,
+                                    blockPosition.x + origin.x - self.blockSideLength * 0.5 - 0.4,
                                     blockPosition.y + origin.y + positionOffset
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
@@ -334,7 +325,7 @@ extension Citopia {
                         if (shouldCreateSideBillboard == 1) {
                             self.foundationalBuildingBlocks.append((
                                 simd_float2(
-                                    blockPosition.x + origin.x + self.blockSideLength * 0.5 + 0.3,
+                                    blockPosition.x + origin.x + self.blockSideLength * 0.5 + 0.4,
                                     blockPosition.y + origin.y + positionOffset
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
@@ -370,7 +361,7 @@ extension Citopia {
                             self.foundationalBuildingBlocks.append((
                                 simd_float2(
                                     blockPosition.x + origin.x + positionOffset,
-                                    blockPosition.y + origin.y + self.blockSideLength * 0.5 + 0.3
+                                    blockPosition.y + origin.y + self.blockSideLength * 0.5 + 0.4
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(billboardScale.x, billboardScale.y, 0.15),
@@ -616,6 +607,7 @@ extension Citopia {
                     
                     // create the exterior entrance node
                     var exteriorEntranceNode = MapNodeData()
+                    exteriorEntranceNode.data.x = 1
                     exteriorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x + offset, 0.0,
                         blockPosition.y + origin.y - self.blockSideLength * 0.5 - 1.0, 0.0
@@ -628,6 +620,7 @@ extension Citopia {
                     
                     // create the interior entrance node
                     var interiorEntranceNode = MapNodeData()
+                    interiorEntranceNode.data.x = 2
                     interiorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x + offset, 0.0,
                         blockPosition.y + origin.y - self.blockSideLength * 0.5 + 1.0, 0.0
@@ -672,6 +665,7 @@ extension Citopia {
                     
                     // create the exterior entrance node
                     var exteriorEntranceNode = MapNodeData()
+                    exteriorEntranceNode.data.x = 1
                     exteriorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x - self.blockSideLength * 0.5 - 1.0, 0.0,
                         blockPosition.y + origin.y + offset, 0.0
@@ -684,6 +678,7 @@ extension Citopia {
                     
                     // create the interior entrance node
                     var interiorEntranceNode = MapNodeData()
+                    interiorEntranceNode.data.x = 2
                     interiorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x - self.blockSideLength * 0.5 + 1.0, 0.0,
                         blockPosition.y + origin.y + offset, 0.0
@@ -728,6 +723,7 @@ extension Citopia {
                     
                     // create the exterior entrance node
                     var exteriorEntranceNode = MapNodeData()
+                    exteriorEntranceNode.data.x = 1
                     exteriorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x + self.blockSideLength * 0.5 + 1.0, 0.0,
                         blockPosition.y + origin.y + offset, 0.0
@@ -740,6 +736,7 @@ extension Citopia {
                     
                     // create the interior entrance node
                     var interiorEntranceNode = MapNodeData()
+                    interiorEntranceNode.data.x = 2
                     interiorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x + self.blockSideLength * 0.5 - 1.0, 0.0,
                         blockPosition.y + origin.y + offset, 0.0
@@ -784,6 +781,7 @@ extension Citopia {
                     
                     // create the exterior entrance node
                     var exteriorEntranceNode = MapNodeData()
+                    exteriorEntranceNode.data.x = 1
                     exteriorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x + offset, 0.0,
                         blockPosition.y + origin.y + self.blockSideLength * 0.5 + 1.0, 0.0
@@ -796,6 +794,7 @@ extension Citopia {
                     
                     // create the interior entrance node
                     var interiorEntranceNode = MapNodeData()
+                    interiorEntranceNode.data.x = 2
                     interiorEntranceNode.position = simd_float4(
                         blockPosition.x + origin.x + offset, 0.0,
                         blockPosition.y + origin.y + self.blockSideLength * 0.5 - 1.0, 0.0
@@ -821,7 +820,7 @@ extension Citopia {
                 // initialize the building as an apartment building
                 if (apartmentIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     self.initializeApartmentBuildingInterior(
-                        origin: origin, blockPosition: blockPosition,
+                        x: x, z: z, origin: origin, blockPosition: blockPosition,
                         interiorEntranceNodeIndices: interiorEntranceNodeIndices,
                         connect: connect
                     )
@@ -831,7 +830,8 @@ extension Citopia {
     }
     
     // define the function that initializes the apartment building interior
-    func initializeApartmentBuildingInterior(origin: simd_float2, 
+    func initializeApartmentBuildingInterior(x: Int, z: Int,
+                                             origin: simd_float2,
                                              blockPosition: simd_float2,
                                              interiorEntranceNodeIndices: [Int],
                                              connect: (Int, Int) -> ()) {
@@ -852,8 +852,8 @@ extension Citopia {
                 
                 // create the pillow
                 self.furnitureBlocks.append((
-                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ + 0.75), 0.25,
-                    simd_float3( 0.5, 0.05, 0.25), 34
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ - 0.75), 0.25,
+                    simd_float3(0.5, 0.05, 0.25), 34
                 ))
             }
         }
@@ -869,6 +869,7 @@ extension Citopia {
                 let offsetZ = distanceBetweenBedsZ * Float(bedZ)
                 let nodePosition = blockPosition + origin + nodeOffset - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ)
                 var mapNode = MapNodeData()
+                mapNode.data.x = 3
                 mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
                 self.mapNodes.append(mapNode)
                 nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
@@ -888,6 +889,7 @@ extension Citopia {
                     
                     // create a map node for bed
                     var mapNode = MapNodeData()
+                    mapNode.data.x = 4
                     mapNode.position += self.mapNodes[nodeIndex].position
                     mapNode.position += self.mapNodes[nodePositionIndexArray[(bedX - 1) + bedZ * (numBedsX + 1)].1].position
                     mapNode.position /= 2.0
@@ -896,6 +898,12 @@ extension Citopia {
                     // connect the bed node with the left and right node
                     connect(self.mapNodes.count - 1, nodeIndex)
                     connect(self.mapNodes.count - 1, nodePositionIndexArray[(bedX - 1) + bedZ * (numBedsX + 1)].1)
+                    
+                    // store the bed data
+                    self.bedData.append(simd_int4(
+                        Int32(x), Int32(z),
+                        Int32(self.mapNodes.count - 1), 0
+                    ))
                 }
             }
         }

@@ -6,8 +6,8 @@ using namespace metal;
 // define all the colors to render
 constant float3 colors[] = {
     float3(1.0f, 1.0f, 1.0f),
-    float3(0.2f, 0.2f, 0.2f),
-    float3(0.6f, 0.6f, 0.6f),
+    float3(0.05f, 0.05f, 0.05f),
+    float3(0.15f, 0.15f, 0.15f),
     float3(0.0f, 1.0f, 0.623f),
     float3(0.0f, 0.9f, 0.7f),
     float3(0.0f, 1.0f, 0.55f),
@@ -156,11 +156,12 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     point = camera.matrices[1] * point;
     point /= point.w;
     point = camera.matrices[2] * point;
-    const float3 light = normalize(float3(1.0f, 1.0f, 1.0f));
+    const float3 light = normalize(float3(1.0f, 2.0f, 3.0f));
     const float3 view = normalize(camera.matrices[2][3].xyz - point.xyz);
-    const float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
     const uint a = as_type<uint>(buffer.a);
     const uint material = (a >> 16) & 65535;
+    float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
+    lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
     const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
-    return float4(float3(r < 1.0f ? lambert * 0.8f + 0.1f : 0.0f) * colors[material] * fog, 1.0f);
+    return float4(float3(r < 1.0f ? lambert * 0.8f + 0.3f : 0.0f) * colors[material] * fog, 1.0f);
 }

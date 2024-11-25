@@ -127,7 +127,7 @@ extension Citopia {
         
         // create a staging buffer with the map node data
         let stagingBuffer = self.device.makeBuffer(
-            length: MemoryLayout<CharacterData>.stride * self.characterCount,
+            length: MemoryLayout<CharacterData>.stride * self.bedData.count,
             options: [
                 .cpuCacheModeWriteCombined,
                 .storageModeShared,
@@ -136,10 +136,11 @@ extension Citopia {
         
         // acquire the pointer to the staging buffer
         let pointer = stagingBuffer.contents().bindMemory(
-            to: CharacterData.self, capacity: self.characterCount
+            to: CharacterData.self, capacity: self.bedData.count
         )
         
-        for index in 0...self.characterCount {
+        // initialize the characters
+        for (index, bedData) in self.bedData.enumerated() {
             
             // initialize gender
             pointer[index].data.x = UInt32.random(in: 0...1)
@@ -147,32 +148,26 @@ extension Citopia {
             // initialize age
             pointer[index].data.y = UInt32.random(in: 20...40)
             
+            // initialize the stats
+            pointer[index].stats.0 = Float.random(in: 0.0...1.0)
+            pointer[index].stats.1 = 1.0 / (Float.random(in: 10.0...20.0) * 60.0)
+            
+            // initialize the addresses
+            pointer[index].addresses.0 = bedData
+            
             // initialize position
-            let mapNodeIndex = index % ((self.blockCount + 1) * (self.blockCount + 1))
-            let blockLength = Float(self.blockCount) * self.blockSideLength
-            let intervalLength = Float(self.blockCount) * self.blockDistance
-            let origin = simd_float3(
-                repeating: -(blockLength + intervalLength) * 0.5
-            )
-            let x = mapNodeIndex % (self.blockCount + 1)
-            let z = mapNodeIndex / (self.blockCount + 1)
-            pointer[index].position = simd_float4(
-                Float(x) * (self.blockSideLength + self.blockDistance) + origin.x, 0.0,
-                Float(z) * (self.blockSideLength + self.blockDistance) + origin.z, 0.0
-            )
-            pointer[index].position.x += self.blockSideLength * Float.random(in: -0.3...0.3)
-            pointer[index].position.z += self.blockSideLength * Float.random(in: -0.3...0.3)
+            pointer[index].position = self.mapNodes[Int(bedData.z)].position
             
             // initialize destination
             pointer[index].destination = pointer[index].position
             pointer[index].destination.x += 0.1
             pointer[index].destination.z += 0.1
-            pointer[index].data.w = UInt32(mapNodeIndex)
+            pointer[index].data.w = UInt32(bedData.z)
         }
         
         // create a private storage buffer
         self.characterBuffer = self.device.makeBuffer(
-            length: MemoryLayout<CharacterData>.stride * self.characterCount,
+            length: stagingBuffer.length,
             options: [
                 .storageModePrivate,
             ]
@@ -193,6 +188,12 @@ extension Citopia {
         encoder.endEncoding()
         command.commit()
         command.waitUntilCompleted()
+        
+        // clear the array of bed data
+        self.bedData.removeAll()
+        
+        // clear the array of map nodes
+        self.mapNodes.removeAll()
     }
     
     // define the function that creates the visible character index buffer
@@ -485,8 +486,5 @@ extension Citopia {
         
         // clear the connection data
         self.exteriorConnectionData.removeAll()
-        
-        // clear the array of map nodes
-        self.mapNodes.removeAll()
     }
 }
