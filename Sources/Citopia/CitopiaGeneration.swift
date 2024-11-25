@@ -251,7 +251,7 @@ extension Citopia {
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(billboardLength, 3.0, 0.2),
-                            buildingColorIndex
+                            Int.random(in: 3...22)
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -269,7 +269,7 @@ extension Citopia {
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(billboardScale.x, billboardScale.y, 0.15),
-                                buildingColorIndex
+                                Int.random(in: 3...22)
                             ))
                             floor -= 2
                         } else {
@@ -286,7 +286,7 @@ extension Citopia {
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(0.2, 3.0, billboardLength),
-                            buildingColorIndex
+                            Int.random(in: 3...22)
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -304,7 +304,7 @@ extension Citopia {
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(0.15, billboardScale.y, billboardScale.x),
-                                buildingColorIndex
+                                Int.random(in: 3...22)
                             ))
                             floor -= 2
                         } else {
@@ -321,7 +321,7 @@ extension Citopia {
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(0.2, 3.0, billboardLength),
-                            buildingColorIndex
+                            Int.random(in: 3...22)
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -339,7 +339,7 @@ extension Citopia {
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(0.15, billboardScale.y, billboardScale.x),
-                                buildingColorIndex
+                                Int.random(in: 3...22)
                             ))
                             floor -= 2
                         } else {
@@ -356,7 +356,7 @@ extension Citopia {
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(billboardLength, 3.0, 0.2),
-                            buildingColorIndex
+                            Int.random(in: 3...22)
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -374,7 +374,7 @@ extension Citopia {
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(billboardScale.x, billboardScale.y, 0.15),
-                                buildingColorIndex
+                                Int.random(in: 3...22)
                             ))
                             floor -= 2
                         } else {
@@ -382,119 +382,119 @@ extension Citopia {
                         }
                     }
                 }
-                
-                // create the side billboards
-                if (numAdditionalFloors > 1 && billboardDirections.contains(0) && billboardDirections.contains(1)) {
-                    let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let shouldCreateSideBillboardLeft = Int.random(in: 0...4)
-                    let shouldCreateSideBillboardRight = Int.random(in: 0...4)
-                    if (shouldCreateSideBillboardLeft == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x - pillarOffsetX - 1.0,
-                                blockPosition.y + origin.y - pillarOffsetZ
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
-                            simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                            buildingColorIndex
-                        ))
-                    }
-                    if (shouldCreateSideBillboardRight == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x - pillarOffsetX,
-                                blockPosition.y + origin.y - pillarOffsetZ - 1.0
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
-                            simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                            buildingColorIndex
-                        ))
-                    }
+            }
+            
+            // create the side billboards
+            if (numAdditionalFloors > 1 && billboardDirections.contains(0) && billboardDirections.contains(1)) {
+                let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
+                let shouldCreateSideBillboardRight = Int.random(in: 0...3)
+                if (shouldCreateSideBillboardLeft == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x - pillarOffsetX - 1.0,
+                            blockPosition.y + origin.y - pillarOffsetZ
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
+                        simd_float3(2.0, sideBillboardLengthLeft, 0.2),
+                        Int.random(in: 3...22)
+                    ))
                 }
-                if (numAdditionalFloors > 1 && billboardDirections.contains(1) && billboardDirections.contains(3)) {
-                    let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let shouldCreateSideBillboardLeft = Int.random(in: 0...4)
-                    let shouldCreateSideBillboardRight = Int.random(in: 0...4)
-                    if (shouldCreateSideBillboardLeft == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x - pillarOffsetX - 1.0,
-                                blockPosition.y + origin.y + pillarOffsetZ
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
-                            simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                            buildingColorIndex
-                        ))
-                    }
-                    if (shouldCreateSideBillboardRight == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x - pillarOffsetX,
-                                blockPosition.y + origin.y + pillarOffsetZ + 1.0
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
-                            simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                            buildingColorIndex
-                        ))
-                    }
+                if (shouldCreateSideBillboardRight == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x - pillarOffsetX,
+                            blockPosition.y + origin.y - pillarOffsetZ - 1.0
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
+                        simd_float3(0.2, sideBillboardLengthRight, 2.0),
+                        Int.random(in: 3...22)
+                    ))
                 }
-                if (numAdditionalFloors > 1 && billboardDirections.contains(3) && billboardDirections.contains(2)) {
-                    let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let shouldCreateSideBillboardLeft = Int.random(in: 0...4)
-                    let shouldCreateSideBillboardRight = Int.random(in: 0...4)
-                    if (shouldCreateSideBillboardLeft == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x + pillarOffsetX + 1.0,
-                                blockPosition.y + origin.y + pillarOffsetZ
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
-                            simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                            buildingColorIndex
-                        ))
-                    }
-                    if (shouldCreateSideBillboardRight == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x + pillarOffsetX,
-                                blockPosition.y + origin.y + pillarOffsetZ + 1.0
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
-                            simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                            buildingColorIndex
-                        ))
-                    }
+            }
+            if (numAdditionalFloors > 1 && billboardDirections.contains(1) && billboardDirections.contains(3)) {
+                let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
+                let shouldCreateSideBillboardRight = Int.random(in: 0...3)
+                if (shouldCreateSideBillboardLeft == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x - pillarOffsetX - 1.0,
+                            blockPosition.y + origin.y + pillarOffsetZ
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
+                        simd_float3(2.0, sideBillboardLengthLeft, 0.2),
+                        Int.random(in: 3...22)
+                    ))
                 }
-                if (numAdditionalFloors > 1 && billboardDirections.contains(0) && billboardDirections.contains(2)) {
-                    let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
-                    let shouldCreateSideBillboardLeft = Int.random(in: 0...4)
-                    let shouldCreateSideBillboardRight = Int.random(in: 0...4)
-                    if (shouldCreateSideBillboardLeft == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x + pillarOffsetX + 1.0,
-                                blockPosition.y + origin.y - pillarOffsetZ
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
-                            simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                            buildingColorIndex
-                        ))
-                    }
-                    if (shouldCreateSideBillboardRight == 1) {
-                        self.foundationalBuildingBlocks.append((
-                            simd_float2(
-                                blockPosition.x + origin.x + pillarOffsetX,
-                                blockPosition.y + origin.y - pillarOffsetZ - 1.0
-                            ),
-                            3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
-                            simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                            buildingColorIndex
-                        ))
-                    }
+                if (shouldCreateSideBillboardRight == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x - pillarOffsetX,
+                            blockPosition.y + origin.y + pillarOffsetZ + 1.0
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
+                        simd_float3(0.2, sideBillboardLengthRight, 2.0),
+                        Int.random(in: 3...22)
+                    ))
+                }
+            }
+            if (numAdditionalFloors > 1 && billboardDirections.contains(3) && billboardDirections.contains(2)) {
+                let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
+                let shouldCreateSideBillboardRight = Int.random(in: 0...3)
+                if (shouldCreateSideBillboardLeft == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x + pillarOffsetX + 1.0,
+                            blockPosition.y + origin.y + pillarOffsetZ
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
+                        simd_float3(2.0, sideBillboardLengthLeft, 0.2),
+                        Int.random(in: 3...22)
+                    ))
+                }
+                if (shouldCreateSideBillboardRight == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x + pillarOffsetX,
+                            blockPosition.y + origin.y + pillarOffsetZ + 1.0
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
+                        simd_float3(0.2, sideBillboardLengthRight, 2.0),
+                        Int.random(in: 3...22)
+                    ))
+                }
+            }
+            if (numAdditionalFloors > 1 && billboardDirections.contains(0) && billboardDirections.contains(2)) {
+                let sideBillboardLengthLeft = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let sideBillboardLengthRight = Float.random(in: 3.0...Float(numAdditionalFloors * 2))
+                let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
+                let shouldCreateSideBillboardRight = Int.random(in: 0...3)
+                if (shouldCreateSideBillboardLeft == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x + pillarOffsetX + 1.0,
+                            blockPosition.y + origin.y - pillarOffsetZ
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
+                        simd_float3(2.0, sideBillboardLengthLeft, 0.2),
+                        Int.random(in: 3...22)
+                    ))
+                }
+                if (shouldCreateSideBillboardRight == 1) {
+                    self.foundationalBuildingBlocks.append((
+                        simd_float2(
+                            blockPosition.x + origin.x + pillarOffsetX,
+                            blockPosition.y + origin.y - pillarOffsetZ - 1.0
+                        ),
+                        3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
+                        simd_float3(0.2, sideBillboardLengthRight, 2.0),
+                        Int.random(in: 3...22)
+                    ))
                 }
             }
         }
@@ -537,7 +537,7 @@ extension Citopia {
                 
                 // colorize the building corresponding to its type
                 if (apartmentIndices.contains(simd_int2(Int32(x), Int32(z)))) {
-                    buildingColorIndex = 0
+                    buildingColorIndex = Int.random(in: 23...28)
                 }
                 
                 // generate the building decorations
@@ -847,9 +847,13 @@ extension Citopia {
                 let offsetZ = distanceBetweenBedsZ * Float(bedZ)
                 self.furnitureBlocks.append((
                     blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ), 0.05,
-                    simd_float3(
-                        1.0, 0.2, 2.0
-                    ), 1
+                    simd_float3(1.0, 0.2, 2.0), Int.random(in: 29...33)
+                ))
+                
+                // create the pillow
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ + 0.75), 0.25,
+                    simd_float3( 0.5, 0.05, 0.25), 34
                 ))
             }
         }
