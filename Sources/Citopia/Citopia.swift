@@ -60,6 +60,7 @@ struct CharacterData {
     //  - states.x = goal
     //      - 0 = wandering on the street
     //      - 1 = sleeping (determined by energy)
+    //      - 2 = working (determined by gold)
     //  - states.y = goal planner
     //      - 0 = planning
     //      - 1 = achieving
@@ -72,6 +73,10 @@ struct CharacterData {
     //  - stats[0] = energy (restored by sleeping)
     //  - stats[1] = energy restoration
     //  - stats[2] = energy consumption
+    //  - stats[3] = total gold
+    //  - stats[4] = gold earned in the current cycle
+    //  - stats[5] = target gold per cycle
+    //  - stats[6] = gold earned per frame
     var stats: (
         Float, Float, Float, Float,
         Float, Float, Float, Float,
@@ -85,6 +90,7 @@ struct CharacterData {
     // define the unique addresses of the character
     //  - addresses[0] = the current address
     //  - addresses[1] = the bed in the apartment
+    //  - addresses[2] = the office in the office building
     var addresses: (
         simd_int4, simd_int4,
         simd_int4, simd_int4
@@ -332,8 +338,8 @@ class Citopia {
     // define the array for all the bed data
     var bedData: [simd_int4] = []
     
-    // define the array for all the bed data
-    var officeData: [simd_int4] = []
+    // define the set for all the office data
+    var officeData: Set<simd_int4> = []
     
     // define an array of all the map nodes
     var mapNodes: [MapNodeData] = []

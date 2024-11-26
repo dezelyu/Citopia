@@ -525,7 +525,7 @@ extension Citopia {
         let numDesksX = Int(self.blockSideLength / 4.5)
         let numChairsZ = Int(deskLength / 1.5)
         let officeDeskCount = Int(numDesksX) * Int(numChairsZ * 2)
-        let officeCount = self.characterCount / officeDeskCount + 1
+        let officeCount = (apartmentBedCount * apartmentCount) / officeDeskCount + 1
         while (buildingIndices.count > 0 && officeIndices.count < officeCount) {
             let randomBuildingIndex = buildingIndices.randomElement()!
             buildingIndices.remove(randomBuildingIndex)
@@ -957,7 +957,7 @@ extension Citopia {
                     
                     // store the bed data
                     self.bedData.append(simd_int4(
-                        Int32(index), Int32(self.mapNodes.count - 1), 0, 0
+                        Int32(index), Int32(self.mapNodes.count - 1), -1, 0
                     ))
                 }
             }
@@ -1072,6 +1072,11 @@ extension Citopia {
                             
                             // connect the desk node to the chair node
                             connect(nodeIndex, self.mapNodes.count - 1)
+                            
+                            // store the chair data
+                            self.officeData.insert(simd_int4(
+                                Int32(index), Int32(self.mapNodes.count - 1), 0, 0
+                            ))
                         }
                         if (deskX != 0) {
                             
@@ -1084,6 +1089,11 @@ extension Citopia {
                             
                             // connect the desk node to the chair node
                             connect(nodeIndex, self.mapNodes.count - 1)
+                            
+                            // store the chair data
+                            self.officeData.insert(simd_int4(
+                                Int32(index), Int32(self.mapNodes.count - 1), 2, 0
+                            ))
                         }
                     }
                 }

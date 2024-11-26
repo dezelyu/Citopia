@@ -75,6 +75,7 @@ struct CharacterData {
     //  - states.x = goal
     //      - 0 = wandering on the street
     //      - 1 = sleeping (determined by energy)
+    //      - 2 = working (determined by gold)
     //  - states.y = goal planner
     //      - 0 = planning
     //      - 1 = achieving
@@ -87,11 +88,16 @@ struct CharacterData {
     //  - stats[0] = energy (restored by sleeping)
     //  - stats[1] = energy restoration
     //  - stats[2] = energy consumption
+    //  - stats[3] = total gold
+    //  - stats[4] = gold earned in the current cycle
+    //  - stats[5] = target gold per cycle
+    //  - stats[6] = gold earned per frame
     float stats[12];
     
     // define the unique addresses of the character
     //  - addresses[0] = the current address
     //  - addresses[1] = the bed in the apartment
+    //  - addresses[2] = the office in the office building
     int4 addresses[4];
     
     // define the navigation data of the character
@@ -539,7 +545,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 
                 // update the character's movement explicitly
-                updateMovement(character, frame, character.destination, -PI * 0.5f);
+                updateMovement(character, frame, character.destination, float(character.addresses[1].z) * PI * 0.5f);
                 
                 // avoid navigation and movement update
                 performNavigationUpdate = false;
