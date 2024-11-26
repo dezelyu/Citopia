@@ -223,15 +223,18 @@ void updateMotion(thread CharacterData& character, const int motionIndex,
                   const float currentTime) {
     float4x2 controller = character.motionControllers[motionIndex];
     if (motionDurations[motionIndex] < 0.0f) {
+        controller[1][0] = 0.0f;
+        controller[1][1] = 0.0f;
         controller[3][0] = currentTime;
         controller[3][1] = currentTime;
-    }
-    const float offset = targetSpeed * (currentTime - controller[3][1]);
-    if (offset < motionAttacks[motionIndex]) {
-        const float factor = 0.5f - cos(offset / motionAttacks[motionIndex] * PI) * 0.5f;
-        controller[1][0] = controller[1][0] * (1.0 - factor) + controller[1][1] * factor;
     } else {
-        controller[1][0] = controller[1][1];
+        const float offset = targetSpeed * (currentTime - controller[3][1]);
+        if (offset < motionAttacks[motionIndex]) {
+            const float factor = 0.5f - cos(offset / motionAttacks[motionIndex] * PI) * 0.5f;
+            controller[1][0] = controller[1][0] * (1.0 - factor) + controller[1][1] * factor;
+        } else {
+            controller[1][0] = controller[1][1];
+        }
     }
     const float progress = fmod(targetSpeed * (currentTime - controller[3][0]),
                                 motionDurations[motionIndex]);
@@ -243,6 +246,12 @@ void updateMotion(thread CharacterData& character, const int motionIndex,
     controller[3][0] = currentTime - (controller[1][0] <= 0.0001f ? 0.0f : progress) / targetSpeed;
     controller[3][1] = currentTime;
     character.motionControllers[motionIndex] = controller;
+}
+
+// defien the function that gets the duration played for a motion
+float motionDurationPlayed(thread CharacterData& character, const int motionIndex, const float currentTime) {
+    const float4x2 controller = character.motionControllers[motionIndex];
+    return currentTime - controller[3][1];
 }
 
 // define the function that finds the nearest external entrance
@@ -512,19 +521,18 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
-                    updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
-                    updateMotion(character, 1, motionSpeedFactor, 1.0f, currentTime);
-                    updateMotion(character, 2, motionSpeedFactor, 1.0f, currentTime);
+                    updateMotion(character, 0, 1.0f, 0.0f, currentTime);
+                    updateMotion(character, 1, 1.0f, 1.0f, currentTime);
+                    updateMotion(character, 2, 1.0f, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     character.stats[0] += character.stats[1];
                     if (character.stats[0] >= 1.0f) {
                         character.states.y = 3;
-                        updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
-                        updateMotion(character, 3, motionSpeedFactor, 1.0f, currentTime);
+                        updateMotion(character, 1, 1.0f, 0.0f, currentTime);
+                        updateMotion(character, 3, 1.0f, 1.0f, currentTime);
                     }
-                } else if (character.states.y >= 3) {
-                    character.states.y += 1;
-                    if (character.states.y > 120) {
+                } else if (character.states.y == 3) {
+                    if (motionDurationPlayed(character, 3, currentTime) > 2.0f) {
                         character.states.x = 0;
                         character.states.y = 0;
                     }
@@ -692,7 +700,7 @@ kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]
     
     const float3 characterPosition = characters[index].position.xyz;
     const float4 center = float4(characterPosition.x, characterPosition.y + 1.0f, characterPosition.z, 1.0f);
-    const float radius = -2.0f;
+    const float radius = -4.0f;
     if (dot(frame.frustumData[0], center) < radius) {
         return;
     }

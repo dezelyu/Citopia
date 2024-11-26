@@ -290,14 +290,14 @@ class Renderer {
         
         // load the meshes from the mesh assets
         let meshes = [
-            Mesh(asset: meshAssets[0], scale: 2.0, range: (0.0, 0.0, 2.0, 2.5)),
-            Mesh(asset: meshAssets[1], scale: 2.0, range: (1.5, 2.0, 5.0, 6.0)),
-            Mesh(asset: meshAssets[2], scale: 2.0, range: (4.0, 5.0, 10.0, 11.0)),
-            Mesh(asset: meshAssets[3], scale: 2.0, range: (9.0, 10.0, 1000.0, 1000.0)),
-            Mesh(asset: meshAssets[4], scale: 2.0, range: (0.0, 0.0, 2.0, 2.5)),
-            Mesh(asset: meshAssets[5], scale: 2.0, range: (1.5, 2.0, 5.0, 6.0)),
-            Mesh(asset: meshAssets[6], scale: 2.0, range: (4.0, 5.0, 10.0, 11.0)),
-            Mesh(asset: meshAssets[7], scale: 2.0, range: (9.0, 10.0, 1000.0, 1000.0)),
+            Mesh(asset: meshAssets[0], scale: 4.0, range: (0.0, 0.0, 2.0, 2.5)),
+            Mesh(asset: meshAssets[1], scale: 4.0, range: (1.5, 2.0, 5.0, 6.0)),
+            Mesh(asset: meshAssets[2], scale: 4.0, range: (4.0, 5.0, 10.0, 11.0)),
+            Mesh(asset: meshAssets[3], scale: 4.0, range: (9.0, 10.0, 1000.0, 1000.0)),
+            Mesh(asset: meshAssets[4], scale: 4.0, range: (0.0, 0.0, 2.0, 2.5)),
+            Mesh(asset: meshAssets[5], scale: 4.0, range: (1.5, 2.0, 5.0, 6.0)),
+            Mesh(asset: meshAssets[6], scale: 4.0, range: (4.0, 5.0, 10.0, 11.0)),
+            Mesh(asset: meshAssets[7], scale: 4.0, range: (9.0, 10.0, 1000.0, 1000.0)),
         ]
         
         // load the skeleton node
