@@ -40,6 +40,14 @@ constant float3 colors[] = {
     float3(0.040f, 0.050f, 0.015f),
     float3(0.020f, 0.030f, 0.005f),
     float3(0.839f, 0.776f, 0.694f),
+    float3(1.0f, 0.5f, 0.0f),
+    float3(1.0f, 0.45f, 0.0f),
+    float3(1.0f, 0.55f, 0.0f),
+    float3(0.95f, 0.5f, 0.0f),
+    float3(1.0f, 0.5f, 0.05f),
+    float3(1.0f, 0.5f, -0.05f),
+    float3(0.4f, 0.1f, 0.0f),
+    float3(0.02f, 0.02f, 0.02f),
 };
 
 // define the visible character data

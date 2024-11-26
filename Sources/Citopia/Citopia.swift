@@ -166,6 +166,7 @@ struct MapNodeData {
     //      - 2 = internal entrance
     //      - 3 = building
     //      - 4 = bed
+    //      - 5 = office
     //  - data.w = connection count
     var data: simd_int4 = .zero
     
@@ -330,6 +331,9 @@ class Citopia {
     
     // define the array for all the bed data
     var bedData: [simd_int4] = []
+    
+    // define the array for all the bed data
+    var officeData: [simd_int4] = []
     
     // define an array of all the map nodes
     var mapNodes: [MapNodeData] = []

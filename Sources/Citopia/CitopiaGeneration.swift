@@ -519,6 +519,19 @@ extension Citopia {
             apartmentIndices.insert(randomBuildingIndex)
         }
         
+        // initialize the office buildings
+        var officeIndices: Set<simd_int2> = []
+        let deskLength = self.blockSideLength - 6.0
+        let numDesksX = Int(self.blockSideLength / 4.5)
+        let numChairsZ = Int(deskLength / 1.5)
+        let officeDeskCount = Int(numDesksX) * Int(numChairsZ * 2)
+        let officeCount = self.characterCount / officeDeskCount + 1
+        while (buildingIndices.count > 0 && officeIndices.count < officeCount) {
+            let randomBuildingIndex = buildingIndices.randomElement()!
+            buildingIndices.remove(randomBuildingIndex)
+            officeIndices.insert(randomBuildingIndex)
+        }
+        
         // initialize the buildings
         for x in 0..<self.blockCount {
             for z in 0..<self.blockCount {
@@ -543,6 +556,9 @@ extension Citopia {
                 if (apartmentIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 1
                     buildingColorIndex = Int.random(in: 23...28)
+                } else if (officeIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    building.data.x = 2
+                    buildingColorIndex = Int.random(in: 35...40)
                 }
                 
                 // generate the building decorations
@@ -854,6 +870,15 @@ extension Citopia {
                     )
                 }
                 
+                // initialize the building as an office building
+                if (officeIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    self.initializeOfficeBuildingInterior(
+                        index: self.buildings.count, origin: origin, blockPosition: blockPosition,
+                        interiorEntranceNodeIndices: interiorEntranceNodeIndices,
+                        connect: connect
+                    )
+                }
+                
                 // store the new building
                 self.buildings.append(building)
             }
@@ -939,6 +964,133 @@ extension Citopia {
         }
         
         // connect the map node with the interior entrance nodes
+        for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
+            let position = self.mapNodes[interiorEntranceNodeIndex].position
+            let array = nodePositionIndexArray.sorted {
+                distance(position, $0.0) < distance(position, $1.0)
+            }
+            connect(interiorEntranceNodeIndex, array[0].1)
+            connect(interiorEntranceNodeIndex, array[1].1)
+        }
+    }
+    
+    // define the function that initializes the office building interior
+    func initializeOfficeBuildingInterior(index: Int,
+                                          origin: simd_float2,
+                                          blockPosition: simd_float2,
+                                          interiorEntranceNodeIndices: [Int],
+                                          connect: (Int, Int) -> ()) {
+        
+        // create the desks
+        let deskHeight = Float(0.8)
+        let deskLength = self.blockSideLength - 6.0
+        let numDesksX = Int(self.blockSideLength / 4.5)
+        let numChairsZ = Int(deskLength / 1.5)
+        let distanceBetweenDesksX = self.blockSideLength / Float(numDesksX + 1)
+        let distanceBetweenChairsZ = deskLength / Float(numChairsZ + 1)
+        var previousLaptopColor = Int(-1)
+        for deskX in 1...numDesksX {
+            let offsetX = distanceBetweenDesksX * Float(deskX)
+            self.furnitureBlocks.append((
+                blockPosition + origin - simd_float2(self.blockSideLength / 2.0, 0.0) + simd_float2(offsetX, 0), 0.05,
+                simd_float3(1.0, deskHeight, deskLength), 41
+            ))
+            for chairZ in 1...numChairsZ {
+                
+                // create the chairs
+                let offsetZ = distanceBetweenChairsZ * Float(chairZ)
+                let nodePositionPos = blockPosition + origin - simd_float2(self.blockSideLength / 2.0, deskLength / 2.0) + simd_float2(offsetX + 1.2, offsetZ)
+                self.furnitureBlocks.append((
+                    nodePositionPos, 0.05,
+                    simd_float3(0.5, 0.5, 0.5), 42
+                ))
+                let nodePositionNeg = blockPosition + origin - simd_float2(self.blockSideLength / 2.0, deskLength / 2.0) + simd_float2(offsetX - 1.2, offsetZ)
+                self.furnitureBlocks.append((
+                    nodePositionNeg, 0.05,
+                    simd_float3(0.5, 0.5, 0.5), 42
+                ))
+                
+                // create a laptop
+                var laptopColorArray = [Int]()
+                for i in 0...4 {
+                    if (i != previousLaptopColor) {
+                        laptopColorArray.append(i)
+                    }
+                }
+                let laptopColorIndex = laptopColorArray.randomElement()!
+                previousLaptopColor = laptopColorIndex
+                let laptopColor = 3 + laptopColorIndex * 4 + Int.random(in: 0...3)
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(self.blockSideLength / 2.0, deskLength / 2.0) + simd_float2(offsetX, offsetZ), deskHeight + 0.05,
+                    simd_float3(0.8, 0.1, 0.8), laptopColor
+                ))
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(self.blockSideLength / 2.0, deskLength / 2.0) + simd_float2(offsetX, offsetZ), deskHeight + 0.15,
+                    simd_float3(0.1, 0.45, 0.8), laptopColor
+                ))
+            }
+        }
+        
+        // create an array storing the desk node position and index
+        var nodePositionIndexArray: [(simd_float4, Int)] = []
+        let nodeOffset = simd_float2((distanceBetweenDesksX) / 2.0, (distanceBetweenChairsZ) / 2.0)
+        for chairZ in -1...(numChairsZ + 1) {
+            for deskX in 0...numDesksX {
+                let offsetX = distanceBetweenDesksX * Float(deskX)
+                let offsetZ = distanceBetweenChairsZ * Float(chairZ)
+                let nodePosition = blockPosition + origin + nodeOffset - simd_float2(self.blockSideLength / 2.0, deskLength / 2.0) + simd_float2(offsetX, offsetZ)
+                var mapNode = MapNodeData()
+                mapNode.data.x = 3
+                mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+                self.mapNodes.append(mapNode)
+                nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
+            }
+        }
+        
+        // create the charis
+        for chairZ in 0...(numChairsZ + 2) {
+            for deskX in 0...numDesksX {
+                let nodeIndexInArray = deskX + chairZ * (numDesksX + 1)
+                let nodeIndex = nodePositionIndexArray[nodeIndexInArray].1
+                if (deskX > 0 && (chairZ == 0 || chairZ == numChairsZ + 2)) {
+                    connect(nodeIndex, nodePositionIndexArray[(deskX - 1) + chairZ * (numDesksX + 1)].1)
+                }
+                
+                // create the chair nodes
+                if (chairZ > 0) {
+                    connect(nodeIndex, nodePositionIndexArray[deskX + (chairZ - 1) * (numDesksX + 1)].1)
+                    if (chairZ > 1 && chairZ < numChairsZ + 2) {
+                        let offset = distanceBetweenDesksX * 0.5 - 0.8
+                        if (deskX != numDesksX) {
+                            
+                            // create the chair node
+                            let nodePosition = simd_float2(self.mapNodes[nodeIndex].position.x + offset, self.mapNodes[nodeIndex].position.z)
+                            var mapNode = MapNodeData()
+                            mapNode.data.x = 5
+                            mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+                            self.mapNodes.append(mapNode)
+                            
+                            // connect the desk node to the chair node
+                            connect(nodeIndex, self.mapNodes.count - 1)
+                        }
+                        if (deskX != 0) {
+                            
+                            // create the chair node
+                            let nodePosition = simd_float2(self.mapNodes[nodeIndex].position.x - offset, self.mapNodes[nodeIndex].position.z)
+                            var mapNode = MapNodeData()
+                            mapNode.data.x = 5
+                            mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+                            self.mapNodes.append(mapNode)
+                            
+                            // connect the desk node to the chair node
+                            connect(nodeIndex, self.mapNodes.count - 1)
+                        }
+                    }
+                }
+            }
+        }
+        
+        // connect the closest desk nodes with the interior entrance nodes
         for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
             let position = self.mapNodes[interiorEntranceNodeIndex].position
             let array = nodePositionIndexArray.sorted {
