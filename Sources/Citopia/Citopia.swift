@@ -327,8 +327,8 @@ class Citopia {
     // define the furniture blocks to render
     var furnitureBlocks: [(simd_float2, Float, simd_float3, Int)] = []
     
-    // define the array for all the bed data
-    var bedData: [simd_int4] = []
+    // define the dictionary for all the bed data
+    var bedData: [Int : Set<simd_int4>] = [:]
     
     // define the dictionary for all the office data
     var officeData: [Int : Set<simd_int4>] = [:]

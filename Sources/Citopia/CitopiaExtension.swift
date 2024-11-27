@@ -125,77 +125,83 @@ extension Citopia {
     // define the function that creates the character buffer
     func createCharacterBuffer() {
         
+        // create an array of characters
+        var characters: [CharacterData] = []
+        
+        // initialize the characters
+        for bedBuildingIndex in self.bedData.keys {
+            for bedData in self.bedData[bedBuildingIndex]! {
+                
+                // create a new character
+                var character = CharacterData()
+                
+                // initialize gender
+                character.data.x = UInt32.random(in: 0...1)
+                
+                // initialize age
+                character.data.y = UInt32.random(in: 20...40)
+                
+                // initialize the stats
+                character.stats.0 = Float.random(in: 0.0...1.0)
+                character.stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+                character.stats.2 = 1.0 / (Float.random(in: 120.0...180.0) * 60.0)
+                character.stats.3 = Float.random(in: 0.0...100.0)
+                character.stats.4 = 0.0
+                character.stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
+                character.stats.6 = character.stats.5 / (Float.random(in: 12.0...18.0) * 60.0)
+                
+                // initialize the addresses
+                character.addresses.0 = bedData
+                character.addresses.1 = bedData
+                if (!self.officeData.isEmpty) {
+                    var nearestDistance = Float.greatestFiniteMagnitude
+                    var nearestOfficeBuildingIndex = self.officeData.keys.randomElement()!
+                    for officeBuildingIndex in self.officeData.keys {
+                        let currentDistance = distance(
+                            self.buildings[officeBuildingIndex].position,
+                            self.buildings[Int(bedData.x)].position
+                        )
+                        if (nearestDistance > currentDistance) {
+                            nearestDistance = currentDistance
+                            nearestOfficeBuildingIndex = officeBuildingIndex
+                        }
+                    }
+                    character.addresses.2 = self.officeData[nearestOfficeBuildingIndex]!.randomElement()!
+                    self.officeData[nearestOfficeBuildingIndex]!.remove(character.addresses.2)
+                    if (self.officeData[nearestOfficeBuildingIndex]!.isEmpty) {
+                        self.officeData[nearestOfficeBuildingIndex] = nil
+                    }
+                }
+                
+                // initialize the navigation data
+                character.navigation = simd_int4(
+                    -1, -1,
+                     Int32(bedData.y),
+                     Int32(bedData.y)
+                )
+                
+                // initialize position
+                character.position = self.mapNodes[Int(bedData.y)].position
+                
+                // initialize destination
+                character.destination = character.position
+                
+                // store the new character
+                characters.append(character)
+            }
+        }
+        
         // update the total number of characters
-        self.characterCount = self.bedData.count
+        self.characterCount = characters.count
         
         // create a staging buffer with the map node data
         let stagingBuffer = self.device.makeBuffer(
-            length: MemoryLayout<CharacterData>.stride * self.bedData.count,
+            bytes: characters, length: MemoryLayout<CharacterData>.stride * characters.count,
             options: [
                 .cpuCacheModeWriteCombined,
                 .storageModeShared,
             ]
         )!
-        
-        // acquire the pointer to the staging buffer
-        let pointer = stagingBuffer.contents().bindMemory(
-            to: CharacterData.self, capacity: self.bedData.count
-        )
-        
-        // initialize the characters
-        for (index, bedData) in self.bedData.enumerated() {
-            
-            // initialize gender
-            pointer[index].data.x = UInt32.random(in: 0...1)
-            
-            // initialize age
-            pointer[index].data.y = UInt32.random(in: 20...40)
-            
-            // initialize the stats
-            pointer[index].stats.0 = Float.random(in: 0.0...1.0)
-            pointer[index].stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
-            pointer[index].stats.2 = 1.0 / (Float.random(in: 120.0...180.0) * 60.0)
-            pointer[index].stats.3 = Float.random(in: 0.0...100.0)
-            pointer[index].stats.4 = 0.0
-            pointer[index].stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
-            pointer[index].stats.6 = pointer[index].stats.5 / (Float.random(in: 12.0...18.0) * 60.0)
-            
-            // initialize the addresses
-            pointer[index].addresses.0 = bedData
-            pointer[index].addresses.1 = bedData
-            if (!self.officeData.isEmpty) {
-                var nearestDistance = Float.greatestFiniteMagnitude
-                var nearestOfficeBuildingIndex = self.officeData.keys.randomElement()!
-                for officeBuildingIndex in self.officeData.keys {
-                    let currentDistance = distance(
-                        self.buildings[officeBuildingIndex].position,
-                        self.buildings[Int(bedData.x)].position
-                    )
-                    if (nearestDistance > currentDistance) {
-                        nearestDistance = currentDistance
-                        nearestOfficeBuildingIndex = officeBuildingIndex
-                    }
-                }
-                pointer[index].addresses.2 = self.officeData[nearestOfficeBuildingIndex]!.randomElement()!
-                self.officeData[nearestOfficeBuildingIndex]!.remove(pointer[index].addresses.2)
-                if (self.officeData[nearestOfficeBuildingIndex]!.isEmpty) {
-                    self.officeData[nearestOfficeBuildingIndex] = nil
-                }
-            }
-            
-            // initialize the navigation data
-            pointer[index].navigation = simd_int4(
-                -1, -1,
-                Int32(bedData.y),
-                Int32(bedData.y)
-            )
-            
-            // initialize position
-            pointer[index].position = self.mapNodes[Int(bedData.y)].position
-            
-            // initialize destination
-            pointer[index].destination = pointer[index].position
-        }
         
         // create a private storage buffer
         self.characterBuffer = self.device.makeBuffer(

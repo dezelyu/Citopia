@@ -958,7 +958,10 @@ extension Citopia {
                     connect(self.mapNodes.count - 1, nodePositionIndexArray[(bedX - 1) + bedZ * (numBedsX + 1)].1)
                     
                     // store the bed data
-                    self.bedData.append(simd_int4(
+                    if (self.bedData[index] == nil) {
+                        self.bedData[index] = []
+                    }
+                    self.bedData[index]!.insert(simd_int4(
                         Int32(index), Int32(self.mapNodes.count - 1), -1, 0
                     ))
                 }
