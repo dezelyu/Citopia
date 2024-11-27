@@ -76,12 +76,7 @@ struct CharacterData {
     //      - 0 = wandering on the street
     //      - 1 = sleeping (determined by energy)
     //      - 2 = working (determined by gold)
-    //  - states.y = goal planner
-    //      - 0 = planning
-    //      - 1 = achieving
-    //      - 2 = completing
-    //      - 3 = terminating
-    //      - 4 = terminated
+    //  - states.y = goal planner state
     uint4 states;
     
     // define the stats of the character
@@ -242,8 +237,7 @@ void updateMotion(thread CharacterData& character, const int motionIndex,
             controller[1][0] = controller[1][1];
         }
     }
-    const float progress = fmod(targetSpeed * (currentTime - controller[3][0]),
-                                motionDurations[motionIndex]);
+    const float progress = fmod(targetSpeed * (currentTime - controller[3][0]), motionDurations[motionIndex]);
     controller[0][0] = motionDurations[motionIndex];
     controller[0][1] = -targetSpeed;
     controller[1][1] = clamp(targetBlendWeight, 0.0001f, 1.0f);
@@ -298,13 +292,65 @@ int findNearestInternalEntrance(thread CharacterData& character,
     return entrance;
 }
 
+// define the function that navigates the character to exit the current building
+void exitCurrentBuilding(thread CharacterData& character,
+                         const device MapNodeData* mapNodes,
+                         const device BuildingData* buildings) {
+    const MapNodeData mapNode = mapNodes[character.navigation.z];
+    if (mapNode.data.x == 1) {
+        character.addresses[0] = int4(-1);
+        character.navigation.x = -1;
+        character.navigation.y = 0;
+    } else if (mapNode.data.x == 2) {
+        character.navigation.x = findNearestExternalEntrance(character, mapNodes, buildings,
+                                                             character.addresses[0].x);
+        character.navigation.y = 1;
+    } else {
+        character.navigation.x = findNearestInternalEntrance(character, mapNodes, buildings,
+                                                             character.addresses[0].x);
+        character.navigation.y = 3;
+    }
+}
+
+// implement the function that navigates the character to a building
+void moveToBuilding(thread CharacterData& character,
+                    const device MapNodeData* mapNodes,
+                    const device BuildingData* buildings,
+                    const int buildingIndex) {
+    const MapNodeData mapNode = mapNodes[character.navigation.z];
+    if (mapNode.data.x == 2) {
+        character.addresses[0] = int4(buildingIndex, -1, -1, -1);
+        character.navigation.x = -1;
+        character.navigation.y = 3;
+    } else if (mapNode.data.x == 1) {
+        character.navigation.x = findNearestInternalEntrance(character, mapNodes, buildings,
+                                                             buildingIndex);
+        character.navigation.y = 2;
+    } else {
+        character.navigation.x = findNearestExternalEntrance(character, mapNodes, buildings,
+                                                             buildingIndex);
+        character.navigation.y = 0;
+    }
+}
+
 // define the function that updates the navigation data of a character
 void updateNavigation(thread CharacterData& character,
                       const device MapNodeData* mapNodes,
+                      const device BuildingData* buildings,
+                      const int buildingIndex,
+                      const int mapNodeIndex,
                       const float3 randomNumber) {
+    if (character.addresses[0].x >= 0 && character.addresses[0].x != buildingIndex) {
+        exitCurrentBuilding(character, mapNodes, buildings);
+    } else if (buildingIndex >= 0 && character.addresses[0].x == -1) {
+        moveToBuilding(character, mapNodes, buildings, buildingIndex);
+    } else if (buildingIndex >= 0 && character.addresses[0].x == buildingIndex) {
+        character.navigation.x = mapNodeIndex;
+        character.navigation.y = 3;
+    }
     float4 destinationVector;
     if (character.navigation.x >= 0) {
-        destinationVector = mapNodes[character.navigation.x].position - character.position;
+        destinationVector = normalize(mapNodes[character.navigation.x].position - character.position);
     }
     const MapNodeData mapNode = mapNodes[character.navigation.z];
     int connections[16];
@@ -329,8 +375,8 @@ void updateNavigation(thread CharacterData& character,
                 connections[connectionCount] = connection;
                 connectionCount += 1;
                 if (character.navigation.x >= 0) {
-                    const float4 vector = currentMapNode.position - character.position;
-                    if (dot(destinationVector, vector) > 0.0f) {
+                    const float4 vector = normalize(currentMapNode.position - character.position);
+                    if (dot(destinationVector.xz, vector.xz) > 0.3f) {
                         desiredConnections[desiredConnectionCount] = connection;
                         desiredConnectionCount += 1;
                     }
@@ -340,23 +386,13 @@ void updateNavigation(thread CharacterData& character,
             connections[connectionCount] = connection;
             connectionCount += 1;
             if (character.navigation.x >= 0) {
-                const float4 vector = currentMapNode.position - character.position;
-                if (dot(destinationVector, vector) > 0.0f) {
+                const float4 vector = normalize(currentMapNode.position - character.position);
+                if (dot(destinationVector.xz, vector.xz) > 0.3f) {
                     desiredConnections[desiredConnectionCount] = connection;
                     desiredConnectionCount += 1;
                 }
             }
         }
-    }
-    if (connectionCount == 0) {
-        const int previousMapNodeIndex = character.navigation.w;
-        character.navigation.w = character.navigation.z;
-        character.navigation.z = previousMapNodeIndex;
-        const MapNodeData currentMapNode = mapNodes[character.navigation.z];
-        character.destination.xyz = currentMapNode.position.xyz;
-        character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
-        character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
-        return;
     }
     if (desiredConnectionCount > 0) {
         character.navigation.w = character.navigation.z;
@@ -369,10 +405,20 @@ void updateNavigation(thread CharacterData& character,
         character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
         return;
     }
+    if (connectionCount > 0) {
+        character.navigation.w = character.navigation.z;
+        character.navigation.z = connections[
+            int(float(connectionCount) * fract(randomNumber.y))
+        ];
+        const MapNodeData currentMapNode = mapNodes[character.navigation.z];
+        character.destination.xyz = currentMapNode.position.xyz;
+        character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
+        character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
+        return;
+    }
+    const int previousMapNodeIndex = character.navigation.w;
     character.navigation.w = character.navigation.z;
-    character.navigation.z = connections[
-        int(float(connectionCount) * fract(randomNumber.y))
-    ];
+    character.navigation.z = previousMapNodeIndex;
     const MapNodeData currentMapNode = mapNodes[character.navigation.z];
     character.destination.xyz = currentMapNode.position.xyz;
     character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
@@ -426,47 +472,6 @@ void updateMovement(thread CharacterData& character, constant FrameData& frame,
     character.position.xyz += positionOffset * positionFactor;
 }
 
-// define the function that navigates the character to exit the current building
-void exitCurrentBuilding(thread CharacterData& character,
-                         const device MapNodeData* mapNodes,
-                         const device BuildingData* buildings) {
-    const MapNodeData mapNode = mapNodes[character.navigation.z];
-    if (mapNode.data.x == 1) {
-        character.addresses[0] = int4(-1);
-        character.navigation.x = -1;
-        character.navigation.y = 0;
-    } else if (mapNode.data.x == 2) {
-        character.navigation.x = findNearestExternalEntrance(character, mapNodes, buildings,
-                                                             character.addresses[0].x);
-        character.navigation.y = 1;
-    } else {
-        character.navigation.x = findNearestInternalEntrance(character, mapNodes, buildings,
-                                                             character.addresses[0].x);
-        character.navigation.y = 3;
-    }
-}
-
-// define the function that navigates the character to a building
-void moveToBuilding(thread CharacterData& character,
-                    const device MapNodeData* mapNodes,
-                    const device BuildingData* buildings,
-                    const int buildingIndex) {
-    const MapNodeData mapNode = mapNodes[character.navigation.z];
-    if (mapNode.data.x == 2) {
-        character.addresses[0] = int4(buildingIndex, -1, -1, -1);
-        character.navigation.x = -1;
-        character.navigation.y = 3;
-    } else if (mapNode.data.x == 1) {
-        character.navigation.x = findNearestInternalEntrance(character, mapNodes, buildings,
-                                                             buildingIndex);
-        character.navigation.y = 2;
-    } else {
-        character.navigation.x = findNearestExternalEntrance(character, mapNodes, buildings,
-                                                             buildingIndex);
-        character.navigation.y = 0;
-    }
-}
-
 // define the simulation function
 kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                                device CharacterData* characters [[buffer(1)]],
@@ -492,7 +497,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     const MapNodeData mapNode = mapNodes[character.navigation.z];
     
     // compute three random numbers based on the character position
-    const float3 randomNumber = generateRandomNumber(fract(character.position.xyz) + float3(currentTime));
+    const float3 randomNumber = generateRandomNumber(character.position.xyz + float3(currentTime + float(index)));
     
     // compute the motion speed factor based on the character age
     const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
@@ -500,20 +505,24 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     // compute the scale factor based on the character age
     const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
     
-    // define the variable that controls whether to perform navigation update
-    bool performNavigationUpdate = true;
+    // define the variable of the index of the target building the character wants to move to
+    int targetBuildingIndex = -1;
     
-    // define the variable that controls whether to perform navigation update
-    bool performMovementUpdate = true;
+    // define the variable of the index of the target map node the character wants to move to
+    int targetMapNodeIndex = -1;
     
     // update the character's stats
     const float sleepingFactor = (character.states.x == 1 && character.states.y == 2) ? 1.0f : 0.0f;
     character.stats[0] -= character.stats[2] * (1.0f - sleepingFactor) * frame.data.y;
     
     // update the character's goal based on the character's stats
-    if (character.states.x != 1 && character.stats[0] <= 0.0f) {
-        character.states.x = 1;
-        character.states.y = 0;
+    if (character.states.y == 0) {
+        if (character.stats[0] < 0.0f) {
+            character.states.x = 1;
+        }
+        if (character.stats[4] < character.stats[5]) {
+            character.states.x = 2;
+        }
     }
     
     // achieve the character's goal
@@ -522,17 +531,21 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             // sleeping
         case 1:
             
-            // perform sleeping when the character has arrived at the bed
+            // update the target building and map node indices
+            targetBuildingIndex = character.addresses[1].x;
+            targetMapNodeIndex = character.addresses[1].y;
+            
+            // perform the sleeping behavior when the character has arrived at the bed
             if (mapNode.data.x == 4 && length(character.destination - character.position) < 0.25f) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
-                    updateMotion(character, 0, 1.0f, 0.0f, currentTime);
+                    updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
                     updateMotion(character, 1, 1.0f, 1.0f, currentTime);
                     updateMotion(character, 2, 1.0f, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     character.stats[0] += character.stats[1];
-                    if (character.stats[0] >= 1.0f) {
+                    if (character.stats[0] > 1.0f) {
                         character.states.y = 3;
                         updateMotion(character, 1, 1.0f, 0.0f, currentTime);
                         updateMotion(character, 3, 1.0f, 1.0f, currentTime);
@@ -541,57 +554,64 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     if (motionDurationPlayed(character, 3, currentTime) > 2.0f) {
                         character.states.x = 0;
                         character.states.y = 0;
+                        character.stats[4] = 0.0f;
                     }
                 }
                 
                 // update the character's movement explicitly
-                updateMovement(character, frame, character.destination, float(character.addresses[1].z) * PI * 0.5f);
+                updateMovement(character, frame, character.destination, 
+                               float(character.addresses[1].z) * PI * 0.5f);
                 
-                // avoid navigation and movement update
-                performNavigationUpdate = false;
-                performMovementUpdate = false;
+                // store the new character data
+                characters[index] = character;
+                
+                // avoid further execution
+                return;
+            }
+            break;
+            
+            // working
+        case 2:
+            
+            // update the target building and map node indices
+            targetBuildingIndex = character.addresses[2].x;
+            targetMapNodeIndex = character.addresses[2].y;
+            
+            // perform the working behavior when the character has arrived at the office
+            if (mapNode.data.x == 5 && length(character.destination - character.position) < 0.25f) {
+                if (character.states.y < 2) {
+                    character.states.y = 2;
+                    character.movement.y = 0.0f;
+                    updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+                } else if (character.states.y == 2) {
+                    character.stats[3] += character.stats[6];
+                    character.stats[4] += character.stats[6];
+                    if (character.stats[4] > character.stats[5]) {
+                        character.states.y = 3;
+                    }
+                } else if (character.states.y == 3) {
+                    character.states.x = 0;
+                    character.states.y = 0;
+                }
+                
+                // update the character's movement explicitly
+                updateMovement(character, frame, character.destination,
+                               float(character.addresses[2].z) * PI * 0.5f);
+                
+                // store the new character data
+                characters[index] = character;
+                
+                // avoid further execution
+                return;
             }
             break;
     }
     
     // update navigation when the character reaches the destination
-    if (performNavigationUpdate && length(character.destination - character.position) < 0.25f) {
-        
-        // update the navigation data based on the character's goal
-        switch (character.states.x) {
-                
-                // wandering on the street
-            case 0:
-                
-                // exit the current building
-                if (character.addresses[0].x >= 0) {
-                    exitCurrentBuilding(character, mapNodes, buildings);
-                }
-                break;
-                
-                // sleeping
-            case 1:
-                
-                // move to the character's apartment if the character is on the street
-                if (character.addresses[0].x == -1) {
-                    moveToBuilding(character, mapNodes, buildings, character.addresses[1].x);
-                } else {
-                    
-                    // exit the current building if it is not the character's apartment
-                    if (character.addresses[0].x != character.addresses[1].x) {
-                        exitCurrentBuilding(character, mapNodes, buildings);
-                        
-                        // locate the map node of the bed
-                    } else {
-                        character.navigation.x = character.addresses[1].y;
-                        character.navigation.y = 3;
-                    }
-                }
-                break;
-        }
+    if (length(character.destination - character.position) < 0.25f) {
         
         // perform navigation update
-        updateNavigation(character, mapNodes, randomNumber);
+        updateNavigation(character, mapNodes, buildings, targetBuildingIndex, targetMapNodeIndex, randomNumber);
         
         // update the walk motion controller with the new parameters
         updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
@@ -601,9 +621,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // update the character movement
-    if (performMovementUpdate) {
-        updateMovement(character, frame);
-    }
+    updateMovement(character, frame);
     
     // store the new character data
     characters[index] = character;

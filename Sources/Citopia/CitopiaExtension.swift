@@ -157,14 +157,16 @@ extension Citopia {
             pointer[index].stats.2 = 1.0 / (Float.random(in: 120.0...180.0) * 60.0)
             pointer[index].stats.3 = Float.random(in: 0.0...100.0)
             pointer[index].stats.4 = 0.0
-            pointer[index].stats.5 = Float.random(in: 100.0...200.0)
+            pointer[index].stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
             pointer[index].stats.6 = pointer[index].stats.5 / (Float.random(in: 12.0...18.0) * 60.0)
             
             // initialize the addresses
             pointer[index].addresses.0 = bedData
             pointer[index].addresses.1 = bedData
-            pointer[index].addresses.2 = self.officeData.randomElement()!
-            self.officeData.remove(pointer[index].addresses.2)
+            if let officeData = self.officeData.randomElement() {
+                pointer[index].addresses.2 = officeData
+                self.officeData.remove(pointer[index].addresses.2)
+            }
             
             // initialize the navigation data
             pointer[index].navigation = simd_int4(

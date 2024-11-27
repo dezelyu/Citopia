@@ -32,10 +32,12 @@ extension Citopia {
                 }
                 
                 // conditionally break one connection
-                if (!possibleExteriorConnections.isEmpty && Bool.random()) {
-                    possibleExteriorConnections.remove(
-                        at: Int.random(in: 0..<possibleExteriorConnections.count)
-                    )
+                if (0 < x && x < self.blockCount && 0 < z && z < self.blockCount) {
+                    if (!possibleExteriorConnections.isEmpty && Bool.random()) {
+                        possibleExteriorConnections.remove(
+                            at: Int.random(in: 0..<possibleExteriorConnections.count)
+                        )
+                    }
                 }
                 
                 // store the connections

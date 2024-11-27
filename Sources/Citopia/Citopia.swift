@@ -61,12 +61,7 @@ struct CharacterData {
     //      - 0 = wandering on the street
     //      - 1 = sleeping (determined by energy)
     //      - 2 = working (determined by gold)
-    //  - states.y = goal planner
-    //      - 0 = planning
-    //      - 1 = achieving
-    //      - 2 = completing
-    //      - 3 = terminating
-    //      - 4 = terminated
+    //  - states.y = goal planner state
     var states: simd_uint4 = .zero
     
     // define the stats of the character
