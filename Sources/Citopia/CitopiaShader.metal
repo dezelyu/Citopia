@@ -9,21 +9,24 @@ constant float characterMovementDampingFactor = 0.1f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
-constant uint motionCount = 4;
+constant uint motionCount = 5;
 constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
     -2.0f,
     -2.0f,
+    0.75f,
 };
 constant float motionAttacks[motionCount] = {
     0.4f,
     1.0f,
     0.4f,
     0.4f,
+    0.4f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
     0.027f,
+    0.0f,
     0.0f,
     0.0f,
     0.0f,
@@ -427,7 +430,7 @@ void updateNavigation(thread CharacterData& character,
 }
 
 // define the function that updates the character movement
-void updateMovement(thread CharacterData& character, constant FrameData& frame) {
+float3 updateMovement(thread CharacterData& character, constant FrameData& frame) {
     const float speedOffset = character.movement.y - character.movement.x;
     const float speedFactor = frame.data.y * characterMovementDampingFactor;
     character.movement.x += clamp(speedOffset * speedFactor,
@@ -449,7 +452,7 @@ void updateMovement(thread CharacterData& character, constant FrameData& frame) 
     const float directionX = cos(character.movement.z);
     const float directionZ = sin(character.movement.z);
     const float3 currentDirection = normalize(float3(directionX, 0.0f, directionZ));
-    character.position.xyz += currentDirection * character.movement.x * frame.data.y;
+    return currentDirection * character.movement.x * frame.data.y;
 }
 
 // define the function that updates the character movement with a specific position and rotation
@@ -583,15 +586,19 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     character.states.y = 2;
                     character.movement.y = 0.0f;
                     updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+                    updateMotion(character, 4, 1.0, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     character.stats[3] += character.stats[6];
                     character.stats[4] += character.stats[6];
                     if (character.stats[4] > character.stats[5]) {
                         character.states.y = 3;
+                        updateMotion(character, 4, 1.0, 0.0f, currentTime);
                     }
                 } else if (character.states.y == 3) {
-                    character.states.x = 0;
-                    character.states.y = 0;
+                    if (motionDurationPlayed(character, 4, currentTime) > 0.4f) {
+                        character.states.x = 0;
+                        character.states.y = 0;
+                    }
                 }
                 
                 // update the character's movement explicitly
@@ -621,7 +628,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // update the character movement
-    updateMovement(character, frame);
+    character.position.xyz += updateMovement(character, frame);
     
     // store the new character data
     characters[index] = character;

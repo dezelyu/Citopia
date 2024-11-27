@@ -310,6 +310,7 @@ class Renderer {
             ("Assets.scnassets/Motions/SleepLoop.scn", true, false),
             ("Assets.scnassets/Motions/SleepStart.scn", false, false),
             ("Assets.scnassets/Motions/SleepEnd.scn", false, false),
+            ("Assets.scnassets/Motions/WorkLoop.scn", true, false),
         ]
         
         // load the motion scene assets
@@ -390,6 +391,9 @@ class Renderer {
                         break
                     case 3:
                         visibleCharacterData.motionControllerIndices.3 = Int32(motionNode.data.1)
+                        break
+                    case 4:
+                        visibleCharacterData.motionControllerIndices.4 = Int32(motionNode.data.1)
                         break
                     default:
                         break

@@ -987,7 +987,7 @@ extension Citopia {
                                           connect: (Int, Int) -> ()) {
         
         // create the desks
-        let deskHeight = Float(0.8)
+        let deskHeight = Float(0.6)
         let deskLength = self.blockSideLength - 6.0
         let numDesksX = Int(self.blockSideLength / 4.5)
         let numChairsZ = Int(deskLength / 1.5)
@@ -1004,15 +1004,21 @@ extension Citopia {
                 
                 // create the chairs
                 let offsetZ = distanceBetweenChairsZ * Float(chairZ)
-                let nodePositionPos = blockPosition + origin - simd_float2(self.blockSideLength / 2.0, deskLength / 2.0) + simd_float2(offsetX + 1.2, offsetZ)
+                let nodePositionPos = blockPosition + origin + simd_float2(
+                    offsetX + 0.8 - self.blockSideLength / 2.0,
+                    offsetZ - deskLength / 2.0
+                )
                 self.furnitureBlocks.append((
                     nodePositionPos, 0.05,
-                    simd_float3(0.5, 0.5, 0.5), 42
+                    simd_float3(0.4, 0.4, 0.4), 42
                 ))
-                let nodePositionNeg = blockPosition + origin - simd_float2(self.blockSideLength / 2.0, deskLength / 2.0) + simd_float2(offsetX - 1.2, offsetZ)
+                let nodePositionNeg = blockPosition + origin + simd_float2(
+                    offsetX - 0.8 - self.blockSideLength / 2.0,
+                    offsetZ - deskLength / 2.0
+                )
                 self.furnitureBlocks.append((
                     nodePositionNeg, 0.05,
-                    simd_float3(0.5, 0.5, 0.5), 42
+                    simd_float3(0.4, 0.4, 0.4), 42
                 ))
                 
                 // create a laptop
@@ -1069,7 +1075,12 @@ extension Citopia {
                         if (deskX != numDesksX) {
                             
                             // create the chair node
-                            let nodePosition = simd_float2(self.mapNodes[nodeIndex].position.x + offset, self.mapNodes[nodeIndex].position.z)
+                            let nodeIndexInArray = deskX + chairZ * (numDesksX + 1)
+                            let nodeIndex = nodePositionIndexArray[nodeIndexInArray].1
+                            let nodePosition = simd_float2(
+                                self.mapNodes[nodeIndex].position.x + offset,
+                                self.mapNodes[nodeIndex].position.z
+                            )
                             var mapNode = MapNodeData()
                             mapNode.data.x = 5
                             mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
@@ -1089,7 +1100,12 @@ extension Citopia {
                         if (deskX != 0) {
                             
                             // create the chair node
-                            let nodePosition = simd_float2(self.mapNodes[nodeIndex].position.x - offset, self.mapNodes[nodeIndex].position.z)
+                            let nodeIndexInArray = deskX + (chairZ - 1) * (numDesksX + 1)
+                            let nodeIndex = nodePositionIndexArray[nodeIndexInArray].1
+                            let nodePosition = simd_float2(
+                                self.mapNodes[nodeIndex].position.x - offset,
+                                self.mapNodes[nodeIndex].position.z
+                            )
                             var mapNode = MapNodeData()
                             mapNode.data.x = 5
                             mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
