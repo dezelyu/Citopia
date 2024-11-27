@@ -628,7 +628,56 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // update the character movement
-    character.position.xyz += updateMovement(character, frame);
+    float3 deltaPosition = updateMovement(character, frame);
+    
+    const float radius = 0.2f;
+    const float3 position = character.position.xyz;
+    
+    const float gridLengthX = frame.gridLengthData.x;
+    const float gridLengthZ = frame.gridLengthData.y;
+    
+    const uint gridDim = uint(sqrt(float(frame.gridData.x)));
+    const float width = gridLengthX * gridDim;
+    const float height = gridLengthZ * gridDim;
+    
+    const float3 gridCenter = float3(width / 2.0f, 0.0f, height / 2.0f);
+    const float3 characterPosition = clamp(position + gridCenter,
+                                           float3(0.0f, 0.0f, 0.0f),
+                                           float3(width, 0.0f, height));
+    
+    const uint gridIndexX = uint(characterPosition.x / gridLengthX);
+    const uint gridIndexZ = uint(characterPosition.z / gridLengthZ);
+    const uint gridIndex = gridIndexX + gridIndexZ * gridDim;
+    const uint startIndex = gridData[gridIndex].data.x;
+    const uint endIndex = gridData[gridIndex].data.y;
+    
+    for (uint i = startIndex; i <= endIndex; i++) {
+        
+        const uint neighbourIndex = characterIndexBuffer[i];
+        if (neighbourIndex == index) {
+            continue;
+        }
+        
+        const CharacterData neighbour = characters[neighbourIndex];
+        if (neighbour.states.x == 1 && neighbour.states.y == 2) {
+            continue;
+        }
+        
+        const float3 neighbourPosition = neighbour.position.xyz;
+        if (distance(neighbourPosition, position) >= radius * 2.0f) {
+            continue;
+        };
+        
+        float3 v = normalize(neighbourPosition - position);
+        if (dot(normalize(deltaPosition), v) <= 0.0f) {
+            continue;
+        };
+        
+        v = float3(v.z, 0.0f, -v.x);
+        deltaPosition = dot(deltaPosition, v) * v * frame.data.y + v * 0.01f;
+    }
+    
+    character.position.xyz += deltaPosition;
     
     // store the new character data
     characters[index] = character;
