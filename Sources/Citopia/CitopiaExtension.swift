@@ -163,9 +163,24 @@ extension Citopia {
             // initialize the addresses
             pointer[index].addresses.0 = bedData
             pointer[index].addresses.1 = bedData
-            if let officeData = self.officeData.randomElement() {
-                pointer[index].addresses.2 = officeData
-                self.officeData.remove(pointer[index].addresses.2)
+            if (!self.officeData.isEmpty) {
+                var nearestDistance = Float.greatestFiniteMagnitude
+                var nearestOfficeBuildingIndex = self.officeData.keys.randomElement()!
+                for officeBuildingIndex in self.officeData.keys {
+                    let currentDistance = distance(
+                        self.buildings[officeBuildingIndex].position,
+                        self.buildings[Int(bedData.x)].position
+                    )
+                    if (nearestDistance > currentDistance) {
+                        nearestDistance = currentDistance
+                        nearestOfficeBuildingIndex = officeBuildingIndex
+                    }
+                }
+                pointer[index].addresses.2 = self.officeData[nearestOfficeBuildingIndex]!.randomElement()!
+                self.officeData[nearestOfficeBuildingIndex]!.remove(pointer[index].addresses.2)
+                if (self.officeData[nearestOfficeBuildingIndex]!.isEmpty) {
+                    self.officeData[nearestOfficeBuildingIndex] = nil
+                }
             }
             
             // initialize the navigation data
@@ -214,6 +229,9 @@ extension Citopia {
         
         // clear the array of map nodes
         self.mapNodes.removeAll()
+        
+        // clear the building data
+        self.buildings.removeAll()
     }
     
     // define the function that creates the visible character index buffer
@@ -543,8 +561,5 @@ extension Citopia {
         encoder.endEncoding()
         command.commit()
         command.waitUntilCompleted()
-        
-        // clear the building data
-        self.buildings.removeAll()
     }
 }

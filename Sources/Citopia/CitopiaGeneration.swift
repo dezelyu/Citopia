@@ -1076,7 +1076,10 @@ extension Citopia {
                             connect(nodeIndex, self.mapNodes.count - 1)
                             
                             // store the chair data
-                            self.officeData.insert(simd_int4(
+                            if (self.officeData[index] == nil) {
+                                self.officeData[index] = []
+                            }
+                            self.officeData[index]!.insert(simd_int4(
                                 Int32(index), Int32(self.mapNodes.count - 1), 0, 0
                             ))
                         }
@@ -1093,7 +1096,10 @@ extension Citopia {
                             connect(nodeIndex, self.mapNodes.count - 1)
                             
                             // store the chair data
-                            self.officeData.insert(simd_int4(
+                            if (self.officeData[index] == nil) {
+                                self.officeData[index] = []
+                            }
+                            self.officeData[index]!.insert(simd_int4(
                                 Int32(index), Int32(self.mapNodes.count - 1), 2, 0
                             ))
                         }

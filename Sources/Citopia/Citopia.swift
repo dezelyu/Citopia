@@ -327,17 +327,17 @@ class Citopia {
     // define the furniture blocks to render
     var furnitureBlocks: [(simd_float2, Float, simd_float3, Int)] = []
     
-    // define an array of all the buildings
-    var buildings: [BuildingData] = []
-    
     // define the array for all the bed data
     var bedData: [simd_int4] = []
     
-    // define the set for all the office data
-    var officeData: Set<simd_int4> = []
+    // define the dictionary for all the office data
+    var officeData: [Int : Set<simd_int4>] = [:]
     
     // define an array of all the map nodes
     var mapNodes: [MapNodeData] = []
+    
+    // define an array of all the buildings
+    var buildings: [BuildingData] = []
     
     // define the storage buffer for the map node data
     var mapNodeBuffer: MTLBuffer!
