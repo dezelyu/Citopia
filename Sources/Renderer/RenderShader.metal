@@ -5,9 +5,17 @@ using namespace metal;
 
 // define all the colors to render
 constant float3 colors[] = {
+    
+    // character (index: 0)
     float3(1.0f, 1.0f, 1.0f),
+    
+    // ground (index: 1)
     float3(0.05f, 0.05f, 0.05f),
+    
+    // structure (index: 2)
     float3(0.15f, 0.15f, 0.15f),
+    
+    // billboard (index: 3 - 22)
     float3(0.0f, 1.0f, 0.623f),
     float3(0.0f, 0.9f, 0.7f),
     float3(0.0f, 1.0f, 0.55f),
@@ -28,25 +36,37 @@ constant float3 colors[] = {
     float3(0.85f, 0.0f, 0.9f),
     float3(0.8f, 0.0f, 0.9f),
     float3(0.85f, 0.0f, 0.85f),
+    
+    // apartment (index: 23 - 28)
     float3(0.518f, 0.125f, 0.125f),
     float3(0.530f, 0.135f, 0.135f),
     float3(0.505f, 0.115f, 0.115f),
     float3(0.505f, 0.125f, 0.145f),
     float3(0.518f, 0.115f, 0.135f),
     float3(0.528f, 0.125f, 0.145f),
+    
+    // bed (index: 29 - 33)
     float3(0.050f, 0.060f, 0.020f),
     float3(0.030f, 0.040f, 0.010f),
     float3(0.070f, 0.080f, 0.020f),
     float3(0.040f, 0.050f, 0.015f),
     float3(0.020f, 0.030f, 0.005f),
+    
+    // pillow (index: 34)
     float3(0.839f, 0.776f, 0.694f),
+    
+    // office (index: 35 - 40)
     float3(1.0f, 0.5f, 0.0f),
     float3(1.0f, 0.45f, 0.0f),
     float3(1.0f, 0.55f, 0.0f),
     float3(0.95f, 0.5f, 0.0f),
+    float3(0.95f, 0.55f, 0.05f),
     float3(1.0f, 0.5f, 0.05f),
-    float3(1.0f, 0.5f, -0.05f),
+    
+    // office desk (index: 41)
     float3(0.4f, 0.1f, 0.0f),
+    
+    // office chair (index: 42)
     float3(0.02f, 0.02f, 0.02f),
 };
 
