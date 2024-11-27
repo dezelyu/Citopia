@@ -130,6 +130,27 @@ extension Citopia {
         
         // initialize the characters
         for bedBuildingIndex in self.bedData.keys {
+            
+            // define the index of the nearest office building
+            var nearestOfficeBuildingIndex = -1
+            
+            // find the index of the nearest office building
+            if (!self.officeData.isEmpty) {
+                var nearestDistance = Float.greatestFiniteMagnitude
+                nearestOfficeBuildingIndex = self.officeData.keys.randomElement()!
+                for officeBuildingIndex in self.officeData.keys {
+                    let currentDistance = distance(
+                        self.buildings[officeBuildingIndex].position,
+                        self.buildings[bedBuildingIndex].position
+                    )
+                    if (nearestDistance > currentDistance) {
+                        nearestDistance = currentDistance
+                        nearestOfficeBuildingIndex = officeBuildingIndex
+                    }
+                }
+            }
+            
+            // iterate through all the bed data
             for bedData in self.bedData[bedBuildingIndex]! {
                 
                 // create a new character
@@ -153,23 +174,30 @@ extension Citopia {
                 // initialize the addresses
                 character.addresses.0 = bedData
                 character.addresses.1 = bedData
-                if (!self.officeData.isEmpty) {
+                character.addresses.2 = simd_int4(repeating: -1)
+                
+                // find the next nearest office building index
+                if (nearestOfficeBuildingIndex == -1 && !self.officeData.isEmpty) {
                     var nearestDistance = Float.greatestFiniteMagnitude
-                    var nearestOfficeBuildingIndex = self.officeData.keys.randomElement()!
                     for officeBuildingIndex in self.officeData.keys {
                         let currentDistance = distance(
                             self.buildings[officeBuildingIndex].position,
-                            self.buildings[Int(bedData.x)].position
+                            self.buildings[bedBuildingIndex].position
                         )
                         if (nearestDistance > currentDistance) {
                             nearestDistance = currentDistance
                             nearestOfficeBuildingIndex = officeBuildingIndex
                         }
                     }
+                }
+                
+                // assign the nearest office data to the character
+                if (nearestOfficeBuildingIndex != -1) {
                     character.addresses.2 = self.officeData[nearestOfficeBuildingIndex]!.randomElement()!
                     self.officeData[nearestOfficeBuildingIndex]!.remove(character.addresses.2)
                     if (self.officeData[nearestOfficeBuildingIndex]!.isEmpty) {
                         self.officeData[nearestOfficeBuildingIndex] = nil
+                        nearestOfficeBuildingIndex = -1
                     }
                 }
                 
