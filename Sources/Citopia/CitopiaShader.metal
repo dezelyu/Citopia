@@ -518,8 +518,10 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     int targetMapNodeIndex = -1;
     
     // update the character's stats
-    const float sleepingFactor = (character.states.x == 1 && character.states.y == 2) ? 1.0f : 0.0f;
-    character.stats[0] -= character.stats[2] * (1.0f - sleepingFactor) * frame.data.y;
+    float energyFactor = 1.0f;
+    energyFactor = (character.states.x == 1 && character.states.y == 2) ? 0.0f : energyFactor;
+    energyFactor = (character.states.x == 2) ? 0.0f : energyFactor;
+    character.stats[0] -= character.stats[2] * energyFactor * frame.data.y;
     
     // update the character's goal based on the character's stats
     if (character.states.y == 0) {
