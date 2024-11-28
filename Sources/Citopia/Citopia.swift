@@ -321,8 +321,8 @@ class Citopia {
     // define the exterior connection data
     var exteriorConnectionData: Set<simd_int4> = []
     
-    // define the foundational building blocks to render
-    var foundationalBuildingBlocks: [(simd_float2, Float, simd_float3, Int)] = []
+    // define the building blocks to render
+    var buildingBlocks: [(simd_float2, Float, simd_float3, Int, Bool)] = []
     
     // define the furniture blocks to render
     var furnitureBlocks: [(simd_float2, Float, simd_float3, Int)] = []

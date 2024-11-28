@@ -6,8 +6,9 @@ using namespace metal;
 // define the global constants
 constant float PI = 3.1415926535f;
 constant float rigidBodyCollisionRadius = 400.0f;
+constant float characterNavigationDistance = 0.4f;
 constant float characterMovementDampingFactor = 0.1f;
-constant float characterCollisionDistance = 0.5f;
+constant float characterCollisionDistance = 0.6f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
@@ -541,7 +542,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             targetMapNodeIndex = character.addresses[1].y;
             
             // perform the sleeping behavior when the character has arrived at the bed
-            if (mapNode.data.x == 4 && length(character.destination - character.position) < 0.25f) {
+            if (mapNode.data.x == 4 && length(character.destination - character.position) < characterNavigationDistance) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
@@ -583,7 +584,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             targetMapNodeIndex = character.addresses[2].y;
             
             // perform the working behavior when the character has arrived at the office
-            if (mapNode.data.x == 5 && length(character.destination - character.position) < 0.25f) {
+            if (mapNode.data.x == 5 && length(character.destination - character.position) < characterNavigationDistance) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
@@ -617,7 +618,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // update navigation when the character reaches the destination
-    if (length(character.destination - character.position) < 0.25f) {
+    if (length(character.destination - character.position) < characterNavigationDistance) {
         
         // perform navigation update
         updateNavigation(character, mapNodes, buildings, targetBuildingIndex, targetMapNodeIndex, randomNumber);
@@ -681,7 +682,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
 // define the compute grid function
 kernel void ComputeGridFunction(constant FrameData& frame [[buffer(0)]],
                                 const device CharacterData* characters [[buffer(1)]],
-                                device atomic_uint* characterCountPerGrid [[buffer(2)]],
+                                device atomic<uint>* characterCountPerGrid [[buffer(2)]],
                                 const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -712,7 +713,7 @@ kernel void ComputeGridFunction(constant FrameData& frame [[buffer(0)]],
 kernel void AssignLinkedGridFunction(constant FrameData& frame [[buffer(0)]],
                                      const device uint* characterCountPerGrid [[buffer(1)]],
                                      device GridData* gridData [[buffer(2)]],
-                                     device atomic_uint* nextAvailableGridIndex [[buffer(3)]],
+                                     device atomic<uint>* nextAvailableGridIndex [[buffer(3)]],
                                      const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of map grids
@@ -729,7 +730,7 @@ kernel void AssignLinkedGridFunction(constant FrameData& frame [[buffer(0)]],
 // define the set character index per grid
 kernel void SetCharacterIndexPerGridFunction(constant FrameData& frame [[buffer(0)]],
                                              const device CharacterData* characters [[buffer(1)]],
-                                             device atomic_uint* characterCountPerGrid [[buffer(2)]],
+                                             device atomic<uint>* characterCountPerGrid [[buffer(2)]],
                                              device uint* characterIndexBuffer [[buffer(3)]],
                                              const device GridData* gridData [[buffer(4)]],
                                              const uint index [[thread_position_in_grid]]) {
@@ -763,7 +764,7 @@ kernel void SetCharacterIndexPerGridFunction(constant FrameData& frame [[buffer(
 // define the find visible characters function
 kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]],
                                           const device CharacterData* characters [[buffer(1)]],
-                                          device atomic_uint* visibleCharacterCount [[buffer(2)]],
+                                          device atomic<uint>* visibleCharacterCount [[buffer(2)]],
                                           device uint* potentiallyVisibleCharacterIndexBuffer [[buffer(3)]],
                                           device float* visibleCharacterDistanceToObserverBuffer [[buffer(4)]],
                                           const uint index [[thread_position_in_grid]]) {

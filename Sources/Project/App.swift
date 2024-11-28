@@ -66,7 +66,7 @@ import CameraKit
             capacity: (1000000, 100000, 1000000, 100000)
         )
         CameraManager.configure(
-            capacity: 10
+            capacity: 2
         )
         
         // store the graphics device
@@ -114,9 +114,9 @@ import CameraKit
         // create the grid acceleration structure
         self.simulator.createGrids()
         
-        // create the foundational buildings
-        self.renderer.createFoundationalBuildings(
-            foundationalBuildingBlocks: self.simulator.foundationalBuildingBlocks
+        // create the buildings
+        self.renderer.createBuildings(
+            buildingBlocks: self.simulator.buildingBlocks
         )
         
         // create the furnitures
@@ -125,7 +125,7 @@ import CameraKit
         )
         
         // free up some memory
-        self.simulator.foundationalBuildingBlocks.removeAll()
+        self.simulator.buildingBlocks.removeAll()
         self.simulator.furnitureBlocks.removeAll()
     }
     

@@ -100,6 +100,9 @@ class Renderer {
     // define the camera node
     var cameraNode: CameraNode!
     
+    // define the debug camera node
+    var debugCameraNode: CameraNode!
+    
     // define the camera instance
     var camera: SCNCamera!
     
@@ -139,11 +142,19 @@ class Renderer {
     // define the ground node
     var groundNode: Node!
     
+    // define the decoration visibility
+    var decorationVisibility: Bool = true
+    
     // define the constructor
     init() {
         
         // create the camera node
         self.cameraNode = CameraNode(
+            category: 3, angle: 60.0, near: 0.5, far: 500.0
+        )
+        
+        // create the debug camera node
+        self.debugCameraNode = CameraNode(
             category: 1, angle: 60.0, near: 0.5, far: 500.0
         )
         
@@ -181,6 +192,9 @@ class Renderer {
         
         // attach the camera node to the scene
         NodeManager.attach(node: self.cameraNode)
+        
+        // attach the debug camera node to the scene
+        NodeManager.attach(node: self.debugCameraNode)
         
         // create the render targets
         self.attachment = CameraManager.attachment(scale: 2.0)
@@ -440,6 +454,7 @@ class Renderer {
         // move and rotate the camera smoothly
         self.cameraNode.position += (self.targetPosition - self.cameraNode.position) * 0.2
         self.cameraNode.rotation += (self.targetRotation - self.cameraNode.rotation) * 0.2
+        self.debugCameraNode.transform = self.cameraNode.transform
         
         // update the position of the ground
         self.updateGroundPosition()
@@ -463,9 +478,15 @@ class Renderer {
         self.commands[self.phase].wait()
         CameraManager.update(command: self.commands[self.phase])
         self.commands[self.phase].wait()
-        self.cameraNode.capture(command: self.commands[self.phase], color: [
-            self.attachment.0.clear().store(),
-        ], depth: self.attachment.1.clear().store())
+        if (self.decorationVisibility) {
+            self.cameraNode.capture(command: self.commands[self.phase], color: [
+                self.attachment.0.clear().store(),
+            ], depth: self.attachment.1.clear().store())
+        } else {
+            self.debugCameraNode.capture(command: self.commands[self.phase], color: [
+                self.attachment.0.clear().store(),
+            ], depth: self.attachment.1.clear().store())
+        }
         self.commands[self.phase].commit()
     }
 }

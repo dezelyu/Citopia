@@ -166,8 +166,8 @@ extension Citopia {
                 character.stats.0 = Float.random(in: 0.0...1.0)
                 character.stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
                 character.stats.2 = 1.0 / (Float.random(in: 120.0...180.0) * 60.0)
-                character.stats.3 = Float.random(in: 0.0...100.0)
-                character.stats.4 = 0.0
+                character.stats.3 = Float.random(in: 0.0...200.0)
+                character.stats.4 = Bool.random() ? 0.0 : 200.0
                 character.stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
                 character.stats.6 = character.stats.5 / (Float.random(in: 12.0...18.0) * 60.0)
                 

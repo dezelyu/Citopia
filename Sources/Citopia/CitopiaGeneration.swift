@@ -55,7 +55,7 @@ extension Citopia {
             repeating: -(blockLength + intervalLength) * 0.5
         )
         
-        // initialize the foundationalBuildingBlocks between blocks by checking the exterior connection data
+        // initialize the buildingBlocks between blocks by checking the exterior connection data
         for x in 0...self.blockCount {
             for z in 0...self.blockCount {
                 
@@ -69,8 +69,8 @@ extension Citopia {
                         self.blockSideLength - 1.0, Float(Int.random(in: 1...5) * 3),
                         self.blockDistance
                     )
-                    self.foundationalBuildingBlocks.append((
-                        blockPosition + origin, -0.2, blockSize, 2
+                    self.buildingBlocks.append((
+                        blockPosition + origin, -0.2, blockSize, 2, true
                     ))
                 }
                 
@@ -84,8 +84,8 @@ extension Citopia {
                         self.blockDistance, Float(Int.random(in: 1...5) * 3),
                         self.blockSideLength - 1.0
                     )
-                    self.foundationalBuildingBlocks.append((
-                        blockPosition + origin, -0.2, blockSize, 2
+                    self.buildingBlocks.append((
+                        blockPosition + origin, -0.2, blockSize, 2, true
                     ))
                 }
             }
@@ -144,12 +144,12 @@ extension Citopia {
         )
         
         // create the first floor
-        self.foundationalBuildingBlocks.append((
+        self.buildingBlocks.append((
             blockPosition + origin, 0.0,
             simd_float3(
                 self.blockSideLength + 1.3, 0.05,
                 self.blockSideLength + 1.3
-            ), buildingColorIndex
+            ), buildingColorIndex, true
         ))
         
         // create additional floors
@@ -158,12 +158,12 @@ extension Citopia {
         numAdditionalFloors = max(1, numAdditionalFloors)
         for floor in 1...numAdditionalFloors {
             let offset = (floor % 2 != 0) ? 0.4 : 0.0
-            self.foundationalBuildingBlocks.append((
+            self.buildingBlocks.append((
                 blockPosition + origin, 3.0 * Float(floor),
                 simd_float3(
                     self.blockSideLength + Float(offset), 3.0,
                     self.blockSideLength + Float(offset)
-                ), buildingColorIndex
+                ), buildingColorIndex, false
             ))
         }
         
@@ -171,10 +171,10 @@ extension Citopia {
         var pillarOffsetX = self.blockSideLength / 2.0
         var pillarOffsetZ = self.blockSideLength / 2.0
         for corner in 0...3 {
-            self.foundationalBuildingBlocks.append((
+            self.buildingBlocks.append((
                 blockPosition + origin + simd_float2(pillarOffsetX, pillarOffsetZ), 0.0,
                 simd_float3(1.0, 3.0 * Float(1 + numAdditionalFloors) + 0.5, 1.0),
-                buildingColorIndex
+                buildingColorIndex, false
             ))
             if (corner % 2 == 0) {
                 pillarOffsetX *= -1.0
@@ -184,12 +184,12 @@ extension Citopia {
         }
         
         // create the rooftop
-        self.foundationalBuildingBlocks.append((
+        self.buildingBlocks.append((
             blockPosition + origin, 3.0 * Float(1 + numAdditionalFloors),
             simd_float3(
                 self.blockSideLength + 1.2, 0.6,
                 self.blockSideLength + 1.2
-            ), buildingColorIndex
+            ), buildingColorIndex, false
         ))
         
         // create the rooftop building
@@ -198,15 +198,15 @@ extension Citopia {
         let rooftopBuildingSideLengthZ = Float.random(in: Float(self.blockSideLength / 5.0)...Float(self.blockSideLength / 3.0))
         let rooftopBuldingOffset = simd_float2(Float.random(in: -3.0...3.0), Float.random(in: -3.0...3.0))
         if (shouldCreateRooftopBuilding == 1) {
-            self.foundationalBuildingBlocks.append((
+            self.buildingBlocks.append((
                 blockPosition + origin + rooftopBuldingOffset, 3.0 * Float(1 + numAdditionalFloors) + 0.5,
                 simd_float3(rooftopBuildingSideLengthX, 2.5, rooftopBuildingSideLengthZ),
-                buildingColorIndex
+                buildingColorIndex, false
             ))
-            self.foundationalBuildingBlocks.append((
+            self.buildingBlocks.append((
                 blockPosition + origin + rooftopBuldingOffset, 3.0 * Float(1 + numAdditionalFloors) + 3.0,
                 simd_float3(rooftopBuildingSideLengthX + 0.5, 0.5, rooftopBuildingSideLengthZ + 0.5),
-                buildingColorIndex
+                buildingColorIndex, false
             ))
         }
         
@@ -237,14 +237,14 @@ extension Citopia {
                 if (billboardDirection == 0) {
                     let shouldCreateBillboard = Int.random(in: 0...4)
                     if (shouldCreateBillboard == 1) {
-                        self.foundationalBuildingBlocks.append((
+                        self.buildingBlocks.append((
                             simd_float2(
                                 blockPosition.x + origin.x + billboardPositionOffset,
                                 blockPosition.y + origin.y - self.blockSideLength * 0.5 + 0.1
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(billboardLength, 3.0, 0.2),
-                            Int.random(in: 3...22)
+                            Int.random(in: 3...22), false
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -255,14 +255,14 @@ extension Citopia {
                         let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
                         let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
                         if (shouldCreateSideBillboard == 1) {
-                            self.foundationalBuildingBlocks.append((
+                            self.buildingBlocks.append((
                                 simd_float2(
                                     blockPosition.x + origin.x + positionOffset,
                                     blockPosition.y + origin.y - self.blockSideLength * 0.5 - 0.4
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(billboardScale.x, billboardScale.y, 0.15),
-                                Int.random(in: 3...22)
+                                Int.random(in: 3...22), false
                             ))
                             floor -= 2
                         } else {
@@ -272,14 +272,14 @@ extension Citopia {
                 } else if (billboardDirection == 1) {
                     let shouldCreateBillboard = Int.random(in: 0...4)
                     if (shouldCreateBillboard == 1) {
-                        self.foundationalBuildingBlocks.append((
+                        self.buildingBlocks.append((
                             simd_float2(
                                 blockPosition.x + origin.x - self.blockSideLength * 0.5 + 0.1,
                                 blockPosition.y + origin.y + billboardPositionOffset
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(0.2, 3.0, billboardLength),
-                            Int.random(in: 3...22)
+                            Int.random(in: 3...22), false
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -290,14 +290,14 @@ extension Citopia {
                         let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
                         let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
                         if (shouldCreateSideBillboard == 1) {
-                            self.foundationalBuildingBlocks.append((
+                            self.buildingBlocks.append((
                                 simd_float2(
                                     blockPosition.x + origin.x - self.blockSideLength * 0.5 - 0.4,
                                     blockPosition.y + origin.y + positionOffset
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(0.15, billboardScale.y, billboardScale.x),
-                                Int.random(in: 3...22)
+                                Int.random(in: 3...22), false
                             ))
                             floor -= 2
                         } else {
@@ -307,14 +307,14 @@ extension Citopia {
                 } else if (billboardDirection == 2) {
                     let shouldCreateBillboard = Int.random(in: 0...4)
                     if (shouldCreateBillboard == 1) {
-                        self.foundationalBuildingBlocks.append((
+                        self.buildingBlocks.append((
                             simd_float2(
                                 blockPosition.x + origin.x + self.blockSideLength * 0.5 - 0.1,
                                 blockPosition.y + origin.y + billboardPositionOffset
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(0.2, 3.0, billboardLength),
-                            Int.random(in: 3...22)
+                            Int.random(in: 3...22), false
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -325,14 +325,14 @@ extension Citopia {
                         let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
                         let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
                         if (shouldCreateSideBillboard == 1) {
-                            self.foundationalBuildingBlocks.append((
+                            self.buildingBlocks.append((
                                 simd_float2(
                                     blockPosition.x + origin.x + self.blockSideLength * 0.5 + 0.4,
                                     blockPosition.y + origin.y + positionOffset
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(0.15, billboardScale.y, billboardScale.x),
-                                Int.random(in: 3...22)
+                                Int.random(in: 3...22), false
                             ))
                             floor -= 2
                         } else {
@@ -342,14 +342,14 @@ extension Citopia {
                 } else if (billboardDirection == 3) {
                     let shouldCreateBillboard = Int.random(in: 0...4)
                     if (shouldCreateBillboard == 1) {
-                        self.foundationalBuildingBlocks.append((
+                        self.buildingBlocks.append((
                             simd_float2(
                                 blockPosition.x + origin.x + billboardPositionOffset,
                                 blockPosition.y + origin.y + self.blockSideLength * 0.5 - 0.1
                             ),
                             3.0 * Float(1 + numAdditionalFloors) + 0.6,
                             simd_float3(billboardLength, 3.0, 0.2),
-                            Int.random(in: 3...22)
+                            Int.random(in: 3...22), false
                         ))
                     }
                     var floor = numAdditionalFloors
@@ -360,14 +360,14 @@ extension Citopia {
                         let offsetRange = (self.blockSideLength - billboardScale.x) * 0.4
                         let positionOffset = Float.random(in: (-offsetRange)...offsetRange)
                         if (shouldCreateSideBillboard == 1) {
-                            self.foundationalBuildingBlocks.append((
+                            self.buildingBlocks.append((
                                 simd_float2(
                                     blockPosition.x + origin.x + positionOffset,
                                     blockPosition.y + origin.y + self.blockSideLength * 0.5 + 0.4
                                 ),
                                 3.0 * Float(floor) - billboardScale.y / 2.0 + Float.random(in: -0.2...0.2),
                                 simd_float3(billboardScale.x, billboardScale.y, 0.15),
-                                Int.random(in: 3...22)
+                                Int.random(in: 3...22), false
                             ))
                             floor -= 2
                         } else {
@@ -384,25 +384,25 @@ extension Citopia {
                 let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
                 let shouldCreateSideBillboardRight = Int.random(in: 0...3)
                 if (shouldCreateSideBillboardLeft == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - pillarOffsetX - 1.0,
                             blockPosition.y + origin.y - pillarOffsetZ
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
                         simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
                 if (shouldCreateSideBillboardRight == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - pillarOffsetX,
                             blockPosition.y + origin.y - pillarOffsetZ - 1.0
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
                         simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
             }
@@ -412,25 +412,25 @@ extension Citopia {
                 let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
                 let shouldCreateSideBillboardRight = Int.random(in: 0...3)
                 if (shouldCreateSideBillboardLeft == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - pillarOffsetX - 1.0,
                             blockPosition.y + origin.y + pillarOffsetZ
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
                         simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
                 if (shouldCreateSideBillboardRight == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - pillarOffsetX,
                             blockPosition.y + origin.y + pillarOffsetZ + 1.0
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
                         simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
             }
@@ -440,25 +440,25 @@ extension Citopia {
                 let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
                 let shouldCreateSideBillboardRight = Int.random(in: 0...3)
                 if (shouldCreateSideBillboardLeft == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + pillarOffsetX + 1.0,
                             blockPosition.y + origin.y + pillarOffsetZ
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
                         simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
                 if (shouldCreateSideBillboardRight == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + pillarOffsetX,
                             blockPosition.y + origin.y + pillarOffsetZ + 1.0
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
                         simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
             }
@@ -468,25 +468,25 @@ extension Citopia {
                 let shouldCreateSideBillboardLeft = Int.random(in: 0...3)
                 let shouldCreateSideBillboardRight = Int.random(in: 0...3)
                 if (shouldCreateSideBillboardLeft == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + pillarOffsetX + 1.0,
                             blockPosition.y + origin.y - pillarOffsetZ
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthLeft,
                         simd_float3(2.0, sideBillboardLengthLeft, 0.2),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
                 if (shouldCreateSideBillboardRight == 1) {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + pillarOffsetX,
                             blockPosition.y + origin.y - pillarOffsetZ - 1.0
                         ),
                         3.0 * Float(numAdditionalFloors + 1) - 0.5 - sideBillboardLengthRight,
                         simd_float3(0.2, sideBillboardLengthRight, 2.0),
-                        Int.random(in: 3...22)
+                        Int.random(in: 3...22), false
                     ))
                 }
             }
@@ -618,17 +618,17 @@ extension Citopia {
                     // create two walls
                     let length1 = self.blockSideLength * 0.5 + offset - 1.0
                     let length2 = self.blockSideLength * 0.5 - offset - 1.0
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - self.blockSideLength * 0.5 + length1 * 0.5,
                             blockPosition.y + origin.y - self.blockSideLength * 0.5 + 0.1
-                        ), 0.0, simd_float3(length1, 3.0, 0.2), buildingColorIndex
+                        ), 0.0, simd_float3(length1, 3.0, 0.2), buildingColorIndex, true
                     ))
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + self.blockSideLength * 0.5 - length2 * 0.5,
                             blockPosition.y + origin.y - self.blockSideLength * 0.5 + 0.1
-                        ), 0.0, simd_float3(length2, 3.0, 0.2), buildingColorIndex
+                        ), 0.0, simd_float3(length2, 3.0, 0.2), buildingColorIndex, true
                     ))
                     
                     // create the exterior entrance node
@@ -666,11 +666,11 @@ extension Citopia {
                     
                     // create a large wall
                 } else {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x,
                             blockPosition.y + origin.y - self.blockSideLength * 0.5 + 0.1
-                        ), 0.0, simd_float3(self.blockSideLength, 3.0, 0.2), buildingColorIndex
+                        ), 0.0, simd_float3(self.blockSideLength, 3.0, 0.2), buildingColorIndex, true
                     ))
                 }
                 if (directions.contains(1)) {
@@ -681,17 +681,17 @@ extension Citopia {
                     // create two walls
                     let length1 = self.blockSideLength * 0.5 + offset - 1.0
                     let length2 = self.blockSideLength * 0.5 - offset - 1.0
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - self.blockSideLength * 0.5 + 0.1,
                             blockPosition.y + origin.y - self.blockSideLength * 0.5 + length1 * 0.5
-                        ), 0.0, simd_float3(0.2, 3.0, length1), buildingColorIndex
+                        ), 0.0, simd_float3(0.2, 3.0, length1), buildingColorIndex, true
                     ))
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - self.blockSideLength * 0.5 + 0.1,
                             blockPosition.y + origin.y + self.blockSideLength * 0.5 - length2 * 0.5
-                        ), 0.0, simd_float3(0.2, 3.0, length2), buildingColorIndex
+                        ), 0.0, simd_float3(0.2, 3.0, length2), buildingColorIndex, true
                     ))
                     
                     // create the exterior entrance node
@@ -729,11 +729,11 @@ extension Citopia {
                     
                     // create a large wall
                 } else {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - self.blockSideLength * 0.5 + 0.1,
                             blockPosition.y + origin.y
-                        ), 0.0, simd_float3(0.2, 3.0, self.blockSideLength), buildingColorIndex
+                        ), 0.0, simd_float3(0.2, 3.0, self.blockSideLength), buildingColorIndex, true
                     ))
                 }
                 if (directions.contains(2)) {
@@ -744,17 +744,17 @@ extension Citopia {
                     // create two walls
                     let length1 = self.blockSideLength * 0.5 + offset - 1.0
                     let length2 = self.blockSideLength * 0.5 - offset - 1.0
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + self.blockSideLength * 0.5 - 0.1,
                             blockPosition.y + origin.y - self.blockSideLength * 0.5 + length1 * 0.5
-                        ), 0.0, simd_float3(0.2, 3.0, length1), buildingColorIndex
+                        ), 0.0, simd_float3(0.2, 3.0, length1), buildingColorIndex, true
                     ))
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + self.blockSideLength * 0.5 - 0.1,
                             blockPosition.y + origin.y + self.blockSideLength * 0.5 - length2 * 0.5
-                        ), 0.0, simd_float3(0.2, 3.0, length2), buildingColorIndex
+                        ), 0.0, simd_float3(0.2, 3.0, length2), buildingColorIndex, true
                     ))
                     
                     // create the exterior entrance node
@@ -792,11 +792,11 @@ extension Citopia {
                     
                     // create a large wall
                 } else {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + self.blockSideLength * 0.5 - 0.1,
                             blockPosition.y + origin.y
-                        ), 0.0, simd_float3(0.2, 3.0, self.blockSideLength), buildingColorIndex
+                        ), 0.0, simd_float3(0.2, 3.0, self.blockSideLength), buildingColorIndex, true
                     ))
                 }
                 if (directions.contains(3)) {
@@ -807,17 +807,17 @@ extension Citopia {
                     // create two walls
                     let length1 = self.blockSideLength * 0.5 + offset - 1.0
                     let length2 = self.blockSideLength * 0.5 - offset - 1.0
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x - self.blockSideLength * 0.5 + length1 * 0.5,
                             blockPosition.y + origin.y + self.blockSideLength * 0.5 - 0.1
-                        ), 0.0, simd_float3(length1, 3.0, 0.2), buildingColorIndex
+                        ), 0.0, simd_float3(length1, 3.0, 0.2), buildingColorIndex, true
                     ))
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x + self.blockSideLength * 0.5 - length2 * 0.5,
                             blockPosition.y + origin.y + self.blockSideLength * 0.5 - 0.1
-                        ), 0.0, simd_float3(length2, 3.0, 0.2), buildingColorIndex
+                        ), 0.0, simd_float3(length2, 3.0, 0.2), buildingColorIndex, true
                     ))
                     
                     // create the exterior entrance node
@@ -855,11 +855,11 @@ extension Citopia {
                     
                     // create a large wall
                 } else {
-                    self.foundationalBuildingBlocks.append((
+                    self.buildingBlocks.append((
                         simd_float2(
                             blockPosition.x + origin.x,
                             blockPosition.y + origin.y + self.blockSideLength * 0.5 - 0.1
-                        ), 0.0, simd_float3(self.blockSideLength, 3.0, 0.2), buildingColorIndex
+                        ), 0.0, simd_float3(self.blockSideLength, 3.0, 0.2), buildingColorIndex, true
                     ))
                 }
                 

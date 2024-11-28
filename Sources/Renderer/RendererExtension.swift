@@ -41,6 +41,9 @@ extension Renderer {
         if (self.activeKeys.contains("q")) {
             self.targetPosition -= simd_float3(up.x, up.y, up.z) * speed
         }
+        
+        // limit the target position
+        self.targetPosition.y = max(1.5, min(self.targetPosition.y, 100.0))
     }
     
     // define the function that updates the target rotation of the camera
@@ -64,6 +67,11 @@ extension Renderer {
     // define the function that stores the new active key
     func start(press: String) {
         self.activeKeys.insert(press.lowercased())
+        
+        // show or hide the decorations when the V key is pressed
+        if (press.lowercased() == "v") {
+            self.decorationVisibility = !self.decorationVisibility
+        }
     }
     
     // define the function that removes the new active key
@@ -122,23 +130,30 @@ extension Renderer {
         ]
     }
     
-    // define the function that generates the foundational buildings
-    func createFoundationalBuildings(foundationalBuildingBlocks: [(simd_float2, Float, simd_float3, Int)]) {
+    // define the function that generates the buildings
+    func createBuildings(buildingBlocks: [(simd_float2, Float, simd_float3, Int, Bool)]) {
         let blockSceneAsset = SceneAsset(name: "Assets.scnassets/Elements/Block.scn")
         let blockMeshAsset = blockSceneAsset.meshes.first!
         let blockMesh = Mesh(asset: blockMeshAsset)
-        for foundationalBuildingBlock in foundationalBuildingBlocks {
-            let blockMeshNode = MeshNode(
-                mesh: blockMesh, category: 1
-            )
+        for buildingBlock in buildingBlocks {
+            var blockMeshNode: MeshNode!
+            if (buildingBlock.4) {
+                blockMeshNode = MeshNode(
+                    mesh: blockMesh, category: 1
+                )
+            } else {
+                blockMeshNode = MeshNode(
+                    mesh: blockMesh, category: 2
+                )
+            }
             blockMeshNode.position = simd_float3(
-                foundationalBuildingBlock.0.x, foundationalBuildingBlock.1,
-                foundationalBuildingBlock.0.y
+                buildingBlock.0.x, buildingBlock.1,
+                buildingBlock.0.y
             )
-            blockMeshNode.scale = foundationalBuildingBlock.2
-            blockMeshNode.data.2 = foundationalBuildingBlock.3
-            self.meshNodes.append(blockMeshNode)
+            blockMeshNode.scale = buildingBlock.2
+            blockMeshNode.data.2 = buildingBlock.3
             NodeManager.attach(node: blockMeshNode)
+            self.meshNodes.append(blockMeshNode)
         }
     }
     
@@ -160,8 +175,8 @@ extension Renderer {
             )
             blockMeshNode.scale = furnitureBlock.2
             blockMeshNode.data.2 = furnitureBlock.3
-            self.meshNodes.append(blockMeshNode)
             NodeManager.attach(node: blockMeshNode)
+            self.meshNodes.append(blockMeshNode)
         }
     }
 }
