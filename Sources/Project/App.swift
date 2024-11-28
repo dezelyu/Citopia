@@ -38,6 +38,9 @@ import CameraKit
     // define the simulation instance
     var simulator: Citopia!
     
+    // define an array of simulation durations
+    var simulationDurations: [CFTimeInterval] = []
+    
     // define the launching behavior
     override func launched() {
         
@@ -120,6 +123,10 @@ import CameraKit
         self.renderer.createFurnitures(
             furnitureBlocks: self.simulator.furnitureBlocks
         )
+        
+        // free up some memory
+        self.simulator.foundationalBuildingBlocks.removeAll()
+        self.simulator.furnitureBlocks.removeAll()
     }
     
     // define the update behavior
@@ -134,8 +141,29 @@ import CameraKit
             // perform the simulation
             self.simulator.simulate(time: App.time, commandBuffer: commandBuffer)
             
+            // record the start time
+            let startTime = CACurrentMediaTime()
+            
             // submit the command buffer
             commandBuffer.commit()
+            
+            // compute the simulation duration
+            commandBuffer.addCompletedHandler { _ in
+                let endTime = CACurrentMediaTime()
+                let simulationDuration = (endTime - startTime) * 1000.0
+                self.simulationDurations.append(simulationDuration)
+                if (self.simulationDurations.count > 100) {
+                    self.simulationDurations.removeFirst()
+                    var averageSimulationDuration: CFTimeInterval = 0.0
+                    for simulationDuration in self.simulationDurations {
+                        averageSimulationDuration += simulationDuration
+                    }
+                    averageSimulationDuration /= CFTimeInterval(self.simulationDurations.count)
+                    
+                    // print the average simulation duration
+                    // print("Simulation Duration: \(averageSimulationDuration)ms")
+                }
+            }
             
             // wait until all commands have been completed
             commandBuffer.waitUntilCompleted()
