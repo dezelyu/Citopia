@@ -13,9 +13,11 @@ struct VisibleCharacterData {
     
     // define the general visible character data
     //  - data.x = sex
-    //  - data.z = color
     //  - data.w = character node index
     var data: simd_uint4 = .zero
+    
+    // define the personalities of the character
+    var personalities: simd_float4 = .zero
     
     // define the indices of the female mesh nodes
     var femaleMeshNodeIndices: simd_uint4 = .zero

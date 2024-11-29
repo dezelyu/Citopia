@@ -162,6 +162,14 @@ extension Citopia {
                 // initialize age
                 character.data.y = UInt32.random(in: 20...40)
                 
+                // initialize the personalities
+                character.personalities = normalize(simd_float4(
+                    Float.random(in: 0.0...1.0),
+                    Float.random(in: 0.0...1.0),
+                    Float.random(in: 0.0...1.0),
+                    0.0
+                ))
+                
                 // initialize the stats
                 character.stats.0 = Float.random(in: 0.0...1.0)
                 character.stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
@@ -340,9 +348,6 @@ extension Citopia {
         // update the delta time scale factor
         pointer.pointee.data.y = (time - self.previousTime) / (1.0 / 60.0)
         self.previousTime = time
-        
-        // update the maxVisibleDistance
-        pointer.pointee.data.z = self.maxVisibleDistance
         
         // update the map data
         pointer.pointee.mapData = simd_uint4(

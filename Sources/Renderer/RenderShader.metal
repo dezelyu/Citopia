@@ -87,9 +87,11 @@ struct VisibleCharacterData {
     
     // define the general visible character data
     //  - data.x = sex
-    //  - data.z = color
     //  - data.w = character node index
     uint4 data;
+    
+    // define the personalities of the character
+    float4 personalities;
     
     // define the indices of the female mesh nodes
     uint4 femaleMeshNodeIndices;
@@ -156,15 +158,21 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
     nodes[character.maleMeshNodeIndices.z].node.w = character.data.x != 0 ? character.data.w : -1;
     nodes[character.maleMeshNodeIndices.w].node.w = character.data.x != 0 ? character.data.w : -1;
     
+    // compute the color index
+    const uint x = uint(character.personalities.x * 40.0);
+    const uint y = uint(character.personalities.y * 40.0);
+    const uint z = uint(character.personalities.z * 40.0);
+    const uint colorIndex = x + y * 40 + z * 40 * 40 + 1000;
+    
     // update the character mesh color
-    nodes[character.femaleMeshNodeIndices.x].node.z = character.data.z;
-    nodes[character.femaleMeshNodeIndices.y].node.z = character.data.z;
-    nodes[character.femaleMeshNodeIndices.z].node.z = character.data.z;
-    nodes[character.femaleMeshNodeIndices.w].node.z = character.data.z;
-    nodes[character.maleMeshNodeIndices.x].node.z = character.data.z;
-    nodes[character.maleMeshNodeIndices.y].node.z = character.data.z;
-    nodes[character.maleMeshNodeIndices.z].node.z = character.data.z;
-    nodes[character.maleMeshNodeIndices.w].node.z = character.data.z;
+    nodes[character.femaleMeshNodeIndices.x].node.z = colorIndex;
+    nodes[character.femaleMeshNodeIndices.y].node.z = colorIndex;
+    nodes[character.femaleMeshNodeIndices.z].node.z = colorIndex;
+    nodes[character.femaleMeshNodeIndices.w].node.z = colorIndex;
+    nodes[character.maleMeshNodeIndices.x].node.z = colorIndex;
+    nodes[character.maleMeshNodeIndices.y].node.z = colorIndex;
+    nodes[character.maleMeshNodeIndices.z].node.z = colorIndex;
+    nodes[character.maleMeshNodeIndices.w].node.z = colorIndex;
     
     // update the character node
     nodes[character.data.w].matrix = character.transform;
@@ -203,5 +211,18 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
     lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
     const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
-    return float4(float3(r < 1.0f ? lambert * 0.8f + 0.2f : 0.0f) * colors[material] * fog, 1.0f);
+    float3 materialColor;
+    if (material >= 1000) {
+        uint colorIndex = material - 1000;
+        const uint z = colorIndex / (40 * 40);
+        colorIndex %= (40 * 40);
+        const uint y = colorIndex / 40;
+        const uint x = colorIndex % 40;
+        materialColor.x = float(x) / 40.0f;
+        materialColor.y = float(y) / 40.0f;
+        materialColor.z = float(z) / 40.0f;
+    } else {
+        materialColor = colors[material];
+    }
+    return float4(float3(r < 1.0f ? lambert * 0.8f + 0.2f : 0.0f) * materialColor * fog, 1.0f);
 }

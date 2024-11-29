@@ -8,7 +8,6 @@ struct FrameData {
     // define the general frame data
     //  - data.x = time
     //  - data.y = delta time scale factor
-    //  - data.z = maxVisibleDistance
     var data: simd_float4 = .zero
     
     // define the map data
@@ -53,8 +52,10 @@ struct CharacterData {
     // define the integer data of the character
     //  - data.x = gender (0: female, 1: male)
     //  - data.y = age (20 - 40)
-    //  - data.z = color
     var data: simd_uint4 = .zero
+    
+    // define the personalities of the character
+    var personalities: simd_float4 = .zero
     
     // define the states of the character
     //  - states.x = goal
@@ -220,7 +221,7 @@ class Citopia {
     // define the total number of visible characters
     var visibleCharacterCount: Int = 0
     
-    // define the actual number of visible characters within maxVisibleDistance
+    // define the actual number of visible characters
     var actualVisibleCharacterCount: Int = 0
     
     // define the map grid count
@@ -231,9 +232,6 @@ class Citopia {
     
     // define the grid dimension in z
     var gridLengthZ: Float = 0
-    
-    // define the max visible distance
-    var maxVisibleDistance: Float = 100.0
     
     // define the previous time
     var previousTime: Float = .zero

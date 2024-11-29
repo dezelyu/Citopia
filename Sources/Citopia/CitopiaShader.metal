@@ -74,8 +74,10 @@ struct CharacterData {
     // define the integer data of the character
     //  - data.x = gender (0: female, 1: male)
     //  - data.y = age (20 - 40)
-    //  - data.z = color
     uint4 data;
+    
+    // define the personalities of the character
+    float4 personalities;
     
     // define the states of the character
     //  - states.x = goal
@@ -130,9 +132,11 @@ struct VisibleCharacterData {
     
     // define the general visible character data
     //  - data.x = gender
-    //  - data.z = color
     //  - data.w = character node index
     uint4 data;
+    
+    // define the personalities of the character
+    float4 personalities;
     
     // define the indices of the female mesh nodes
     float4 femaleMeshNodeIndices;
@@ -824,7 +828,8 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     uint visibleCharacterIndex = visibleCharacterIndexBuffer[index];
     
     visibleCharacters[index].data.x = characters[visibleCharacterIndex].data.x;
-    visibleCharacters[index].data.z = characters[visibleCharacterIndex].data.z;
+    
+    visibleCharacters[index].personalities.xyz = characters[visibleCharacterIndex].personalities.xyz;
     
     const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].movement.z;
     const float scale = 0.6f + float(characters[visibleCharacterIndex].data.y) * 0.01f;
