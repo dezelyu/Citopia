@@ -168,6 +168,7 @@ struct MapNodeData {
     //      - 3 = building
     //      - 4 = bed
     //      - 5 = office
+    //      - 6 = treadmill
     //  - data.w = connection count
     var data: simd_int4 = .zero
     

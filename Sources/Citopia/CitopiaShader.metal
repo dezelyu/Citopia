@@ -160,6 +160,8 @@ struct MapNodeData {
     //      - 2 = internal entrance
     //      - 3 = building
     //      - 4 = bed
+    //      - 5 = office
+    //      - 6 = treadmill
     //  - data.w = connection count
     int4 data;
     

@@ -1174,8 +1174,8 @@ extension Citopia {
         let numTreadmillsZ = Int(self.blockSideLength / 4.5)
         let distanceBetweenTreadmillsX = self.blockSideLength / Float(numTreadmillsX + 1)
         let distanceBetweenTreadmillsZ = self.blockSideLength / Float(numTreadmillsZ + 1)
-        for treadmillX in 1...numTreadmillsX {
-            for treadmillZ in 1...numTreadmillsZ {
+        for treadmillZ in 1...numTreadmillsZ {
+            for treadmillX in 1...numTreadmillsX {
                 let offsetX = distanceBetweenTreadmillsX * Float(treadmillX)
                 let offsetZ = distanceBetweenTreadmillsZ * Float(treadmillZ)
                 self.furnitureBlocks.append((
@@ -1191,6 +1191,64 @@ extension Citopia {
                     simd_float3(0.6, 0.1, 0.3), 50
                 ))
             }
+        }
+        
+        // create an array storing the node position and index
+        var nodePositionIndexArray: [(simd_float4, Int)] = []
+        
+        // create a map node for each space between treadmills
+        let nodeOffset = simd_float2((distanceBetweenTreadmillsX) / 2.0, (distanceBetweenTreadmillsZ) / 2.0)
+        for treadmillZ in 0...numTreadmillsZ {
+            for treadmillX in 0...numTreadmillsX {
+                let offsetX = distanceBetweenTreadmillsX * Float(treadmillX)
+                let offsetZ = distanceBetweenTreadmillsZ * Float(treadmillZ)
+                let nodePosition = blockPosition + origin + nodeOffset - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ)
+                var mapNode = MapNodeData()
+                mapNode.data.x = 3
+                mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+                self.mapNodes.append(mapNode)
+                nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
+            }
+        }
+        for treadmillZ in 0...numTreadmillsZ {
+            for treadmillX in 0...numTreadmillsX {
+                let nodeIndexInArray = treadmillX + treadmillZ * (numTreadmillsX + 1)
+                let nodeIndex = nodePositionIndexArray[nodeIndexInArray].1
+                if (treadmillX > 0) {
+                    let targetNodeIndex = nodePositionIndexArray[(treadmillX - 1) + treadmillZ * (numTreadmillsX + 1)].1
+                    connect(nodeIndex, targetNodeIndex)
+                }
+                if (treadmillZ > 0) {
+                    let targetNodeIndex = nodePositionIndexArray[treadmillX + (treadmillZ - 1) * (numTreadmillsX + 1)].1
+                    connect(nodeIndex, targetNodeIndex)
+                }
+                if (treadmillX > 0 && treadmillZ < numTreadmillsZ) {
+                    
+                    // create a map node for treadmill
+                    let targetNodeIndex = nodePositionIndexArray[(treadmillX - 1) + treadmillZ * (numTreadmillsX + 1)].1
+                    var mapNode = MapNodeData()
+                    mapNode.data.x = 6
+                    mapNode.position += self.mapNodes[nodeIndex].position
+                    mapNode.position += self.mapNodes[targetNodeIndex].position
+                    mapNode.position /= 2.0
+                    mapNode.position.z += 0.5
+                    self.mapNodes.append(mapNode)
+                    
+                    // connect the bed node with the left and right node
+                    connect(self.mapNodes.count - 1, nodeIndex)
+                    connect(self.mapNodes.count - 1, targetNodeIndex)
+                }
+            }
+        }
+        
+        // connect the closest desk nodes with the interior entrance nodes
+        for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
+            let position = self.mapNodes[interiorEntranceNodeIndex].position
+            let array = nodePositionIndexArray.sorted {
+                distance(position, $0.0) < distance(position, $1.0)
+            }
+            connect(interiorEntranceNodeIndex, array[0].1)
+            connect(interiorEntranceNodeIndex, array[1].1)
         }
     }
 }
