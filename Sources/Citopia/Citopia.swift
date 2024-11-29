@@ -186,6 +186,9 @@ struct BuildingData {
     
     // define the general building data
     //  - data.x = type
+    //      - 1 = apartment
+    //      - 2 = office
+    //      - 3 = gym
     //  - data.w = entrance count
     var data: simd_int4 = .zero
     

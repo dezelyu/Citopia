@@ -534,6 +534,18 @@ extension Citopia {
             officeIndices.insert(randomBuildingIndex)
         }
         
+        // define the number of recreation building types
+        let recreationBuildingTypeCount = Int(1)
+        let recreationBuildingCountPerType = buildingIndices.count / recreationBuildingTypeCount
+        
+        // initialize the gyms
+        var gymsIndices: Set<simd_int2> = []
+        while (buildingIndices.count > 0 && gymsIndices.count < recreationBuildingCountPerType) {
+            let randomBuildingIndex = buildingIndices.randomElement()!
+            buildingIndices.remove(randomBuildingIndex)
+            gymsIndices.insert(randomBuildingIndex)
+        }
+        
         // initialize the buildings
         for x in 0..<self.blockCount {
             for z in 0..<self.blockCount {
@@ -561,6 +573,9 @@ extension Citopia {
                 } else if (officeIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 2
                     buildingColorIndex = Int.random(in: 35...40)
+                } else if (gymsIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    building.data.x = 3
+                    buildingColorIndex = Int.random(in: 43...47)
                 }
                 
                 // generate the building decorations

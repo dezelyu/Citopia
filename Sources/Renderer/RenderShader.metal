@@ -68,6 +68,13 @@ constant float3 colors[] = {
     
     // office chair (index: 42)
     float3(0.02f, 0.02f, 0.02f),
+    
+    // gym (index: 43 - 47)
+    float3(0.3f, 0.5f, 0.8f),
+    float3(0.32f, 0.52f, 0.82f),
+    float3(0.28f, 0.48f, 0.78f),
+    float3(0.34f, 0.54f, 0.84f),
+    float3(0.29f, 0.49f, 0.77f),
 };
 
 // define the visible character data
