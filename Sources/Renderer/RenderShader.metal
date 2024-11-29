@@ -75,6 +75,11 @@ constant float3 colors[] = {
     float3(0.28f, 0.48f, 0.78f),
     float3(0.34f, 0.54f, 0.84f),
     float3(0.29f, 0.49f, 0.77f),
+    
+    // treadmills (index: 48 - 50)
+    float3(0.02f, 0.02f, 0.02f),
+    float3(0.2f, 0.2f, 0.2f),
+    float3(0.4f, 0.4f, 0.4f),
 };
 
 // define the visible character data

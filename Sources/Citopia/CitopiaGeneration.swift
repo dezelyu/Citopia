@@ -539,11 +539,11 @@ extension Citopia {
         let recreationBuildingCountPerType = buildingIndices.count / recreationBuildingTypeCount
         
         // initialize the gyms
-        var gymsIndices: Set<simd_int2> = []
-        while (buildingIndices.count > 0 && gymsIndices.count < recreationBuildingCountPerType) {
+        var gymIndices: Set<simd_int2> = []
+        while (buildingIndices.count > 0 && gymIndices.count < recreationBuildingCountPerType) {
             let randomBuildingIndex = buildingIndices.randomElement()!
             buildingIndices.remove(randomBuildingIndex)
-            gymsIndices.insert(randomBuildingIndex)
+            gymIndices.insert(randomBuildingIndex)
         }
         
         // initialize the buildings
@@ -573,7 +573,7 @@ extension Citopia {
                 } else if (officeIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 2
                     buildingColorIndex = Int.random(in: 35...40)
-                } else if (gymsIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                } else if (gymIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 3
                     buildingColorIndex = Int.random(in: 43...47)
                 }
@@ -896,6 +896,15 @@ extension Citopia {
                     )
                 }
                 
+                // initialize the building as a gym building
+                if (gymIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    self.initializeGymBuildingInterior(
+                        index: self.buildings.count, origin: origin, blockPosition: blockPosition,
+                        interiorEntranceNodeIndices: interiorEntranceNodeIndices,
+                        connect: connect
+                    )
+                }
+                
                 // store the new building
                 self.buildings.append(building)
             }
@@ -1150,6 +1159,38 @@ extension Citopia {
             }
             connect(interiorEntranceNodeIndex, array[0].1)
             connect(interiorEntranceNodeIndex, array[1].1)
+        }
+    }
+    
+    // define the function that initializes the gym building interior
+    func initializeGymBuildingInterior(index: Int,
+                                       origin: simd_float2,
+                                       blockPosition: simd_float2,
+                                       interiorEntranceNodeIndices: [Int],
+                                       connect: (Int, Int) -> ()) {
+        
+        // create the treadmills
+        let numTreadmillsX = Int(self.blockSideLength / 3.5)
+        let numTreadmillsZ = Int(self.blockSideLength / 4.5)
+        let distanceBetweenTreadmillsX = self.blockSideLength / Float(numTreadmillsX + 1)
+        let distanceBetweenTreadmillsZ = self.blockSideLength / Float(numTreadmillsZ + 1)
+        for treadmillX in 1...numTreadmillsX {
+            for treadmillZ in 1...numTreadmillsZ {
+                let offsetX = distanceBetweenTreadmillsX * Float(treadmillX)
+                let offsetZ = distanceBetweenTreadmillsZ * Float(treadmillZ)
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ), 0.0,
+                    simd_float3(1.0, 0.2, 2.0), 48
+                ))
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ + 1.05), 0.0,
+                    simd_float3(0.2, 1.2, 0.1), 49
+                ))
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ + 1.0), 1.2,
+                    simd_float3(0.6, 0.1, 0.3), 50
+                ))
+            }
         }
     }
 }
