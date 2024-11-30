@@ -521,27 +521,26 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     // compute the scale factor based on the character age
     const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
     
+    // update the character's stats
+    const float energyRestorationFactor = (character.states.x == 1 && character.states.y == 2) ? 1.0f : 0.0f;
+    character.stats[0] += character.stats[1] * energyRestorationFactor * frame.data.y;
+    float energyConsumptionFactor = 1.0f;
+    energyConsumptionFactor *= (character.states.x == 1 && character.states.y == 2) ? 0.0f : 1.0f;
+    energyConsumptionFactor *= (character.states.x == 2) ? 0.0f : 1.0f;
+    character.stats[0] -= character.stats[2] * energyConsumptionFactor * frame.data.y;
+    const float goldRestorationFactor = (character.states.x == 2 && character.states.y == 2) ? 1.0f : 0.0f;
+    character.stats[3] += character.stats[6] * goldRestorationFactor * frame.data.y;
+    character.stats[4] += character.stats[6] * goldRestorationFactor * frame.data.y;
+    
+    // update the character's goal based on the character's stats
+    character.states.x = (character.states.y == 0 && character.stats[0] < 0.0f) ? 1 : character.states.x;
+    character.states.x = (character.states.y == 0 && character.stats[4] < character.stats[5]) ? 2 : character.states.x;
+    
     // define the variable of the index of the target building the character wants to move to
     int targetBuildingIndex = -1;
     
     // define the variable of the index of the target map node the character wants to move to
     int targetMapNodeIndex = -1;
-    
-    // update the character's stats
-    float energyFactor = 1.0f;
-    energyFactor = (character.states.x == 1 && character.states.y == 2) ? 0.0f : energyFactor;
-    energyFactor = (character.states.x == 2) ? 0.0f : energyFactor;
-    character.stats[0] -= character.stats[2] * energyFactor * frame.data.y;
-    
-    // update the character's goal based on the character's stats
-    if (character.states.y == 0) {
-        if (character.stats[0] < 0.0f) {
-            character.states.x = 1;
-        }
-        if (character.stats[4] < character.stats[5]) {
-            character.states.x = 2;
-        }
-    }
     
     // achieve the character's goal
     switch (character.states.x) {
@@ -562,7 +561,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     updateMotion(character, 1, 1.0f, 1.0f, currentTime);
                     updateMotion(character, 2, 1.0f, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
-                    character.stats[0] += character.stats[1];
                     if (character.stats[0] > 1.0f) {
                         character.states.y = 3;
                         updateMotion(character, 1, 1.0f, 0.0f, currentTime);
@@ -603,8 +601,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
                     updateMotion(character, 4, 1.0, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
-                    character.stats[3] += character.stats[6];
-                    character.stats[4] += character.stats[6];
                     if (character.stats[4] > character.stats[5]) {
                         character.states.y = 3;
                         updateMotion(character, 4, 1.0, 0.0f, currentTime);
