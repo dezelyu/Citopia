@@ -232,7 +232,7 @@ extension Citopia {
         
         // create a staging buffer with the map node data
         let stagingBuffer = self.device.makeBuffer(
-            bytes: characters, length: MemoryLayout<CharacterData>.stride * characters.count,
+            bytes: characters, length: MemoryLayout<CharacterData>.stride * self.characterCount,
             options: [
                 .cpuCacheModeWriteCombined,
                 .storageModeShared,
@@ -299,17 +299,6 @@ extension Citopia {
         
         // update the label of the visible character index buffer
         self.visibleCharacterIndexBuffer.label = "VisibleCharacterIndexBuffer"
-        
-        // create a private storage buffer
-        self.initialVisibleCharacterCountBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt32>.stride * 1,
-            options: [
-                .storageModePrivate
-            ]
-        )!
-        
-        // update the label of the initial atomic int visible character count buffer
-        self.initialVisibleCharacterCountBuffer.label = "InitialVisibleCharacterCount"
         
         // create a private storage buffer
         self.visibleCharacterCountBuffer = self.device.makeBuffer(
@@ -405,17 +394,6 @@ extension Citopia {
         self.characterCountPerGridBuffer.label = "CharacterCountPerGridBuffer"
         
         // create a private storage buffer
-        self.initialCharacterCountPerGridBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt32>.stride * self.mapGridCount,
-            options: [
-                .storageModePrivate,
-            ]
-        )!
-        
-        // update the label of the initial character count per grid buffer
-        self.initialCharacterCountPerGridBuffer.label = "InitialCharacterCountPerGridBuffer"
-        
-        // create a private storage buffer
         self.gridDataBuffer = self.device.makeBuffer(
             length: MemoryLayout<GridData>.stride * self.mapGridCount,
             options: [
@@ -425,17 +403,6 @@ extension Citopia {
         
         // update the label of the grid data buffer
         self.gridDataBuffer.label = "GridDataBuffer"
-        
-        // create a private storage buffer
-        self.initialGridDataBuffer = self.device.makeBuffer(
-            length: MemoryLayout<GridData>.stride * self.mapGridCount,
-            options: [
-                .storageModePrivate
-            ]
-        )!
-        
-        // update the label of the initial grid data buffer
-        self.initialGridDataBuffer.label = "InitialGridDataBuffer"
     }
     
     // define the function that creates the character index buffer per grid
@@ -451,17 +418,6 @@ extension Citopia {
         
         // update the label of the visible character index buffer
         self.characterIndexBufferPerGrid.label = "CharacterIndexBufferPerGrid"
-        
-        // create a private storage buffer
-        self.initialNextAvailableGridBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt32>.stride * 1,
-            options: [
-                .storageModePrivate
-            ]
-        )!
-        
-        // update the label of the initial atomic int next available grid buffer
-        self.initialNextAvailableGridBuffer.label = "InitialNextAvailableGridBuffer"
         
         // create a private storage buffer
         self.nextAvailableGridBuffer = self.device.makeBuffer(

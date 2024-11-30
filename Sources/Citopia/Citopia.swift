@@ -238,26 +238,14 @@ class Citopia {
     // define the storage buffer for the character count per grid data
     var characterCountPerGridBuffer: MTLBuffer!
     
-    // define the storage buffer for the initial character count per grid data
-    var initialCharacterCountPerGridBuffer: MTLBuffer!
-    
     // define the storage buffer for the character index buffer per grid
     var characterIndexBufferPerGrid: MTLBuffer!
-    
-    // define the storage buffer for the initial grid data structure
-    var initialGridDataBuffer: MTLBuffer!
     
     // define the storage buffer for the grid data structure
     var gridDataBuffer: MTLBuffer!
     
-    // define the initial atomic int for tracking next available grid index
-    var initialNextAvailableGridBuffer: MTLBuffer!
-    
     // define the atomic int for tracking next available grid index
     var nextAvailableGridBuffer: MTLBuffer!
-    
-    // define the initial atomic int for counting visible characters
-    var initialVisibleCharacterCountBuffer: MTLBuffer!
     
     // define the atomic int for counting visible characters
     var visibleCharacterCountBuffer: MTLBuffer!
@@ -396,15 +384,15 @@ class Citopia {
         self.updateFrameBuffer(time: time)
         
         if let encoder = commandBuffer.makeBlitCommandEncoder() {
-            encoder.copy(
-                from: self.initialVisibleCharacterCountBuffer, sourceOffset: 0,
-                to: self.visibleCharacterCountBuffer, destinationOffset: 0,
-                size: MemoryLayout<UInt32>.stride
+            encoder.fill(
+                buffer: self.visibleCharacterCountBuffer,
+                range: 0..<self.visibleCharacterCountBuffer.length,
+                value: 0
             )
-            encoder.copy(
-                from: self.initialNextAvailableGridBuffer, sourceOffset: 0,
-                to: self.nextAvailableGridBuffer, destinationOffset: 0,
-                size: MemoryLayout<UInt32>.stride
+            encoder.fill(
+                buffer: self.nextAvailableGridBuffer,
+                range: 0..<self.nextAvailableGridBuffer.length,
+                value: 0
             )
             encoder.endEncoding()
         } else {
@@ -448,15 +436,15 @@ class Citopia {
         }
         
         if let encoder = commandBuffer.makeBlitCommandEncoder() {
-            encoder.copy(
-                from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
-                to: self.characterCountPerGridBuffer, destinationOffset: 0,
-                size: self.characterCountPerGridBuffer.length
+            encoder.fill(
+                buffer: self.characterCountPerGridBuffer,
+                range: 0..<self.characterCountPerGridBuffer.length,
+                value: 0
             )
-            encoder.copy(
-                from: self.initialGridDataBuffer, sourceOffset: 0,
-                to: self.gridDataBuffer, destinationOffset: 0,
-                size: self.gridDataBuffer.length
+            encoder.fill(
+                buffer: self.gridDataBuffer,
+                range: 0..<self.gridDataBuffer.length,
+                value: 0
             )
             encoder.endEncoding()
         } else {
@@ -497,10 +485,10 @@ class Citopia {
         }
         
         if let encoder = commandBuffer.makeBlitCommandEncoder() {
-            encoder.copy(
-                from: self.initialCharacterCountPerGridBuffer, sourceOffset: 0,
-                to: self.characterCountPerGridBuffer, destinationOffset: 0,
-                size: self.characterCountPerGridBuffer.length
+            encoder.fill(
+                buffer: self.characterCountPerGridBuffer,
+                range: 0..<self.characterCountPerGridBuffer.length,
+                value: 0
             )
             encoder.endEncoding()
         } else {
