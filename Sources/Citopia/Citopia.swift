@@ -10,9 +10,13 @@ struct FrameData {
     //  - data.y = delta time scale factor
     var data: simd_float4 = .zero
     
-    // define the map data
-    //  - mapData.x = blockCount
-    var mapData: simd_uint4 = .zero
+    // define the grid count data
+    //  - gridCountData.x = gridCount
+    var gridCountData: simd_uint4 = .zero
+    
+    // define the grid length data
+    //  - gridLengthData.x = gridLength
+    var gridLengthData: simd_float4 = .zero
     
     // define the character data
     //  - characterData.x = character count
@@ -22,17 +26,6 @@ struct FrameData {
     
     // define the position of the observer
     var observerPosition: simd_float4 = .zero
-    
-    // define the grid data
-    //  - gridData.x = mapGridCount
-    //  - gridData.y = linkedGridCount
-    //  - gridData.z = maxNumCharactersPerGrid
-    var gridData: simd_uint4 = .zero
-    
-    // define the grid dimension data
-    //  - gridLengthData.x = gridLengthX
-    //  - gridLengthData.y = gridLengthZ
-    var gridLengthData: simd_float4 = .zero
     
     // define the frustrum data
     var frustumData: (
@@ -103,6 +96,9 @@ struct CharacterData {
     //  - navigation.z = the temporary destination map node index
     //  - navigation.w = the previous map node index
     var navigation: simd_int4 = .zero
+    
+    // define the velocity of the character
+    var velocity: simd_float4 = .zero
     
     // define the position of the character
     var position: simd_float4 = .zero
@@ -179,12 +175,13 @@ struct BuildingData {
     var internalEntrances: simd_int4 = simd_int4(repeating: -1)
 }
 
+// define the grid data
 struct GridData {
     
     // define the index of start and end character index
     //  - data.x = start index
     //  - data.y = end index
-    var data: simd_int4 = .zero
+    var data: simd_uint4 = .zero
 }
 
 // define the class for performing the simulation
@@ -198,15 +195,6 @@ class Citopia {
     
     // define the actual number of visible characters
     var actualVisibleCharacterCount: Int = 0
-    
-    // define the map grid count
-    var mapGridCount: Int = 0
-    
-    // define the grid dimension in x
-    var gridLengthX: Float = 0
-    
-    // define the grid dimension in z
-    var gridLengthZ: Float = 0
     
     // define the previous time
     var previousTime: Float = .zero
@@ -253,11 +241,14 @@ class Citopia {
     // define the simulation pipeline
     var simulationPipeline: MTLComputePipelineState!
     
+    // define the physics simulation pipeline
+    var physicsSimulationPipeline: MTLComputePipelineState!
+    
     // define the compute grid pipeline
     var computeGridPipeline: MTLComputePipelineState!
     
-    // define the assign linked grid pipeline
-    var assignLinkedGridPipeline: MTLComputePipelineState!
+    // define the initialize grid pipeline
+    var initializeGridPipeline: MTLComputePipelineState!
     
     // define the set character index per grid pipeline
     var setCharacterIndexPerGridPipeline: MTLComputePipelineState!
@@ -282,6 +273,12 @@ class Citopia {
     
     // define the distance between two blocks in meters
     var blockDistance: Float = 0
+    
+    // define the number of grids per row of the map
+    var gridCount: Int = 0
+    
+    // define the side length of the grid in meters
+    var gridLength: Float = 0
     
     // define the exterior connection data
     var exteriorConnectionData: Set<simd_int4> = []
@@ -316,15 +313,13 @@ class Citopia {
          blockCount: Int, blockSideLength: Float, blockDistance: Float) {
         
         // save the arguments
-        let sideCount = Int(ceil(Float(blockCount + 2) / 2.0))
         self.characterCount = characterCount
         self.visibleCharacterCount = visibleCharacterCount
         self.blockCount = blockCount
         self.blockSideLength = blockSideLength
         self.blockDistance = blockDistance
-        self.mapGridCount = sideCount * sideCount
-        self.gridLengthX = 2 * (self.blockSideLength + self.blockDistance)
-        self.gridLengthZ = 2 * (self.blockSideLength + self.blockDistance)
+        self.gridCount = Int(ceil(Float(blockCount + 2) * 8.0))
+        self.gridLength = (self.blockSideLength + self.blockDistance) * 0.125
         
         // store the graphics device
         self.device = device
@@ -338,11 +333,14 @@ class Citopia {
         // create the simulation pipeline
         self.createSimulationPipeline()
         
+        // create the physics simulation pipeline
+        self.createPhysicsSimulationPipeline()
+        
         // create the compute grid pipeline
         self.createComputeGridPipeline()
         
-        // create the assign linked grid pipeline
-        self.createAssignLinkedGridPipeline()
+        // create the initialize grid pipeline
+        self.createInitializeGridPipeline()
         
         // create the set character index per grid pipeline
         self.createSetCharacterIndexPerGridPipeline()
@@ -420,9 +418,6 @@ class Citopia {
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
             encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 2)
             encoder.setBuffer(self.buildingBuffer, offset: 0, index: 3)
-            encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 4)
-            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
-            encoder.setBuffer(self.characterCountPerGridBuffer, offset: 0, index: 6)
             
             // perform the simulation
             encoder.dispatchThreadgroups(
@@ -430,6 +425,20 @@ class Citopia {
                 threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
+            // configure the physics simulation pipeline
+            encoder.setComputePipelineState(self.physicsSimulationPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
+            
+            // perform the physics simulation simulation
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.characterCount / (self.physicsSimulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.physicsSimulationPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            // finish encoding
             encoder.endEncoding()
         } else {
             fatalError()
@@ -465,17 +474,17 @@ class Citopia {
                 threadsPerThreadgroup: MTLSizeMake(self.computeGridPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
-            // configure the assign linked grid piepline
-            encoder.setComputePipelineState(self.assignLinkedGridPipeline)
+            // configure the initialize grid piepline
+            encoder.setComputePipelineState(self.initializeGridPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterCountPerGridBuffer,  offset: 0, index: 1)
             encoder.setBuffer(self.gridDataBuffer,  offset: 0, index: 2)
             encoder.setBuffer(self.nextAvailableGridBuffer,  offset: 0, index: 3)
             
-            // perform the assign linked grid pipeline
+            // perform the initialize grid pipeline
             encoder.dispatchThreadgroups(
-                MTLSizeMake(self.mapGridCount / (self.assignLinkedGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-                threadsPerThreadgroup: MTLSizeMake(self.assignLinkedGridPipeline.threadExecutionWidth * 2, 1, 1)
+                MTLSizeMake(self.gridCount * self.gridCount / (self.initializeGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.initializeGridPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
             // finish encoding
@@ -505,7 +514,7 @@ class Citopia {
             encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
             encoder.setBuffer(self.gridDataBuffer,  offset: 0, index: 4)
             
-            // perform the assign linked grid pipeline
+            // perform the set character index per grid pipeline
             encoder.dispatchThreadgroups(
                 MTLSizeMake(self.characterCount / (self.setCharacterIndexPerGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
                 threadsPerThreadgroup: MTLSizeMake(self.setCharacterIndexPerGridPipeline.threadExecutionWidth * 2, 1, 1)

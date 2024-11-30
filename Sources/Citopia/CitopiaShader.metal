@@ -43,9 +43,13 @@ struct FrameData {
     //  - data.y = delta time scale factor
     float4 data;
     
-    // define the map data
-    //  - mapData.x = blockCount
-    uint4 mapData;
+    // define the grid count data
+    //  - gridCountData.x = gridCount
+    uint4 gridCountData;
+    
+    // define the grid length data
+    //  - gridLengthData.x = gridLength
+    float4 gridLengthData;
     
     // define the character data
     //  - characterData.x = character count
@@ -55,15 +59,6 @@ struct FrameData {
     
     // define the position of the observer
     float4 observerPosition;
-    
-    // define the grid data
-    //  - gridData.x = mapGridCount
-    uint4 gridData;
-    
-    // define the grid dimension data
-    //  - gridLengthData.x = gridLengthX
-    //  - gridLengthData.y = gridLengthZ
-    float4 gridLengthData;
     
     // define the frustrum data
     float4 frustumData[6];
@@ -110,6 +105,9 @@ struct CharacterData {
     //  - navigation.z = the temporary destination map node index
     //  - navigation.w = the previous map node index
     int4 navigation;
+    
+    // define the velocity of the character
+    float4 velocity;
     
     // define the position of the character
     float4 position;
@@ -494,9 +492,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                                device CharacterData* characters [[buffer(1)]],
                                const device MapNodeData* mapNodes [[buffer(2)]],
                                const device BuildingData* buildings [[buffer(3)]],
-                               const device GridData* gridData [[buffer(4)]],
-                               const device uint* characterIndexBuffer [[buffer(5)]],
-                               const device uint* characterCountPerGrid [[buffer(6)]],
                                const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -509,6 +504,9 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     
     // acquire the current character
     CharacterData character = characters[index];
+    
+    // update the character position
+    character.position.xyz += character.velocity.xyz;
     
     // acquire the current map node
     const MapNodeData mapNode = mapNodes[character.navigation.z];
@@ -640,49 +638,75 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // update the character movement
-    float3 movementVector = updateMovement(character, frame);
+    character.velocity.xyz = updateMovement(character, frame);
     
-    // perform rigid body collision conditionally
-    if (distance(frame.observerPosition, character.position) < rigidBodyCollisionRadius) {
-        const float3 position = character.position.xyz;
-        const float gridLengthX = frame.gridLengthData.x;
-        const float gridLengthZ = frame.gridLengthData.y;
-        const uint gridDim = uint(sqrt(float(frame.gridData.x)));
-        const float width = gridLengthX * gridDim;
-        const float height = gridLengthZ * gridDim;
-        const float3 gridCenter = float3(width / 2.0f, 0.0f, height / 2.0f);
-        const float3 characterPosition = clamp(position + gridCenter,
-                                               float3(0.0f, 0.0f, 0.0f),
-                                               float3(width, 0.0f, height));
-        const uint gridIndexX = uint(characterPosition.x / gridLengthX);
-        const uint gridIndexZ = uint(characterPosition.z / gridLengthZ);
-        const uint gridIndex = gridIndexX + gridIndexZ * gridDim;
-        const uint startIndex = gridData[gridIndex].data.x;
-        const uint endIndex = gridData[gridIndex].data.y;
-        for (uint currentIndex = startIndex; currentIndex <= endIndex; currentIndex += 1) {
-            const uint neighborIndex = characterIndexBuffer[currentIndex];
-            if (neighborIndex == index) {
-                continue;
-            }
-            const uint4 neighborStates = characters[neighborIndex].states;
-            if (neighborStates.x == 1 && neighborStates.y == 2) {
-                continue;
-            }
-            const float3 neighborPosition = characters[neighborIndex].position.xyz;
-            if (distance(neighborPosition, position) >= characterCollisionDistance) {
-                continue;
-            };
-            float3 vector = normalize(neighborPosition - position);
-            if (dot(normalize(movementVector), vector) <= 0.0f) {
-                continue;
-            };
-            vector = float3(vector.z, 0.0f, -vector.x);
-            movementVector = dot(movementVector, vector) * vector * frame.data.y + vector * 0.01f;
-        }
+    // store the new character data
+    characters[index] = character;
+}
+
+// define the physics simulation function
+kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
+                                      device CharacterData* characters [[buffer(1)]],
+                                      const device GridData* gridData [[buffer(2)]],
+                                      const device uint* characterIndexBuffer [[buffer(3)]],
+                                      const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (index >= frame.characterData.x) {
+        return;
     }
     
-    // update the character position
-    character.position.xyz += movementVector;
+    // acquire the current character
+    CharacterData character = characters[index];
+    
+    // avoid execution when the character is too far away
+    if (distance(character.position.xz, frame.observerPosition.xz) > rigidBodyCollisionRadius) {
+        return;
+    }
+    
+    // compute the grid coordinate based on the character position
+    const float2 gridSize = float2(frame.gridLengthData.x * float(frame.gridCountData.x));
+    const float2 gridCenter = gridSize * 0.5f;
+    const float2 gridPosition = clamp(character.position.xz + gridCenter, float2(0.0f), gridSize);
+    const uint2 gridCoordinate = uint2(gridPosition / frame.gridLengthData.x);
+    
+    // compute the grid coordinate boundaries
+    const uint2 minGridCoordinate = uint2(max(int2(gridCoordinate) - 1, 0));
+    const uint2 maxGridCoordinate = uint2(min(int2(gridCoordinate) + 1, int2(frame.gridCountData.x) - 1));
+    
+    // iterate through all the neighbor grids
+    for (uint x = minGridCoordinate.x; x <= maxGridCoordinate.x; x += 1) {
+        for (uint y = minGridCoordinate.y; y <= maxGridCoordinate.y; y += 1) {
+            
+            // compute the grid index
+            const uint gridIndex = x + y * frame.gridCountData.x;
+            
+            // acquire the iteration boundaries index
+            const uint2 iterationBoundaries = gridData[gridIndex].data.xy;
+            
+            // iterate through all the characters in the grid
+            for (uint currentIndex = iterationBoundaries.x; currentIndex < iterationBoundaries.y; currentIndex += 1) {
+                const uint neighborIndex = characterIndexBuffer[currentIndex];
+                if (neighborIndex == index) {
+                    continue;
+                }
+                const uint4 neighborStates = characters[neighborIndex].states;
+                if (neighborStates.x == 1 && neighborStates.y == 2) {
+                    continue;
+                }
+                const float3 neighborPosition = characters[neighborIndex].position.xyz;
+                if (distance(neighborPosition, character.position.xyz) >= characterCollisionDistance) {
+                    continue;
+                };
+                float3 vector = normalize(neighborPosition - character.position.xyz);
+                if (dot(normalize(character.velocity.xyz), vector) <= 0.0f) {
+                    continue;
+                };
+                vector = float3(vector.z, 0.0f, -vector.x);
+                character.velocity.xyz = dot(character.velocity.xyz, vector) * vector * frame.data.y + vector * 0.01f;
+            }
+        }
+    }
     
     // store the new character data
     characters[index] = character;
@@ -699,41 +723,41 @@ kernel void ComputeGridFunction(constant FrameData& frame [[buffer(0)]],
         return;
     }
     
-    const float gridLengthX = frame.gridLengthData.x;
-    const float gridLengthZ = frame.gridLengthData.y;
+    // acquire the current character position
+    const float2 position = characters[index].position.xz;
     
-    const uint gridDim = uint(sqrt(float(frame.gridData.x)));
-    const float width = gridLengthX * gridDim;
-    const float height = gridLengthZ * gridDim;
+    // compute the grid index based on the character position
+    const float2 gridSize = float2(frame.gridLengthData.x * float(frame.gridCountData.x));
+    const float2 gridCenter = gridSize * 0.5f;
+    const float2 gridPosition = clamp(position + gridCenter, float2(0.0f), gridSize);
+    const uint2 gridCoordinate = uint2(gridPosition / frame.gridLengthData.x);
+    const uint gridIndex = gridCoordinate.x + gridCoordinate.y * frame.gridCountData.x;
     
-    const float3 gridCenter = float3(width / 2.0f, 0.0f, height / 2.0f);
-    const float3 characterPosition = clamp(characters[index].position.xyz + gridCenter,
-                                           float3(0.0f, 0.0f, 0.0f),
-                                           float3(width, 0.0f, height));
-    
-    const uint gridIndexX = uint(characterPosition.x / gridLengthX);
-    const uint gridIndexZ = uint(characterPosition.z / gridLengthZ);
-    const uint gridIndex = gridIndexX + gridIndexZ * gridDim;
-    
+    // increase the character count of the current grid
     atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
 }
 
-// define the assign linked grid function
-kernel void AssignLinkedGridFunction(constant FrameData& frame [[buffer(0)]],
-                                     const device uint* characterCountPerGrid [[buffer(1)]],
-                                     device GridData* gridData [[buffer(2)]],
-                                     device atomic<uint>* nextAvailableGridIndex [[buffer(3)]],
-                                     const uint index [[thread_position_in_grid]]) {
+// define the initialize grid function
+kernel void InitializeGridFunction(constant FrameData& frame [[buffer(0)]],
+                                   const device uint* characterCountPerGrid [[buffer(1)]],
+                                   device GridData* gridData [[buffer(2)]],
+                                   device atomic<uint>* nextAvailableGridIndex [[buffer(3)]],
+                                   const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of map grids
-    if (index >= frame.gridData.x) {
+    if (index >= frame.gridCountData.x * frame.gridCountData.x) {
         return;
     }
     
-    const uint charactersInGrid = characterCountPerGrid[index];
-    const uint startIndex = atomic_fetch_add_explicit(&nextAvailableGridIndex[0], charactersInGrid, memory_order_relaxed);
+    // acquire the character count of the current grid
+    const uint characterCount = characterCountPerGrid[index];
+    
+    // compute the start index
+    const uint startIndex = atomic_fetch_add_explicit(&nextAvailableGridIndex[0], characterCount, memory_order_relaxed);
+    
+    // initialize the current grid
     gridData[index].data.x = startIndex;
-    gridData[index].data.y = startIndex + charactersInGrid - 1;
+    gridData[index].data.y = startIndex + characterCount;
 }
 
 // define the set character index per grid
@@ -749,25 +773,21 @@ kernel void SetCharacterIndexPerGridFunction(constant FrameData& frame [[buffer(
         return;
     }
     
-    const float gridLengthX = frame.gridLengthData.x;
-    const float gridLengthZ = frame.gridLengthData.y;
+    // acquire the current character position
+    const float2 position = characters[index].position.xz;
     
-    const uint gridDim = uint(sqrt(float(frame.gridData.x)));
-    const float width = gridLengthX * gridDim;
-    const float height = gridLengthZ * gridDim;
+    // compute the grid index based on the character position
+    const float2 gridSize = float2(frame.gridLengthData.x * float(frame.gridCountData.x));
+    const float2 gridCenter = gridSize * 0.5f;
+    const float2 gridPosition = clamp(position + gridCenter, float2(0.0f), gridSize);
+    const uint2 gridCoordinate = uint2(gridPosition / frame.gridLengthData.x);
+    const uint gridIndex = gridCoordinate.x + gridCoordinate.y * frame.gridCountData.x;
     
-    const float3 gridCenter = float3(width / 2.0f, 0.0f, height / 2.0f);
-    const float3 characterPosition = clamp(characters[index].position.xyz + gridCenter,
-                                           float3(0.0f, 0.0f, 0.0f),
-                                           float3(width, 0.0f, height));
+    // increase the character count of the current grid
+    const uint characterCount = atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
     
-    const uint gridIndexX = uint(characterPosition.x / gridLengthX);
-    const uint gridIndexZ = uint(characterPosition.z / gridLengthZ);
-    const uint gridIndex = gridIndexX + gridIndexZ * gridDim;
-    
-    const uint prevCount = atomic_fetch_add_explicit(&characterCountPerGrid[gridIndex], 1, memory_order_relaxed);
-    const uint startIndex = gridData[gridIndex].data.x;
-    characterIndexBuffer[startIndex + prevCount] = index;
+    // store the character index
+    characterIndexBuffer[gridData[gridIndex].data.x + characterCount] = index;
 }
 
 // define the find visible characters function
@@ -783,6 +803,7 @@ kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]
         return;
     }
     
+    // perform frustum culling
     const float3 characterPosition = characters[index].position.xyz;
     const float4 center = float4(characterPosition.x, characterPosition.y + 1.0f, characterPosition.z, 1.0f);
     const float radius = -4.0f;
@@ -805,6 +826,7 @@ kernel void FindVisibleCharactersFunction(constant FrameData& frame [[buffer(0)]
         return;
     }
     
+    // mark the character as potentially visible
     const float distance = length(frame.observerPosition.xyz - characters[index].position.xyz);
     const uint prevIndex = atomic_fetch_add_explicit(&visibleCharacterCount[0], 1, memory_order_relaxed);
     potentiallyVisibleCharacterIndexBuffer[prevIndex] = index;

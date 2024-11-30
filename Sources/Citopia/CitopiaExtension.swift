@@ -38,6 +38,23 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the physics simulation pipeline
+    func createPhysicsSimulationPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "PhysicsSimulationFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.physicsSimulationPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the compute grid pipeline
     func createComputeGridPipeline() {
         
@@ -55,11 +72,11 @@ extension Citopia {
         ).0
     }
     
-    // define the function that creates the assign linked grid pipeline
-    func createAssignLinkedGridPipeline() {
+    // define the function that creates the initialize grid pipeline
+    func createInitializeGridPipeline() {
         
         // acquire the function from the library
-        let function = self.library.makeFunction(name: "AssignLinkedGridFunction")
+        let function = self.library.makeFunction(name: "InitializeGridFunction")
         
         // define the compute pipline descriptor
         let descriptor = MTLComputePipelineDescriptor()
@@ -67,7 +84,7 @@ extension Citopia {
         descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
         
         // create the compute pipeline state
-        self.assignLinkedGridPipeline = try! self.device.makeComputePipelineState(
+        self.initializeGridPipeline = try! self.device.makeComputePipelineState(
             descriptor: descriptor, options: []
         ).0
     }
@@ -338,11 +355,9 @@ extension Citopia {
         pointer.pointee.data.y = (time - self.previousTime) / (1.0 / 60.0)
         self.previousTime = time
         
-        // update the map data
-        pointer.pointee.mapData = simd_uint4(
-            UInt32(self.blockCount),
-            0, 0, 0
-        )
+        // update the grid data
+        pointer.pointee.gridCountData.x = UInt32(self.gridCount)
+        pointer.pointee.gridLengthData.x = self.gridLength
         
         // update the character data
         pointer.pointee.characterData = simd_uint4(
@@ -357,18 +372,7 @@ extension Citopia {
             self.observerPosition, 1.0
         )
         
-        pointer.pointee.gridData = simd_uint4(
-            UInt32(self.mapGridCount),
-            0, 0, 0
-        )
-        
-        pointer.pointee.gridLengthData = simd_float4(
-            Float32(self.gridLengthX),
-            Float32(self.gridLengthZ),
-            0.0,
-            0.0
-        )
-        
+        // update the frustum data
         pointer.pointee.frustumData = (
             frustumPlanes[0],
             frustumPlanes[1],
@@ -384,7 +388,7 @@ extension Citopia {
         
         // create a private storage buffer
         self.characterCountPerGridBuffer = self.device.makeBuffer(
-            length: MemoryLayout<UInt32>.stride * self.mapGridCount,
+            length: MemoryLayout<UInt32>.stride * self.gridCount * self.gridCount,
             options: [
                 .storageModePrivate,
             ]
@@ -395,7 +399,7 @@ extension Citopia {
         
         // create a private storage buffer
         self.gridDataBuffer = self.device.makeBuffer(
-            length: MemoryLayout<GridData>.stride * self.mapGridCount,
+            length: MemoryLayout<GridData>.stride * self.gridCount * self.gridCount,
             options: [
                 .storageModePrivate,
             ]
