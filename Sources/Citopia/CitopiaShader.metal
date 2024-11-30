@@ -48,8 +48,9 @@ struct FrameData {
     uint4 mapData;
     
     // define the character data
-    //  - characterData.x = characterCount
-    //  - characterData.y = visibleCharacterCount
+    //  - characterData.x = character count
+    //  - characterData.y = visible character count
+    //  - characterData.z = actual visible character count
     uint4 characterData;
     
     // define the position of the observer

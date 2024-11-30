@@ -15,9 +15,9 @@ struct FrameData {
     var mapData: simd_uint4 = .zero
     
     // define the character data
-    //  - characterData.x = characterCount
-    //  - characterData.y = visibleCharacterCount
-    //  - characterData.z = actualVisibleCharacterCount
+    //  - characterData.x = character count
+    //  - characterData.y = visible character count
+    //  - characterData.z = actual visible character count
     var characterData: simd_uint4 = .zero
     
     // define the position of the observer

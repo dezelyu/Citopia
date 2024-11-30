@@ -164,9 +164,9 @@ extension Citopia {
                 
                 // initialize the personalities
                 character.personalities = normalize(simd_float4(
-                    Float.random(in: 0.0...1.0),
-                    Float.random(in: 0.0...1.0),
-                    Float.random(in: 0.0...1.0),
+                    Float.random(in: -1.0...1.0),
+                    Float.random(in: -1.0...1.0),
+                    Float.random(in: -1.0...1.0),
                     0.0
                 ))
                 

@@ -159,9 +159,9 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
     nodes[character.maleMeshNodeIndices.w].node.w = character.data.x != 0 ? character.data.w : -1;
     
     // compute the color index
-    const uint x = uint(character.personalities.x * 40.0);
-    const uint y = uint(character.personalities.y * 40.0);
-    const uint z = uint(character.personalities.z * 40.0);
+    const uint x = uint((character.personalities.x * 0.5f + 0.5f) * 40.0f);
+    const uint y = uint((character.personalities.y * 0.5f + 0.5f) * 40.0f);
+    const uint z = uint((character.personalities.z * 0.5f + 0.5f) * 40.0f);
     const uint colorIndex = x + y * 40 + z * 40 * 40 + 1000;
     
     // update the character mesh color
