@@ -30,17 +30,17 @@ struct VisibleCharacterData {
     
     // define the motion controller indices
     var motionControllerIndices: (
-        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
-        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
-        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
-        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32,
-        Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32
+        Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32
     ) = (
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+        -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1
     )
     
     // define the motion controllers
@@ -49,38 +49,13 @@ struct VisibleCharacterData {
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2
     ) = (
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0)
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0)
     )
 }
 

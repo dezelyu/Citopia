@@ -123,38 +123,13 @@ struct CharacterData {
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
-        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2
     ) = (
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0),
-        simd_float4x2(0.0), simd_float4x2(0.0)
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0)
     )
 }
 

@@ -125,7 +125,7 @@ struct CharacterData {
     float4 movement;
     
     // define the motion controllers
-    float4x2 motionControllers[50];
+    float4x2 motionControllers[25];
 };
 
 // define the visible character data
@@ -149,10 +149,10 @@ struct VisibleCharacterData {
     float4x4 transform;
     
     // define the motion controller indices
-    int motionControllerIndices[50];
+    int motionControllerIndices[25];
     
     // define the motion controllers
-    float4x2 motionControllers[50];
+    float4x2 motionControllers[25];
 };
 
 // define the map node data
@@ -238,36 +238,37 @@ float3 generateRandomNumber(const float3 input) {
 void updateMotion(thread CharacterData& character, const int motionIndex,
                   const float targetSpeed, const float targetBlendWeight,
                   const float currentTime) {
-    float4x2 controller = character.motionControllers[motionIndex];
+    float4x2 motionController = character.motionControllers[motionIndex];
     if (motionDurations[motionIndex] < 0.0f) {
-        controller[1][0] = 0.0f;
-        controller[1][1] = 0.0f;
-        controller[3][0] = currentTime;
-        controller[3][1] = currentTime;
+        motionController[1][0] = 0.0f;
+        motionController[1][1] = 0.0f;
+        motionController[3][0] = currentTime;
+        motionController[3][1] = currentTime;
     } else {
-        const float offset = targetSpeed * (currentTime - controller[3][1]);
+        const float offset = targetSpeed * (currentTime - motionController[3][1]);
         if (offset < motionAttacks[motionIndex]) {
             const float factor = 0.5f - cos(offset / motionAttacks[motionIndex] * PI) * 0.5f;
-            controller[1][0] = controller[1][0] * (1.0 - factor) + controller[1][1] * factor;
+            motionController[1][0] = motionController[1][0] * (1.0 - factor) + motionController[1][1] * factor;
         } else {
-            controller[1][0] = controller[1][1];
+            motionController[1][0] = motionController[1][1];
         }
     }
-    const float progress = fmod(targetSpeed * (currentTime - controller[3][0]), motionDurations[motionIndex]);
-    controller[0][0] = motionDurations[motionIndex];
-    controller[0][1] = -targetSpeed;
-    controller[1][1] = clamp(targetBlendWeight, 0.0001f, 1.0f);
-    controller[2][0] = motionAttacks[motionIndex];
-    controller[2][1] = motionAttacks[motionIndex];
-    controller[3][0] = currentTime - (controller[1][0] <= 0.0001f ? 0.0f : progress) / targetSpeed;
-    controller[3][1] = currentTime;
-    character.motionControllers[motionIndex] = controller;
+    const float progress = fmod(targetSpeed * (currentTime - motionController[3][0]), motionDurations[motionIndex]);
+    motionController[0][0] = motionDurations[motionIndex];
+    motionController[0][1] = -targetSpeed;
+    motionController[1][1] = clamp(targetBlendWeight, 0.0001f, 1.0f);
+    motionController[2][0] = motionAttacks[motionIndex];
+    motionController[2][1] = motionAttacks[motionIndex];
+    motionController[3][0] = currentTime - (motionController[1][0] <= 0.0001f ? 0.0f : progress) / targetSpeed;
+    motionController[3][1] = currentTime;
+    character.motionControllers[motionIndex] = motionController;
 }
 
 // defien the function that gets the duration played for a motion
-float motionDurationPlayed(thread CharacterData& character, const int motionIndex, const float currentTime) {
-    const float4x2 controller = character.motionControllers[motionIndex];
-    return currentTime - controller[3][1];
+float motionDurationPlayed(thread CharacterData& character, const int motionIndex,
+                           const float currentTime) {
+    const float4x2 motionController = character.motionControllers[motionIndex];
+    return currentTime - motionController[3][1];
 }
 
 // define the function that finds the nearest external entrance
@@ -822,32 +823,37 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
         return;
     }
     
-    uint visibleCharacterIndex = visibleCharacterIndexBuffer[index];
+    // acquire the character index
+    const uint characterIndex = visibleCharacterIndexBuffer[index];
     
-    visibleCharacters[index].data.x = characters[visibleCharacterIndex].data.x;
+    // acquire the character
+    const CharacterData character = characters[characterIndex];
     
-    visibleCharacters[index].personalities.xyz = characters[visibleCharacterIndex].personalities.xyz;
-    
-    const float matrixAngle = PI * 0.5f - characters[visibleCharacterIndex].movement.z;
-    const float scale = 0.6f + float(characters[visibleCharacterIndex].data.y) * 0.01f;
+    // update the visible character based on the current character
+    VisibleCharacterData visibleCharacter;
+    visibleCharacter.data.x = character.data.x;
+    visibleCharacter.personalities.xyz = character.personalities.xyz;
+    const float matrixAngle = PI * 0.5f - character.movement.z;
+    const float scale = 0.6f + float(character.data.y) * 0.01f;
     const float3x3 rotationMatrixY = scale * characterModelScale * float3x3(
         cos(matrixAngle), 0.0f, -sin(matrixAngle),
         0.0f, 1.0f, 0.0f,
         sin(matrixAngle), 0.0f, cos(matrixAngle)
     );
-    
-    visibleCharacters[index].transform[0] = float4(rotationMatrixY[0], 0.0f);
-    visibleCharacters[index].transform[1] = float4(rotationMatrixY[1], 0.0f);
-    visibleCharacters[index].transform[2] = float4(rotationMatrixY[2], 0.0f);
-    visibleCharacters[index].transform[3].xyz = characters[visibleCharacterIndex].position.xyz;
-    
+    visibleCharacter.transform[0] = float4(rotationMatrixY[0], 0.0f);
+    visibleCharacter.transform[1] = float4(rotationMatrixY[1], 0.0f);
+    visibleCharacter.transform[2] = float4(rotationMatrixY[2], 0.0f);
+    visibleCharacter.transform[3].xyz = character.position.xyz;
     if (index >= frame.characterData.z) {
-        visibleCharacters[index].transform[3].y = -10000.0f;
+        visibleCharacter.transform[3].y = -10000.0f;
     }
     
     // synchronize the motion controllers
-    for (int motionIndex = 0; motionIndex < 50; motionIndex += 1) {
-        const float4x2 controller = characters[visibleCharacterIndex].motionControllers[motionIndex];
-        visibleCharacters[index].motionControllers[motionIndex] = controller;
+    for (int motionIndex = 0; motionIndex < 25; motionIndex += 1) {
+        const float4x2 motionController = character.motionControllers[motionIndex];
+        visibleCharacter.motionControllers[motionIndex] = motionController;
     }
+    
+    // store the visible character
+    visibleCharacters[index] = visibleCharacter;
 }
