@@ -8,7 +8,7 @@ constant float PI = 3.1415926535f;
 constant float rigidBodyCollisionRadius = 400.0f;
 constant float characterNavigationDistance = 0.4f;
 constant float characterMovementDampingFactor = 0.1f;
-constant float characterCollisionDistance = 0.6f;
+constant float characterCollisionDistance = 0.4f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
@@ -490,8 +490,10 @@ void updateMovement(thread CharacterData& character, constant FrameData& frame,
 // define the simulation function
 kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                                device CharacterData* characters [[buffer(1)]],
-                               const device MapNodeData* mapNodes [[buffer(2)]],
-                               const device BuildingData* buildings [[buffer(3)]],
+                               device atomic<uint>* characterCount [[buffer(2)]],
+                               device uint* physicsSimulationCharacterIndices [[buffer(3)]],
+                               const device MapNodeData* mapNodes [[buffer(4)]],
+                               const device BuildingData* buildings [[buffer(5)]],
                                const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -642,27 +644,59 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     
     // store the new character data
     characters[index] = character;
+    
+    // store the current character index for physics simulation
+    if (distance(character.position.xz, frame.observerPosition.xz) < rigidBodyCollisionRadius) {
+        const uint count = atomic_fetch_add_explicit(&characterCount[0], 1, memory_order_relaxed);
+        physicsSimulationCharacterIndices[count] = index;
+    }
+}
+
+// define the physics simulation function
+kernel void InitializeIndirectBufferFunction(const device uint* characterCount [[buffer(0)]],
+                                             device MTLDispatchThreadsIndirectArguments* arguments [[buffer(1)]],
+                                             const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of indirect buffers
+    if (index >= 10) {
+        return;
+    }
+    
+    // initialize the output arguments
+    MTLDispatchThreadsIndirectArguments outputArguments;
+    outputArguments.threadsPerGrid[0] = characterCount[index] / 64 + 1;
+    outputArguments.threadsPerGrid[1] = 1;
+    outputArguments.threadsPerGrid[2] = 1;
+    outputArguments.threadsPerThreadgroup[0] = 64;
+    outputArguments.threadsPerThreadgroup[1] = 1;
+    outputArguments.threadsPerThreadgroup[2] = 1;
+    
+    // store the output arguments
+    arguments[index] = outputArguments;
 }
 
 // define the physics simulation function
 kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
                                       device CharacterData* characters [[buffer(1)]],
-                                      const device GridData* gridData [[buffer(2)]],
-                                      const device uint* characterIndexBuffer [[buffer(3)]],
+                                      const device uint* characterCount [[buffer(2)]],
+                                      const device uint* physicsSimulationCharacterIndices [[buffer(3)]],
+                                      const device GridData* gridData [[buffer(4)]],
+                                      const device uint* characterIndexBuffer [[buffer(5)]],
                                       const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
-    if (index >= frame.characterData.x) {
+    if (index >= characterCount[0]) {
         return;
     }
+    
+    // acquire the character index
+    const uint characterIndex = physicsSimulationCharacterIndices[index];
     
     // acquire the current character
-    CharacterData character = characters[index];
+    CharacterData character = characters[characterIndex];
     
-    // avoid execution when the character is too far away
-    if (distance(character.position.xz, frame.observerPosition.xz) > rigidBodyCollisionRadius) {
-        return;
-    }
+    // compute the scale factor based on the character age
+    const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
     
     // compute the grid coordinate based on the character position
     const float2 gridSize = float2(frame.gridLengthData.x * float(frame.gridCountData.x));
@@ -687,7 +721,7 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
             // iterate through all the characters in the grid
             for (uint currentIndex = iterationBoundaries.x; currentIndex < iterationBoundaries.y; currentIndex += 1) {
                 const uint neighborIndex = characterIndexBuffer[currentIndex];
-                if (neighborIndex == index) {
+                if (neighborIndex == characterIndex) {
                     continue;
                 }
                 const uint4 neighborStates = characters[neighborIndex].states;
@@ -695,7 +729,9 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
                     continue;
                 }
                 const float3 neighborPosition = characters[neighborIndex].position.xyz;
-                if (distance(neighborPosition, character.position.xyz) >= characterCollisionDistance) {
+                const float neighborScaleFactor = 0.6f + float(characters[neighborIndex].data.y) * 0.01f;
+                const float targetDistance = characterCollisionDistance * scaleFactor + characterCollisionDistance * neighborScaleFactor;
+                if (distance(neighborPosition, character.position.xyz) >= targetDistance) {
                     continue;
                 };
                 float3 vector = normalize(neighborPosition - character.position.xyz);
@@ -709,7 +745,7 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // store the new character data
-    characters[index] = character;
+    characters[characterIndex] = character;
 }
 
 // define the compute grid function

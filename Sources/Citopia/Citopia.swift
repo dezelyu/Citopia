@@ -211,6 +211,15 @@ class Citopia {
     // define the storage buffer for the character data
     var characterBuffer: MTLBuffer!
     
+    // define the character indirect buffer
+    var characterIndirectBuffer: MTLBuffer!
+    
+    // define the character count buffer
+    var characterCountBuffer: MTLBuffer!
+    
+    // define the physics simulation character index buffer
+    var physicsSimulationCharacterIndexBuffer: MTLBuffer!
+    
     // define the storage buffer for the indices of the potentially visible characters
     var potentiallyVisibleCharacterIndexBuffer: MTLBuffer!
     
@@ -240,6 +249,9 @@ class Citopia {
     
     // define the simulation pipeline
     var simulationPipeline: MTLComputePipelineState!
+    
+    // define the initialize indirect buffer pipeline
+    var initializeIndirectBufferPipeline: MTLComputePipelineState!
     
     // define the physics simulation pipeline
     var physicsSimulationPipeline: MTLComputePipelineState!
@@ -333,6 +345,9 @@ class Citopia {
         // create the simulation pipeline
         self.createSimulationPipeline()
         
+        // create the initialize indirect buffer pipeline
+        self.createInitializeIndirectBufferPipeline()
+        
         // create the physics simulation pipeline
         self.createPhysicsSimulationPipeline()
         
@@ -381,7 +396,13 @@ class Citopia {
         // update the frame buffer
         self.updateFrameBuffer(time: time)
         
+        // reset the buffers
         if let encoder = commandBuffer.makeBlitCommandEncoder() {
+            encoder.fill(
+                buffer: self.characterCountBuffer,
+                range: 0..<self.characterCountBuffer.length,
+                value: 0
+            )
             encoder.fill(
                 buffer: self.visibleCharacterCountBuffer,
                 range: 0..<self.visibleCharacterCountBuffer.length,
@@ -416,8 +437,10 @@ class Citopia {
             encoder.setComputePipelineState(self.simulationPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-            encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 2)
-            encoder.setBuffer(self.buildingBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.physicsSimulationCharacterIndexBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 4)
+            encoder.setBuffer(self.buildingBuffer, offset: 0, index: 5)
             
             // perform the simulation
             encoder.dispatchThreadgroups(
@@ -425,17 +448,31 @@ class Citopia {
                 threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
+            // configure the initialize indirect buffer pipeline
+            encoder.setComputePipelineState(self.initializeIndirectBufferPipeline)
+            encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterIndirectBuffer, offset: 0, index: 1)
+            
+            // perform the initialize indirect buffer pipeline
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(10 / self.simulationPipeline.threadExecutionWidth + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth, 1, 1)
+            )
+            
             // configure the physics simulation pipeline
             encoder.setComputePipelineState(self.physicsSimulationPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-            encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 2)
-            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
+            encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.physicsSimulationCharacterIndexBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 4)
+            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
             
             // perform the physics simulation simulation
             encoder.dispatchThreadgroups(
-                MTLSizeMake(self.characterCount / (self.physicsSimulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-                threadsPerThreadgroup: MTLSizeMake(self.physicsSimulationPipeline.threadExecutionWidth * 2, 1, 1)
+                indirectBuffer: self.characterIndirectBuffer,
+                indirectBufferOffset: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 0,
+                threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
             )
             
             // finish encoding
@@ -444,6 +481,7 @@ class Citopia {
             fatalError()
         }
         
+        // reset the buffers
         if let encoder = commandBuffer.makeBlitCommandEncoder() {
             encoder.fill(
                 buffer: self.characterCountPerGridBuffer,
@@ -460,6 +498,7 @@ class Citopia {
             fatalError()
         }
         
+        // create a new compute command encoder
         if let encoder = commandBuffer.makeComputeCommandEncoder() {
             
             // configure the compute grid pipeline
@@ -493,6 +532,7 @@ class Citopia {
             fatalError()
         }
         
+        // reset the buffers
         if let encoder = commandBuffer.makeBlitCommandEncoder() {
             encoder.fill(
                 buffer: self.characterCountPerGridBuffer,
@@ -504,6 +544,7 @@ class Citopia {
             fatalError()
         }
         
+        // create a new compute command encoder
         if let encoder = commandBuffer.makeComputeCommandEncoder() {
             
             // configure the set character index per grid

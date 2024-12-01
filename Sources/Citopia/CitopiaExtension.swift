@@ -38,6 +38,23 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the initialize indirect buffer pipeline
+    func createInitializeIndirectBufferPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "InitializeIndirectBufferFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.initializeIndirectBufferPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the physics simulation pipeline
     func createPhysicsSimulationPipeline() {
         
@@ -125,6 +142,7 @@ extension Citopia {
     
     // define the function that creates the create visible character simulation pipeline
     func createVisibleCharacterSimulationPipeline(){
+        
         // acquire the function from the library
         let function = self.library.makeFunction(name: "SimulateVisibleCharacterFunction")
         
@@ -291,6 +309,39 @@ extension Citopia {
         
         // clear the building data
         self.buildings.removeAll()
+        
+        // create the character indirect buffer
+        self.characterIndirectBuffer = self.device.makeBuffer(
+            length: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 10,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the buffer
+        self.characterIndirectBuffer.label = "CharacterIndirectBuffer"
+        
+        // create the character count buffer
+        self.characterCountBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * 10,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the buffer
+        self.characterCountBuffer.label = "CharacterCountBuffer"
+        
+        // create a private storage buffer
+        self.physicsSimulationCharacterIndexBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.characterCount,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the buffer
+        self.physicsSimulationCharacterIndexBuffer.label = "PhysicsSimulationCharacterIndexBuffer"
     }
     
     // define the function that creates the visible character index buffer
@@ -438,6 +489,7 @@ extension Citopia {
     // define the sort character index process
     func sortVisibleCharacterIndexBufferByDistance() {
         
+        // copy device visibleCharacterCountBuffer to host
         var hostVisibleCharacterCount = [UInt32](repeating: 0, count: 1)
         memcpy(
             &hostVisibleCharacterCount,
@@ -470,11 +522,9 @@ extension Citopia {
         let sortedIndices = zip(hostCharacterDistanceToObserverBuffer, hostCharacterIndexBufferUInt32).sorted {
             $0.0 < $1.0
         }
-        
         hostCharacterIndexBufferUInt32 = sortedIndices.map { element in
             return UInt32(element.1)
         }
-        
         self.actualVisibleCharacterCount = min(self.actualVisibleCharacterCount, self.visibleCharacterCount)
         
         // copy host visibleCharacterIndexBuffer to device
