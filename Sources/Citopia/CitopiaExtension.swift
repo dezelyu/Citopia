@@ -89,6 +89,24 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the compute character count per building pipeline
+    func createComputeCharacterCountPerBuildingPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "ComputeBuildingCharacterCountFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.computeCharacterCountPerBuildingPipeline = try! self.device
+            .makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the compute grid pipeline
     func createComputeGridPipeline() {
         
@@ -438,6 +456,11 @@ extension Citopia {
         pointer.pointee.gridCountData.x = UInt32(self.gridCount)
         pointer.pointee.gridLengthData.x = self.gridLength
         
+        // update the block data
+        pointer.pointee.blockCountData.x = UInt32(self.blockCount)
+        pointer.pointee.blockLengthData.x = self.blockSideLength
+        pointer.pointee.blockLengthData.y = self.blockDistance
+        
         // update the character data
         pointer.pointee.characterData = simd_uint4(
             UInt32(self.characterCount),
@@ -638,5 +661,16 @@ extension Citopia {
         encoder.endEncoding()
         command.commit()
         command.waitUntilCompleted()
+        
+        // create a private storage buffer
+        self.characterCountPerBuildingBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.buildings.count,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the character count per building buffer
+        self.characterCountPerBuildingBuffer.label = "CharacterCountPerBuildingBuffer"
     }
 }

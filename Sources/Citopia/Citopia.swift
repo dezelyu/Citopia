@@ -18,6 +18,15 @@ struct FrameData {
     //  - gridLengthData.x = gridLength
     var gridLengthData: simd_float4 = .zero
     
+    // define the block count data
+    //  - blockCountData.x = block count
+    var blockCountData: simd_uint4 = .zero
+    
+    // define the block length data
+    //  - blockLengthData.x = block side length
+    //  - blockLengthData.y = block distance
+    var blockLengthData: simd_float4 = .zero
+    
     // define the character data
     //  - characterData.x = character count
     //  - characterData.y = visible character count
@@ -270,6 +279,9 @@ class Citopia {
     // define the navigation pipeline
     var navigationPipeline: MTLComputePipelineState!
     
+    // define the compute character count per building pipeline
+    var computeCharacterCountPerBuildingPipeline: MTLComputePipelineState!
+    
     // define the compute grid pipeline
     var computeGridPipeline: MTLComputePipelineState!
     
@@ -333,6 +345,9 @@ class Citopia {
     // define the storage buffer for the building data
     var buildingBuffer: MTLBuffer!
     
+    // define the storage buffer for the character count per building data
+    var characterCountPerBuildingBuffer: MTLBuffer!
+    
     // define the constructor
     init(device: MTLDevice,
          characterCount: Int, visibleCharacterCount: Int,
@@ -367,6 +382,9 @@ class Citopia {
         
         // create the navigation pipeline
         self.createNavigationPipeline()
+        
+        // create the compute character count per building pipeline
+        self.createComputeCharacterCountPerBuildingPipeline()
         
         // create the compute grid pipeline
         self.createComputeGridPipeline()
@@ -525,6 +543,11 @@ class Citopia {
                 range: 0..<self.gridDataBuffer.length,
                 value: 0
             )
+            encoder.fill(
+                buffer: self.characterCountPerBuildingBuffer,
+                range: 0..<self.characterCountPerBuildingBuffer.length,
+                value: 0
+            )
             encoder.endEncoding()
         } else {
             fatalError()
@@ -532,6 +555,18 @@ class Citopia {
         
         // create a new compute command encoder
         if let encoder = commandBuffer.makeComputeCommandEncoder() {
+            
+            // configure the compute character count per building pipeline
+            encoder.setComputePipelineState(self.computeCharacterCountPerBuildingPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.characterCountPerBuildingBuffer,  offset: 0, index: 2)
+            
+            // dispatch threadgroups for the compute character count per building pipeline
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(self.characterCount / (self.computeCharacterCountPerBuildingPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.computeCharacterCountPerBuildingPipeline.threadExecutionWidth * 2, 1, 1)
+            )
             
             // configure the compute grid pipeline
             encoder.setComputePipelineState(self.computeGridPipeline)

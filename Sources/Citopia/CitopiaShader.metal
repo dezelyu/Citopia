@@ -52,6 +52,15 @@ struct FrameData {
     //  - gridLengthData.x = gridLength
     float4 gridLengthData;
     
+    // define the block count data
+    //  - blockCountData.x = block count
+    uint4 blockCountData;
+    
+    // define the block length data
+    //  - blockLengthData.x = block side length
+    //  - blockLengthData.y = block distance
+    float4 blockLengthData;
+    
     // define the character data
     //  - characterData.x = character count
     //  - characterData.y = visible character count
@@ -770,6 +779,25 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     
     // store the new character data
     characters[characterIndex] = character;
+}
+
+// define the compute building character count function
+kernel void ComputeBuildingCharacterCountFunction(constant FrameData& frame [[buffer(0)]],
+                                                  const device CharacterData* characters [[buffer(1)]],
+                                                  device atomic<uint>* characterCountPerBuilding [[buffer(2)]],
+                                                  const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (index >= frame.characterData.x) {
+        return;
+    }
+    
+    const int buildingIndex = characters[index].addresses[0].x;
+    if (buildingIndex != -1) {
+        
+        // increase the character count of the current building
+        atomic_fetch_add_explicit(&characterCountPerBuilding[buildingIndex], 1, memory_order_relaxed);
+    }
 }
 
 // define the compute grid function
