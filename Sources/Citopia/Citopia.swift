@@ -97,6 +97,14 @@ struct CharacterData {
     //  - navigation.w = the previous map node index
     var navigation: simd_int4 = .zero
     
+    // define the navigation target of the character
+    //  - target.x = the target building index
+    //  - target.y = the target map node index
+    var target: simd_int4 = .zero
+    
+    // define the current map node data
+    var mapNodeData: simd_int4 = .zero
+    
     // define the velocity of the character
     var velocity: simd_float4 = .zero
     
@@ -220,6 +228,9 @@ class Citopia {
     // define the physics simulation character index buffer
     var physicsSimulationCharacterIndexBuffer: MTLBuffer!
     
+    // define the navigation character index buffer
+    var navigationCharacterIndexBuffer: MTLBuffer!
+    
     // define the storage buffer for the indices of the potentially visible characters
     var potentiallyVisibleCharacterIndexBuffer: MTLBuffer!
     
@@ -255,6 +266,9 @@ class Citopia {
     
     // define the physics simulation pipeline
     var physicsSimulationPipeline: MTLComputePipelineState!
+    
+    // define the navigation pipeline
+    var navigationPipeline: MTLComputePipelineState!
     
     // define the compute grid pipeline
     var computeGridPipeline: MTLComputePipelineState!
@@ -351,6 +365,9 @@ class Citopia {
         // create the physics simulation pipeline
         self.createPhysicsSimulationPipeline()
         
+        // create the navigation pipeline
+        self.createNavigationPipeline()
+        
         // create the compute grid pipeline
         self.createComputeGridPipeline()
         
@@ -439,10 +456,9 @@ class Citopia {
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
             encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
             encoder.setBuffer(self.physicsSimulationCharacterIndexBuffer, offset: 0, index: 3)
-            encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 4)
-            encoder.setBuffer(self.buildingBuffer, offset: 0, index: 5)
+            encoder.setBuffer(self.navigationCharacterIndexBuffer, offset: 0, index: 4)
             
-            // perform the simulation
+            // dispatch threadgroups for the simulation pipeline
             encoder.dispatchThreadgroups(
                 MTLSizeMake(self.characterCount / (self.simulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
                 threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth * 2, 1, 1)
@@ -453,7 +469,7 @@ class Citopia {
             encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterIndirectBuffer, offset: 0, index: 1)
             
-            // perform the initialize indirect buffer pipeline
+            // dispatch threadgroups for the initialize indirect buffer pipeline
             encoder.dispatchThreadgroups(
                 MTLSizeMake(10 / self.simulationPipeline.threadExecutionWidth + 1, 1, 1),
                 threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth, 1, 1)
@@ -468,10 +484,26 @@ class Citopia {
             encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 4)
             encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
             
-            // perform the physics simulation simulation
+            // dispatch threadgroups for the physics simulation pipeline
             encoder.dispatchThreadgroups(
                 indirectBuffer: self.characterIndirectBuffer,
                 indirectBufferOffset: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 0,
+                threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
+            )
+            
+            // configure the navigation pipeline
+            encoder.setComputePipelineState(self.navigationPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.navigationCharacterIndexBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.mapNodeBuffer, offset: 0, index: 4)
+            encoder.setBuffer(self.buildingBuffer, offset: 0, index: 5)
+            
+            // dispatch threadgroups for the navigation pipeline
+            encoder.dispatchThreadgroups(
+                indirectBuffer: self.characterIndirectBuffer,
+                indirectBufferOffset: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 1,
                 threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
             )
             
@@ -507,7 +539,7 @@ class Citopia {
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
             encoder.setBuffer(self.characterCountPerGridBuffer,  offset: 0, index: 2)
             
-            // perform the compute grid pipeline
+            // dispatch threadgroups for the compute grid pipeline
             encoder.dispatchThreadgroups(
                 MTLSizeMake(self.characterCount / (self.computeGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
                 threadsPerThreadgroup: MTLSizeMake(self.computeGridPipeline.threadExecutionWidth * 2, 1, 1)
@@ -520,7 +552,7 @@ class Citopia {
             encoder.setBuffer(self.gridDataBuffer,  offset: 0, index: 2)
             encoder.setBuffer(self.nextAvailableGridBuffer,  offset: 0, index: 3)
             
-            // perform the initialize grid pipeline
+            // dispatch threadgroups for the initialize grid pipeline
             encoder.dispatchThreadgroups(
                 MTLSizeMake(self.gridCount * self.gridCount / (self.initializeGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
                 threadsPerThreadgroup: MTLSizeMake(self.initializeGridPipeline.threadExecutionWidth * 2, 1, 1)
@@ -555,13 +587,13 @@ class Citopia {
             encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
             encoder.setBuffer(self.gridDataBuffer,  offset: 0, index: 4)
             
-            // perform the set character index per grid pipeline
+            // dispatch threadgroups for the set character index per grid pipeline
             encoder.dispatchThreadgroups(
                 MTLSizeMake(self.characterCount / (self.setCharacterIndexPerGridPipeline.threadExecutionWidth * 2) + 1, 1, 1),
                 threadsPerThreadgroup: MTLSizeMake(self.setCharacterIndexPerGridPipeline.threadExecutionWidth * 2, 1, 1)
             )
             
-            // configure the find visible character pipeline
+            // dispatch threadgroups for the find visible character pipeline
             encoder.setComputePipelineState(self.findVisibleCharacterPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
             encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)

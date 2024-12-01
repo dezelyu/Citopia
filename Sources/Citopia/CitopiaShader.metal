@@ -5,10 +5,11 @@ using namespace metal;
 
 // define the global constants
 constant float PI = 3.1415926535f;
-constant float rigidBodyCollisionRadius = 400.0f;
-constant float characterNavigationDistance = 0.4f;
 constant float characterMovementDampingFactor = 0.1f;
-constant float characterCollisionDistance = 0.4f;
+constant float characterNavigationCompletionDistance = 0.4f;
+constant float rigidBodyCollisionRadius = 400.0f;
+constant float characterCollisionRadius = 0.4f;
+constant float characterCollisionTurbulenceFactor = 0.01f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
@@ -105,6 +106,14 @@ struct CharacterData {
     //  - navigation.z = the temporary destination map node index
     //  - navigation.w = the previous map node index
     int4 navigation;
+    
+    // define the navigation target of the character
+    //  - target.x = the target building index
+    //  - target.y = the target map node index
+    int4 target;
+    
+    // define the current map node data
+    int4 mapNodeData;
     
     // define the velocity of the character
     float4 velocity;
@@ -269,11 +278,11 @@ float motionDurationPlayed(thread CharacterData& character, const int motionInde
     return currentTime - motionController[3][1];
 }
 
-// define the function that finds the nearest external entrance
-int findNearestExternalEntrance(thread CharacterData& character,
-                                const device MapNodeData* mapNodes,
-                                const device BuildingData* buildings,
-                                const int buildingIndex) {
+// define the function that finds the nearest external entrance of a building
+int findExternalEntrance(thread CharacterData& character,
+                         const device MapNodeData* mapNodes,
+                         const device BuildingData* buildings,
+                         const int buildingIndex) {
     const BuildingData building = buildings[buildingIndex];
     float distance = FLT_MAX;
     int entrance;
@@ -288,11 +297,11 @@ int findNearestExternalEntrance(thread CharacterData& character,
     return entrance;
 }
 
-// define the function that finds the nearest internal entrance
-int findNearestInternalEntrance(thread CharacterData& character,
-                                const device MapNodeData* mapNodes,
-                                const device BuildingData* buildings,
-                                const int buildingIndex) {
+// define the function that finds the nearest internal entrance of a building
+int findInternalEntrance(thread CharacterData& character,
+                         const device MapNodeData* mapNodes,
+                         const device BuildingData* buildings,
+                         const int buildingIndex) {
     const BuildingData building = buildings[buildingIndex];
     float distance = FLT_MAX;
     int entrance;
@@ -307,43 +316,39 @@ int findNearestInternalEntrance(thread CharacterData& character,
     return entrance;
 }
 
-// define the function that navigates the character to exit the current building
-void exitCurrentBuilding(thread CharacterData& character,
-                         const device MapNodeData* mapNodes,
-                         const device BuildingData* buildings) {
+// define the function that navigates the character to exit the building
+void exitBuilding(thread CharacterData& character,
+                  const device MapNodeData* mapNodes,
+                  const device BuildingData* buildings) {
     const MapNodeData mapNode = mapNodes[character.navigation.z];
     if (mapNode.data.x == 1) {
         character.addresses[0] = int4(-1);
         character.navigation.x = -1;
         character.navigation.y = 0;
     } else if (mapNode.data.x == 2) {
-        character.navigation.x = findNearestExternalEntrance(character, mapNodes, buildings,
-                                                             character.addresses[0].x);
+        character.navigation.x = findExternalEntrance(character, mapNodes, buildings, character.addresses[0].x);
         character.navigation.y = 1;
     } else {
-        character.navigation.x = findNearestInternalEntrance(character, mapNodes, buildings,
-                                                             character.addresses[0].x);
+        character.navigation.x = findInternalEntrance(character, mapNodes, buildings, character.addresses[0].x);
         character.navigation.y = 3;
     }
 }
 
 // implement the function that navigates the character to a building
-void moveToBuilding(thread CharacterData& character,
-                    const device MapNodeData* mapNodes,
-                    const device BuildingData* buildings,
-                    const int buildingIndex) {
+void enterBuilding(thread CharacterData& character,
+                   const device MapNodeData* mapNodes,
+                   const device BuildingData* buildings,
+                   const int buildingIndex) {
     const MapNodeData mapNode = mapNodes[character.navigation.z];
     if (mapNode.data.x == 2) {
         character.addresses[0] = int4(buildingIndex, -1, -1, -1);
         character.navigation.x = -1;
         character.navigation.y = 3;
     } else if (mapNode.data.x == 1) {
-        character.navigation.x = findNearestInternalEntrance(character, mapNodes, buildings,
-                                                             buildingIndex);
+        character.navigation.x = findInternalEntrance(character, mapNodes, buildings, buildingIndex);
         character.navigation.y = 2;
     } else {
-        character.navigation.x = findNearestExternalEntrance(character, mapNodes, buildings,
-                                                             buildingIndex);
+        character.navigation.x = findExternalEntrance(character, mapNodes, buildings, buildingIndex);
         character.navigation.y = 0;
     }
 }
@@ -352,15 +357,13 @@ void moveToBuilding(thread CharacterData& character,
 void updateNavigation(thread CharacterData& character,
                       const device MapNodeData* mapNodes,
                       const device BuildingData* buildings,
-                      const int buildingIndex,
-                      const int mapNodeIndex,
                       const float3 randomNumber) {
-    if (character.addresses[0].x >= 0 && character.addresses[0].x != buildingIndex) {
-        exitCurrentBuilding(character, mapNodes, buildings);
-    } else if (buildingIndex >= 0 && character.addresses[0].x == -1) {
-        moveToBuilding(character, mapNodes, buildings, buildingIndex);
-    } else if (buildingIndex >= 0 && character.addresses[0].x == buildingIndex) {
-        character.navigation.x = mapNodeIndex;
+    if (character.addresses[0].x >= 0 && character.addresses[0].x != character.target.x) {
+        exitBuilding(character, mapNodes, buildings);
+    } else if (character.target.x >= 0 && character.addresses[0].x == -1) {
+        enterBuilding(character, mapNodes, buildings, character.target.x);
+    } else if (character.target.x >= 0 && character.addresses[0].x == character.target.x) {
+        character.navigation.x = character.target.y;
         character.navigation.y = 3;
     }
     float4 destinationVector;
@@ -445,22 +448,14 @@ void updateNavigation(thread CharacterData& character,
 float3 updateMovement(thread CharacterData& character, constant FrameData& frame) {
     const float speedOffset = character.movement.y - character.movement.x;
     const float speedFactor = frame.data.y * characterMovementDampingFactor;
-    character.movement.x += clamp(speedOffset * speedFactor,
-                                  -characterMovementDampingFactor,
-                                  characterMovementDampingFactor);
+    character.movement.x += clamp(speedOffset * speedFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
     const float4 targetDirection = normalize(character.destination - character.position);
     character.movement.w = atan2(targetDirection.z, targetDirection.x);
-    while (character.movement.w - character.movement.z > PI) {
-        character.movement.w -= PI * 2.0f;
-    }
-    while (character.movement.z - character.movement.w > PI) {
-        character.movement.w += PI * 2.0f;
-    }
+    character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
+    character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
     const float rotationOffset = character.movement.w - character.movement.z;
     const float rotationFactor = frame.data.y * characterMovementDampingFactor;
-    character.movement.z += clamp(rotationOffset * rotationFactor,
-                                  -characterMovementDampingFactor,
-                                  characterMovementDampingFactor);
+    character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
     const float directionX = cos(character.movement.z);
     const float directionZ = sin(character.movement.z);
     const float3 currentDirection = normalize(float3(directionX, 0.0f, directionZ));
@@ -492,8 +487,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                                device CharacterData* characters [[buffer(1)]],
                                device atomic<uint>* characterCount [[buffer(2)]],
                                device uint* physicsSimulationCharacterIndices [[buffer(3)]],
-                               const device MapNodeData* mapNodes [[buffer(4)]],
-                               const device BuildingData* buildings [[buffer(5)]],
+                               device uint* navigationCharacterIndices [[buffer(4)]],
                                const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -510,17 +504,8 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     // update the character position
     character.position.xyz += character.velocity.xyz;
     
-    // acquire the current map node
-    const MapNodeData mapNode = mapNodes[character.navigation.z];
-    
-    // compute three random numbers based on the character position
-    const float3 randomNumber = generateRandomNumber(character.position.xyz + float3(currentTime + float(index)));
-    
     // compute the motion speed factor based on the character age
     const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
-    
-    // compute the scale factor based on the character age
-    const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
     
     // update the character's stats
     const float energyRestorationFactor = (character.states.x == 1 && character.states.y == 2) ? 1.0f : 0.0f;
@@ -537,11 +522,8 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     character.states.x = (character.states.y == 0 && character.stats[0] < 0.0f) ? 1 : character.states.x;
     character.states.x = (character.states.y == 0 && character.stats[4] < character.stats[5]) ? 2 : character.states.x;
     
-    // define the variable of the index of the target building the character wants to move to
-    int targetBuildingIndex = -1;
-    
-    // define the variable of the index of the target map node the character wants to move to
-    int targetMapNodeIndex = -1;
+    // reset the character's navigation target
+    character.target = int4(-1);
     
     // achieve the character's goal
     switch (character.states.x) {
@@ -549,12 +531,11 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             // sleeping
         case 1:
             
-            // update the target building and map node indices
-            targetBuildingIndex = character.addresses[1].x;
-            targetMapNodeIndex = character.addresses[1].y;
+            // update the character's navigation target
+            character.target = character.addresses[1];
             
             // perform the sleeping behavior when the character has arrived at the bed
-            if (mapNode.data.x == 4 && length(character.destination - character.position) < characterNavigationDistance) {
+            if (character.mapNodeData.x == 4 && length(character.destination - character.position) < characterNavigationCompletionDistance) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
@@ -590,12 +571,11 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             // working
         case 2:
             
-            // update the target building and map node indices
-            targetBuildingIndex = character.addresses[2].x;
-            targetMapNodeIndex = character.addresses[2].y;
+            // update the character's navigation target
+            character.target = character.addresses[2];
             
             // perform the working behavior when the character has arrived at the office
-            if (mapNode.data.x == 5 && length(character.destination - character.position) < characterNavigationDistance) {
+            if (character.mapNodeData.x == 5 && length(character.destination - character.position) < characterNavigationCompletionDistance) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
@@ -626,19 +606,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             break;
     }
     
-    // update navigation when the character reaches the destination
-    if (length(character.destination - character.position) < characterNavigationDistance) {
-        
-        // perform navigation update
-        updateNavigation(character, mapNodes, buildings, targetBuildingIndex, targetMapNodeIndex, randomNumber);
-        
-        // update the walk motion controller with the new parameters
-        updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
-        
-        // update the target speed
-        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[0];
-    }
-    
     // update the character movement
     character.velocity.xyz = updateMovement(character, frame);
     
@@ -649,6 +616,12 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     if (distance(character.position.xz, frame.observerPosition.xz) < rigidBodyCollisionRadius) {
         const uint count = atomic_fetch_add_explicit(&characterCount[0], 1, memory_order_relaxed);
         physicsSimulationCharacterIndices[count] = index;
+    }
+    
+    // store the current character index for navigation
+    if (length(character.destination - character.position) < characterNavigationCompletionDistance) {
+        const uint count = atomic_fetch_add_explicit(&characterCount[1], 1, memory_order_relaxed);
+        navigationCharacterIndices[count] = index;
     }
 }
 
@@ -730,7 +703,7 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 const float3 neighborPosition = characters[neighborIndex].position.xyz;
                 const float neighborScaleFactor = 0.6f + float(characters[neighborIndex].data.y) * 0.01f;
-                const float targetDistance = characterCollisionDistance * scaleFactor + characterCollisionDistance * neighborScaleFactor;
+                const float targetDistance = characterCollisionRadius * scaleFactor + characterCollisionRadius * neighborScaleFactor;
                 if (distance(neighborPosition, character.position.xyz) >= targetDistance) {
                     continue;
                 };
@@ -739,10 +712,58 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
                     continue;
                 };
                 vector = float3(vector.z, 0.0f, -vector.x);
-                character.velocity.xyz = dot(character.velocity.xyz, vector) * vector * frame.data.y + vector * 0.01f;
+                character.velocity.xyz = dot(character.velocity.xyz, vector) * vector * frame.data.y + vector * characterCollisionTurbulenceFactor;
             }
         }
     }
+    
+    // store the new character data
+    characters[characterIndex] = character;
+}
+
+// define the navigation function
+kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
+                               device CharacterData* characters [[buffer(1)]],
+                               const device uint* characterCount [[buffer(2)]],
+                               const device uint* navigationCharacterIndices [[buffer(3)]],
+                               const device MapNodeData* mapNodes [[buffer(4)]],
+                               const device BuildingData* buildings [[buffer(5)]],
+                               const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (index >= characterCount[1]) {
+        return;
+    }
+    
+    // acquire the character index
+    const uint characterIndex = navigationCharacterIndices[index];
+    
+    // acquire the current time
+    const float currentTime = frame.data.x;
+    
+    // acquire the current character
+    CharacterData character = characters[characterIndex];
+    
+    // compute three random numbers based on the character position
+    const float3 randomNumber = generateRandomNumber(character.position.xyz + float3(currentTime + float(index)));
+    
+    // compute the motion speed factor based on the character age
+    const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
+    
+    // compute the scale factor based on the character age
+    const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
+    
+    // perform navigation update
+    updateNavigation(character, mapNodes, buildings, randomNumber);
+    
+    // update the walk motion controller with the new parameters
+    updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
+    
+    // update the target speed
+    character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[0];
+    
+    // update the current map node data
+    character.mapNodeData = mapNodes[character.navigation.z].data;
     
     // store the new character data
     characters[characterIndex] = character;

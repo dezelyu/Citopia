@@ -72,6 +72,23 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the navigation pipeline
+    func createNavigationPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "NavigationFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.navigationPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the compute grid pipeline
     func createComputeGridPipeline() {
         
@@ -342,6 +359,17 @@ extension Citopia {
         
         // update the label of the buffer
         self.physicsSimulationCharacterIndexBuffer.label = "PhysicsSimulationCharacterIndexBuffer"
+        
+        // create a private storage buffer
+        self.navigationCharacterIndexBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.characterCount,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the buffer
+        self.navigationCharacterIndexBuffer.label = "NavigationCharacterIndexBuffer"
     }
     
     // define the function that creates the visible character index buffer
