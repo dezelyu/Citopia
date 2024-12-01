@@ -6,9 +6,9 @@ using namespace metal;
 // define the global constants
 constant float PI = 3.1415926535f;
 constant float characterMovementDampingFactor = 0.1f;
-constant float characterNavigationCompletionDistance = 0.4f;
+constant float characterNavigationCompletionDistance = 0.8f;
 constant float rigidBodyCollisionRadius = 400.0f;
-constant float characterCollisionRadius = 0.4f;
+constant float characterCollisionRadius = 0.3f;
 constant float characterCollisionTurbulenceFactor = 0.01f;
 constant float characterModelScale = 0.01f;
 
@@ -449,13 +449,17 @@ float3 updateMovement(thread CharacterData& character, constant FrameData& frame
     const float speedOffset = character.movement.y - character.movement.x;
     const float speedFactor = frame.data.y * characterMovementDampingFactor;
     character.movement.x += clamp(speedOffset * speedFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
-    const float4 targetDirection = normalize(character.destination - character.position);
-    character.movement.w = atan2(targetDirection.z, targetDirection.x);
-    character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
-    character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
-    const float rotationOffset = character.movement.w - character.movement.z;
-    const float rotationFactor = frame.data.y * characterMovementDampingFactor;
-    character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
+    if (distance(character.destination, character.position) > 0.0f) {
+        const float4 targetDirection = normalize(character.destination - character.position);
+        character.movement.w = atan2(targetDirection.z, targetDirection.x);
+        character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
+        character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
+        character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
+        character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
+        const float rotationOffset = character.movement.w - character.movement.z;
+        const float rotationFactor = frame.data.y * characterMovementDampingFactor;
+        character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
+    }
     const float directionX = cos(character.movement.z);
     const float directionZ = sin(character.movement.z);
     const float3 currentDirection = normalize(float3(directionX, 0.0f, directionZ));
@@ -466,17 +470,13 @@ float3 updateMovement(thread CharacterData& character, constant FrameData& frame
 void updateMovement(thread CharacterData& character, constant FrameData& frame,
                     const float4 position, const float rotation) {
     character.movement.w = rotation;
-    while (character.movement.w - character.movement.z > PI) {
-        character.movement.w -= PI * 2.0f;
-    }
-    while (character.movement.z - character.movement.w > PI) {
-        character.movement.w += PI * 2.0f;
-    }
+    character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
+    character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
+    character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
+    character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
     const float rotationOffset = character.movement.w - character.movement.z;
     const float rotationFactor = frame.data.y * characterMovementDampingFactor;
-    character.movement.z += clamp(rotationOffset * rotationFactor,
-                                  -characterMovementDampingFactor,
-                                  characterMovementDampingFactor);
+    character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
     const float3 positionOffset = position.xyz - character.position.xyz;
     const float positionFactor = frame.data.y * characterMovementDampingFactor;
     character.position.xyz += positionOffset * positionFactor;
@@ -500,9 +500,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     
     // acquire the current character
     CharacterData character = characters[index];
-    
-    // update the character position
-    character.position.xyz += character.velocity.xyz;
     
     // compute the motion speed factor based on the character age
     const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
@@ -606,6 +603,9 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             break;
     }
     
+    // update the character position
+    character.position.xyz += character.velocity.xyz;
+    
     // update the character movement
     character.velocity.xyz = updateMovement(character, frame);
     
@@ -699,6 +699,9 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 const uint4 neighborStates = characters[neighborIndex].states;
                 if (neighborStates.x == 1 && neighborStates.y == 2) {
+                    continue;
+                }
+                if (neighborStates.x == 2 && neighborStates.y == 2) {
                     continue;
                 }
                 const float3 neighborPosition = characters[neighborIndex].position.xyz;

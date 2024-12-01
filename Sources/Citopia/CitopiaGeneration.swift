@@ -1095,7 +1095,7 @@ extension Citopia {
                 if (chairZ > 0) {
                     connect(nodeIndex, nodePositionIndexArray[deskX + (chairZ - 1) * (numDesksX + 1)].1)
                     if (chairZ > 1 && chairZ < numChairsZ + 2) {
-                        let offset = distanceBetweenDesksX * 0.5 - 1.2
+                        let offset = distanceBetweenDesksX * 0.5 - 0.8
                         if (deskX != numDesksX) {
                             
                             // create the chair node
