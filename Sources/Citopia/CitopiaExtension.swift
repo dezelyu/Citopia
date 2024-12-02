@@ -64,7 +64,7 @@ extension Citopia {
         // define the compute pipline descriptor
         let descriptor = MTLComputePipelineDescriptor()
         descriptor.computeFunction = function
-        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = false
         
         // create the compute pipeline state
         self.physicsSimulationPipeline = try! self.device.makeComputePipelineState(
@@ -81,10 +81,27 @@ extension Citopia {
         // define the compute pipline descriptor
         let descriptor = MTLComputePipelineDescriptor()
         descriptor.computeFunction = function
-        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = false
         
         // create the compute pipeline state
         self.navigationPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
+    // define the function that creates the socialization pipeline
+    func createSocializationPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "SocializationFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = false
+        
+        // create the compute pipeline state
+        self.socializationPipeline = try! self.device.makeComputePipelineState(
             descriptor: descriptor, options: []
         ).0
     }
@@ -248,6 +265,9 @@ extension Citopia {
                 character.stats.4 = Bool.random() ? 0.0 : 200.0
                 character.stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
                 character.stats.6 = character.stats.5 / (Float.random(in: 12.0...18.0) * 60.0)
+                character.stats.7 = Float.random(in: 0.0...1.0)
+                character.stats.8 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+                character.stats.9 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
                 
                 // initialize the addresses
                 character.addresses.0 = bedData
@@ -388,6 +408,17 @@ extension Citopia {
         
         // update the label of the buffer
         self.navigationCharacterIndexBuffer.label = "NavigationCharacterIndexBuffer"
+        
+        // create a private storage buffer
+        self.socializationCharacterIndexBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.characterCount,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the buffer
+        self.socializationCharacterIndexBuffer.label = "SocializationCharacterIndexBuffer"
     }
     
     // define the function that creates the visible character index buffer

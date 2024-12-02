@@ -64,7 +64,9 @@ struct CharacterData {
     //      - 0 = wandering on the street
     //      - 1 = sleeping (determined by energy)
     //      - 2 = working (determined by gold)
+    //      - 3 = socializing (determined by socialization impulse)
     //  - states.y = goal planner state
+    //  - states.z = target character
     var states: simd_uint4 = .zero
     
     // define the stats of the character
@@ -75,6 +77,9 @@ struct CharacterData {
     //  - stats[4] = gold earned in the current cycle
     //  - stats[5] = target gold per cycle
     //  - stats[6] = gold earned per frame
+    //  - stats[7] = socialization impulse
+    //  - stats[8] = socialization impulse restoration
+    //  - stats[9] = socialization impulse consumption
     var stats: (
         Float, Float, Float, Float,
         Float, Float, Float, Float,
@@ -240,6 +245,9 @@ class Citopia {
     // define the navigation character index buffer
     var navigationCharacterIndexBuffer: MTLBuffer!
     
+    // define the socialization character index buffer
+    var socializationCharacterIndexBuffer: MTLBuffer!
+    
     // define the storage buffer for the indices of the potentially visible characters
     var potentiallyVisibleCharacterIndexBuffer: MTLBuffer!
     
@@ -278,6 +286,9 @@ class Citopia {
     
     // define the navigation pipeline
     var navigationPipeline: MTLComputePipelineState!
+    
+    // define the socialization pipeline
+    var socializationPipeline: MTLComputePipelineState!
     
     // define the compute character count per building pipeline
     var computeCharacterCountPerBuildingPipeline: MTLComputePipelineState!
@@ -383,6 +394,9 @@ class Citopia {
         // create the navigation pipeline
         self.createNavigationPipeline()
         
+        // create the socialization pipeline
+        self.createSocializationPipeline()
+        
         // create the compute character count per building pipeline
         self.createComputeCharacterCountPerBuildingPipeline()
         
@@ -475,6 +489,7 @@ class Citopia {
             encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
             encoder.setBuffer(self.physicsSimulationCharacterIndexBuffer, offset: 0, index: 3)
             encoder.setBuffer(self.navigationCharacterIndexBuffer, offset: 0, index: 4)
+            encoder.setBuffer(self.socializationCharacterIndexBuffer, offset: 0, index: 5)
             
             // dispatch threadgroups for the simulation pipeline
             encoder.dispatchThreadgroups(
@@ -522,6 +537,22 @@ class Citopia {
             encoder.dispatchThreadgroups(
                 indirectBuffer: self.characterIndirectBuffer,
                 indirectBufferOffset: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 1,
+                threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
+            )
+            
+            // configure the socialization pipeline
+            encoder.setComputePipelineState(self.socializationPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.socializationCharacterIndexBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 4)
+            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 5)
+            
+            // dispatch threadgroups for the physics simulation pipeline
+            encoder.dispatchThreadgroups(
+                indirectBuffer: self.characterIndirectBuffer,
+                indirectBufferOffset: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 2,
                 threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
             )
             

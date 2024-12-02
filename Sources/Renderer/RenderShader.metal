@@ -159,9 +159,9 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
     nodes[character.maleMeshNodeIndices.w].node.w = character.data.x != 0 ? character.data.w : -1;
     
     // compute the color index
-    const uint x = uint((character.personalities.x * 0.5f + 0.5f) * 40.0f);
-    const uint y = uint((character.personalities.y * 0.5f + 0.5f) * 40.0f);
-    const uint z = uint((character.personalities.z * 0.5f + 0.5f) * 40.0f);
+    const uint x = uint((character.personalities.x * 0.5f + 0.5f) * 39.0f);
+    const uint y = uint((character.personalities.y * 0.5f + 0.5f) * 39.0f);
+    const uint z = uint((character.personalities.z * 0.5f + 0.5f) * 39.0f);
     const uint colorIndex = x + y * 40 + z * 40 * 40 + 1000;
     
     // update the character mesh color
@@ -218,9 +218,9 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
         colorIndex %= (40 * 40);
         const uint y = colorIndex / 40;
         const uint x = colorIndex % 40;
-        materialColor.x = float(x) / 40.0f;
-        materialColor.y = float(y) / 40.0f;
-        materialColor.z = float(z) / 40.0f;
+        materialColor.x = float(x) / 39.0f;
+        materialColor.y = float(y) / 39.0f;
+        materialColor.z = float(z) / 39.0f;
     } else {
         materialColor = colors[material];
     }

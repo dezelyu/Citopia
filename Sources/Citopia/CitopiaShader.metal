@@ -10,6 +10,8 @@ constant float characterNavigationCompletionDistance = 0.8f;
 constant float rigidBodyCollisionRadius = 400.0f;
 constant float characterCollisionRadius = 0.3f;
 constant float characterCollisionTurbulenceFactor = 0.01f;
+constant float characterSocializationDistance = 2.0f;
+constant float characterSocializationFactor = 0.001f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
@@ -90,7 +92,9 @@ struct CharacterData {
     //      - 0 = wandering on the street
     //      - 1 = sleeping (determined by energy)
     //      - 2 = working (determined by gold)
+    //      - 3 = socializing (determined by socialization impulse)
     //  - states.y = goal planner state
+    //  - states.z = target character
     uint4 states;
     
     // define the stats of the character
@@ -101,6 +105,9 @@ struct CharacterData {
     //  - stats[4] = gold earned in the current cycle
     //  - stats[5] = target gold per cycle
     //  - stats[6] = gold earned per frame
+    //  - stats[7] = socialization impulse
+    //  - stats[8] = socialization impulse restoration
+    //  - stats[9] = socialization impulse consumption
     float stats[12];
     
     // define the unique addresses of the character
@@ -497,6 +504,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                                device atomic<uint>* characterCount [[buffer(2)]],
                                device uint* physicsSimulationCharacterIndices [[buffer(3)]],
                                device uint* navigationCharacterIndices [[buffer(4)]],
+                               device uint* socializationCharacterIndices [[buffer(5)]],
                                const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -523,6 +531,10 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     const float goldRestorationFactor = (character.states.x == 2 && character.states.y == 2) ? 1.0f : 0.0f;
     character.stats[3] += character.stats[6] * goldRestorationFactor * frame.data.y;
     character.stats[4] += character.stats[6] * goldRestorationFactor * frame.data.y;
+    const float socializationImpulseRestorationFactor = (character.states.x == 0) ? 1.0f : 0.0f;
+    character.stats[7] += character.stats[8] * socializationImpulseRestorationFactor * frame.data.y;
+    const float socializationImpulseConsumptionFactor = (character.states.x == 3 && character.states.y == 2) ? 1.0f : 0.0f;
+    character.stats[7] -= character.stats[9] * socializationImpulseConsumptionFactor * frame.data.y;
     
     // update the character's goal based on the character's stats
     character.states.x = (character.states.y == 0 && character.stats[0] < 0.0f) ? 1 : character.states.x;
@@ -610,6 +622,45 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 return;
             }
             break;
+            
+            // socializing
+        case 3: {
+            if (character.states.y < 2) {
+                character.states.y = 2;
+                updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+            } else if (character.states.y == 2) {
+                const float4 targetCharacterPosition = characters[character.states.z].position;
+                const float targetCharacterDistance = distance(targetCharacterPosition, character.position);
+                if (character.stats[7] < 0.0f || characters[character.states.z].states.x != 3) {
+                    character.states.y = 3;
+                } else if (targetCharacterDistance > 0.0f) {
+                    const float4 targetDirection = normalize(targetCharacterPosition - character.position);
+                    float targetAngle = atan2(targetDirection.z, targetDirection.x);
+                    targetAngle += character.movement.z - targetAngle > PI ? PI * 2.0f : 0.0f;
+                    targetAngle += character.movement.z - targetAngle > PI ? PI * 2.0f : 0.0f;
+                    targetAngle -= targetAngle - character.movement.z > PI ? PI * 2.0f : 0.0f;
+                    targetAngle -= targetAngle - character.movement.z > PI ? PI * 2.0f : 0.0f;
+                    const float rotationOffset = targetAngle - character.movement.z;
+                    const float rotationFactor = frame.data.y * characterMovementDampingFactor;
+                    character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
+                }
+                const float4 targetCharacterPersonalities = characters[character.states.z].personalities;
+                const float4 offset = normalize(targetCharacterPersonalities - character.personalities);
+                character.personalities += offset * characterSocializationFactor * frame.data.y;
+                character.personalities = normalize(character.personalities);
+            } else if (character.states.y == 3) {
+                character.states.x = 0;
+                character.states.y = 0;
+                character.stats[7] = 0.0f;
+                updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
+            }
+            
+            // store the new character data
+            characters[index] = character;
+            
+            // avoid further execution
+            return;
+        }
     }
     
     // update the character position
@@ -631,6 +682,12 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     if (length(character.destination - character.position) < characterNavigationCompletionDistance) {
         const uint count = atomic_fetch_add_explicit(&characterCount[1], 1, memory_order_relaxed);
         navigationCharacterIndices[count] = index;
+    }
+    
+    // store the current character index for socialization
+    if (character.states.x == 0 && character.stats[7] > 1.0f) {
+        const uint count = atomic_fetch_add_explicit(&characterCount[2], 1, memory_order_relaxed);
+        socializationCharacterIndices[count] = index;
     }
 }
 
@@ -730,7 +787,7 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // store the new character data
-    characters[characterIndex] = character;
+    characters[characterIndex].velocity.xyz = character.velocity.xyz;
 }
 
 // define the navigation function
@@ -779,6 +836,75 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     
     // store the new character data
     characters[characterIndex] = character;
+}
+
+// define the socialization function
+kernel void SocializationFunction(constant FrameData& frame [[buffer(0)]],
+                                  device CharacterData* characters [[buffer(1)]],
+                                  const device uint* characterCount [[buffer(2)]],
+                                  const device uint* socializationCharacterIndices [[buffer(3)]],
+                                  const device GridData* gridData [[buffer(4)]],
+                                  const device uint* characterIndexBuffer [[buffer(5)]],
+                                  const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (index >= characterCount[2]) {
+        return;
+    }
+    
+    // acquire the character index
+    const uint characterIndex = socializationCharacterIndices[index];
+    
+    // acquire the current character
+    CharacterData character = characters[characterIndex];
+    
+    // compute the grid coordinate based on the character position
+    const float2 gridSize = float2(frame.gridLengthData.x * float(frame.gridCountData.x));
+    const float2 gridCenter = gridSize * 0.5f;
+    const float2 gridPosition = clamp(character.position.xz + gridCenter, float2(0.0f), gridSize);
+    const uint2 gridCoordinate = uint2(gridPosition / frame.gridLengthData.x);
+    
+    // compute the grid coordinate boundaries
+    const uint2 minGridCoordinate = uint2(max(int2(gridCoordinate) - 1, 0));
+    const uint2 maxGridCoordinate = uint2(min(int2(gridCoordinate) + 1, int2(frame.gridCountData.x) - 1));
+    
+    // iterate through all the neighbor grids
+    for (uint x = minGridCoordinate.x; x <= maxGridCoordinate.x; x += 1) {
+        for (uint y = minGridCoordinate.y; y <= maxGridCoordinate.y; y += 1) {
+            
+            // compute the grid index
+            const uint gridIndex = x + y * frame.gridCountData.x;
+            
+            // acquire the iteration boundaries index
+            const uint2 iterationBoundaries = gridData[gridIndex].data.xy;
+            
+            // iterate through all the characters in the grid
+            for (uint currentIndex = iterationBoundaries.x; currentIndex < iterationBoundaries.y; currentIndex += 1) {
+                const uint neighborIndex = characterIndexBuffer[currentIndex];
+                if (neighborIndex == characterIndex) {
+                    continue;
+                }
+                if (characters[neighborIndex].states.x != 0 || characters[neighborIndex].stats[7] > 1.0f) {
+                    continue;
+                }
+                if (dot(character.personalities.xyz, characters[neighborIndex].personalities.xyz) < 0.0f) {
+                    continue;
+                }
+                const float3 neighborPosition = characters[neighborIndex].position.xyz;
+                if (distance(neighborPosition, character.position.xyz) >= characterSocializationDistance) {
+                    continue;
+                };
+                characters[characterIndex].states = uint4(3, 0, neighborIndex, 0);
+                characters[characterIndex].stats[7] = 1.0f;
+                characters[neighborIndex].states = uint4(3, 0, characterIndex, 0);
+                characters[neighborIndex].stats[7] = 1.0f;
+                return;
+            }
+        }
+    }
+    
+    // store the new character data
+    characters[characterIndex].stats[7] -= 0.1f;
 }
 
 // define the compute building character count function
