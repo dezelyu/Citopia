@@ -296,12 +296,15 @@ class Renderer {
         
         // define the names of the motion scene assets to load
         let motionSceneNames = [
-            ("Assets.scnassets/Motions/Idle0.scn", true, false),
-            ("Assets.scnassets/Motions/Walk0.scn", true, false),
+            ("Assets.scnassets/Motions/IdleLoop0.scn", true, false),
+            ("Assets.scnassets/Motions/WalkLoop0.scn", true, false),
             ("Assets.scnassets/Motions/SleepLoop.scn", true, false),
             ("Assets.scnassets/Motions/SleepStart.scn", false, false),
             ("Assets.scnassets/Motions/SleepEnd.scn", false, false),
             ("Assets.scnassets/Motions/WorkLoop.scn", true, false),
+            ("Assets.scnassets/Motions/TalkLoop.scn", true, false),
+            ("Assets.scnassets/Motions/WalkLoop1.scn", true, false),
+            ("Assets.scnassets/Motions/WalkLoop2.scn", true, false),
         ]
         
         // load the motion scene assets
@@ -385,6 +388,15 @@ class Renderer {
                         break
                     case 4:
                         visibleCharacterData.motionControllerIndices.4 = Int32(motionNode.data.1)
+                        break
+                    case 5:
+                        visibleCharacterData.motionControllerIndices.5 = Int32(motionNode.data.1)
+                        break
+                    case 6:
+                        visibleCharacterData.motionControllerIndices.6 = Int32(motionNode.data.1)
+                        break
+                    case 7:
+                        visibleCharacterData.motionControllerIndices.7 = Int32(motionNode.data.1)
                         break
                     default:
                         break

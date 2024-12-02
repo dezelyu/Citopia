@@ -15,13 +15,16 @@ constant float characterSocializationFactor = 0.001f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
-constant uint motionCount = 5;
+constant uint motionCount = 8;
 constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
     -2.0f,
     -2.0f,
     0.75f,
+    8.0f,
+    1.0f,
+    1.0f,
 };
 constant float motionAttacks[motionCount] = {
     0.4f,
@@ -29,13 +32,19 @@ constant float motionAttacks[motionCount] = {
     0.4f,
     0.4f,
     0.4f,
+    0.4f,
+    0.4f,
+    0.4f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
-    0.027f,
+    0.0325f,
     0.0f,
     0.0f,
     0.0f,
     0.0f,
+    0.0f,
+    0.0225f,
+    0.02f,
 };
 
 // define the frame data
@@ -557,7 +566,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
-                    updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+                    updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
                     updateMotion(character, 1, 1.0f, 1.0f, currentTime);
                     updateMotion(character, 2, 1.0f, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
@@ -627,7 +636,8 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
         case 3: {
             if (character.states.y < 2) {
                 character.states.y = 2;
-                updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+                updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
+                updateMotion(character, 5, motionSpeedFactor, 1.0f, currentTime);
             } else if (character.states.y == 2) {
                 const float4 targetCharacterPosition = characters[character.states.z].position;
                 const float targetCharacterDistance = distance(targetCharacterPosition, character.position);
@@ -645,14 +655,17 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
                 }
                 const float4 targetCharacterPersonalities = characters[character.states.z].personalities;
-                const float4 offset = normalize(targetCharacterPersonalities - character.personalities);
-                character.personalities += offset * characterSocializationFactor * frame.data.y;
-                character.personalities = normalize(character.personalities);
+                const float4 offset = targetCharacterPersonalities - character.personalities;
+                if (length(offset) > 0.0f) {
+                    character.personalities += normalize(offset) * characterSocializationFactor * frame.data.y;
+                    character.personalities = normalize(character.personalities);
+                }
             } else if (character.states.y == 3) {
                 character.states.x = 0;
                 character.states.y = 0;
                 character.stats[7] = 0.0f;
-                updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 6, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 5, motionSpeedFactor, 0.0f, currentTime);
             }
             
             // store the new character data
@@ -825,11 +838,23 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     // perform navigation update
     updateNavigation(character, mapNodes, buildings, randomNumber);
     
-    // update the walk motion controller with the new parameters
-    updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
-    
-    // update the target speed
-    character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[0];
+    // update the walk motion controller with the new parameters and the target speed
+    if (character.states.x == 2) {
+        updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
+        updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[0];
+    } else if (character.states.x == 1) {
+        updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 7, motionSpeedFactor, 1.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[7];
+    } else {
+        updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 6, motionSpeedFactor, 1.0f, currentTime);
+        updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[6];
+    }
     
     // update the current map node data
     character.mapNodeData = mapNodes[character.navigation.z].data;
