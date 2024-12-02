@@ -477,10 +477,8 @@ float3 updateMovement(thread CharacterData& character, constant FrameData& frame
     if (distance(character.destination, character.position) > 0.0f) {
         const float4 targetDirection = normalize(character.destination - character.position);
         character.movement.w = atan2(targetDirection.z, targetDirection.x);
-        character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
-        character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
-        character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
-        character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
+        const float difference = fmod(character.movement.w - character.movement.z + PI, PI * 2.0f) - PI;
+        character.movement.w = character.movement.z + (difference < PI ? difference + PI * 2.0f : difference);
         const float rotationOffset = character.movement.w - character.movement.z;
         const float rotationFactor = frame.data.y * characterMovementDampingFactor;
         character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
@@ -495,10 +493,8 @@ float3 updateMovement(thread CharacterData& character, constant FrameData& frame
 void updateMovement(thread CharacterData& character, constant FrameData& frame,
                     const float4 position, const float rotation) {
     character.movement.w = rotation;
-    character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
-    character.movement.w += character.movement.z - character.movement.w > PI ? PI * 2.0f : 0.0f;
-    character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
-    character.movement.w -= character.movement.w - character.movement.z > PI ? PI * 2.0f : 0.0f;
+    const float difference = fmod(character.movement.w - character.movement.z + PI, PI * 2.0f) - PI;
+    character.movement.w = character.movement.z + (difference < PI ? difference + PI * 2.0f : difference);
     const float rotationOffset = character.movement.w - character.movement.z;
     const float rotationFactor = frame.data.y * characterMovementDampingFactor;
     character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
