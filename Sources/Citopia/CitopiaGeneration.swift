@@ -147,7 +147,7 @@ extension Citopia {
         self.buildingBlocks.append((
             blockPosition + origin, 0.0,
             simd_float3(
-                self.blockSideLength + 1.3, 0.05,
+                self.blockSideLength + 1.3, 0.02,
                 self.blockSideLength + 1.3
             ), buildingColorIndex, true
         ))
@@ -575,6 +575,7 @@ extension Citopia {
                     buildingColorIndex = Int.random(in: 35...40)
                 } else if (gymIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 3
+                    building.quality = simd_float4(0.0, 0.0, 1.0, 0.0);
                     buildingColorIndex = Int.random(in: 43...47)
                 }
                 
@@ -901,6 +902,7 @@ extension Citopia {
                     self.initializeGymBuildingInterior(
                         index: self.buildings.count, origin: origin, blockPosition: blockPosition,
                         interiorEntranceNodeIndices: interiorEntranceNodeIndices,
+                        building: &building,
                         connect: connect
                     )
                 }
@@ -1167,6 +1169,7 @@ extension Citopia {
                                        origin: simd_float2,
                                        blockPosition: simd_float2,
                                        interiorEntranceNodeIndices: [Int],
+                                       building: inout BuildingData,
                                        connect: (Int, Int) -> ()) {
         
         // create the treadmills
@@ -1210,6 +1213,7 @@ extension Citopia {
                 nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
             }
         }
+        var interactableNodes: [Int32] = []
         for treadmillZ in 0...numTreadmillsZ {
             for treadmillX in 0...numTreadmillsX {
                 let nodeIndexInArray = treadmillX + treadmillZ * (numTreadmillsX + 1)
@@ -1228,17 +1232,25 @@ extension Citopia {
                     let targetNodeIndex = nodePositionIndexArray[(treadmillX - 1) + treadmillZ * (numTreadmillsX + 1)].1
                     var mapNode = MapNodeData()
                     mapNode.data.x = 6
+                    mapNode.data.y = 1
                     mapNode.position += self.mapNodes[nodeIndex].position
                     mapNode.position += self.mapNodes[targetNodeIndex].position
                     mapNode.position /= 2.0
                     mapNode.position.z += 0.5
                     self.mapNodes.append(mapNode)
+                    if (interactableNodes.count < 16) {
+                        interactableNodes.append(Int32(self.mapNodes.count - 1))
+                    }
                     
                     // connect the bed node with the left and right node
                     connect(self.mapNodes.count - 1, nodeIndex)
                     connect(self.mapNodes.count - 1, targetNodeIndex)
                 }
             }
+        }
+        building.data.z = Int32(interactableNodes.count)
+        for (i, interactableNode) in interactableNodes.enumerated() {
+            building.interactableNodes[i] = interactableNode
         }
         
         // connect the closest desk nodes with the interior entrance nodes

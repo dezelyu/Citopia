@@ -117,12 +117,14 @@ struct CharacterData {
     //  - stats[7] = socialization impulse
     //  - stats[8] = socialization impulse restoration
     //  - stats[9] = socialization impulse consumption
+    //  - stats[10] = entertainment energy consumption
     float stats[12];
     
     // define the unique addresses of the character
     //  - addresses[0] = the current address
     //  - addresses[1] = the bed in the apartment
     //  - addresses[2] = the office in the office building
+    //  - addresses[3] = the entertainment address
     int4 addresses[4];
     
     // define the navigation data of the character
@@ -135,6 +137,8 @@ struct CharacterData {
     // define the navigation target of the character
     //  - target.x = the target building index
     //  - target.y = the target map node index
+    //  - target.z = the desired target building index
+    //  - target.w = the desired target node index
     int4 target;
     
     // define the current map node data
@@ -199,6 +203,7 @@ struct MapNodeData {
     //      - 4 = bed
     //      - 5 = office
     //      - 6 = treadmill
+    //  - data.y = orientation
     //  - data.w = connection count
     int4 data;
     
@@ -220,17 +225,27 @@ struct BuildingData {
     //      - 1 = apartment
     //      - 2 = office
     //      - 3 = gym
+    //  - data.z = capacity
     //  - data.w = entrance count
     int4 data;
     
     // define the position of the building
     float4 position;
     
+    // define the quality of the building
+    float4 quality;
+    
     // define the external entrances of the building
     int externalEntrances[4];
     
     // define the internal entrances of the building
     int internalEntrances[4];
+
+    // define the interactable nodes
+    int interactableNodes[16];
+    
+    // define the interactable node availabilities
+    int interactableNodeAvailabilities[16];
 };
 
 // define the grid data
@@ -510,6 +525,8 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                                device uint* physicsSimulationCharacterIndices [[buffer(3)]],
                                device uint* navigationCharacterIndices [[buffer(4)]],
                                device uint* socializationCharacterIndices [[buffer(5)]],
+                               device uint* entertainmentEntranceCharacterIndices [[buffer(6)]],
+                               device uint* entertainmentExitCharacterIndices [[buffer(7)]],
                                const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -532,7 +549,9 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     float energyConsumptionFactor = 1.0f;
     energyConsumptionFactor *= (character.states.x == 1 && character.states.y == 2) ? 0.0f : 1.0f;
     energyConsumptionFactor *= (character.states.x == 2) ? 0.0f : 1.0f;
-    character.stats[0] -= character.stats[2] * energyConsumptionFactor * frame.data.y;
+    energyConsumptionFactor *= (character.states.x == 4 && character.states.y == 2) ? 1.0f : 0.0f;
+    float baseEnergyConsumption = (character.states.x == 4) ? character.stats[10] : character.stats[2];
+    character.stats[0] -= baseEnergyConsumption * energyConsumptionFactor * frame.data.y;
     const float goldRestorationFactor = (character.states.x == 2 && character.states.y == 2) ? 1.0f : 0.0f;
     character.stats[3] += character.stats[6] * goldRestorationFactor * frame.data.y;
     character.stats[4] += character.stats[6] * goldRestorationFactor * frame.data.y;
@@ -670,6 +689,37 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             // avoid further execution
             return;
         }
+            
+            // entertaining
+        case 4: {
+            
+            // update the character's navigation target
+            character.target = character.addresses[3];
+            if (character.mapNodeData.x == 6 && length(character.destination - character.position) < characterNavigationCompletionDistance) {
+                if (character.states.y < 2) {
+                    character.states.y = 2;
+                    updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
+                } else if (character.states.y == 2) {
+                    if (character.stats[0] < 0.0f) {
+                        character.states.y = 3;
+                    }
+                } else if (character.states.y == 3) {
+                    break;
+                }
+
+                // update the character's movement explicitly
+                updateMovement(character, frame, character.destination,
+                               float(character.mapNodeData.y) * PI * 0.5f);
+                
+                // store the new character data
+                characters[index] = character;
+                
+                // avoid further execution
+                return;
+            }
+            break;
+        }
+            
     }
     
     // update the character position
@@ -688,7 +738,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // store the current character index for navigation
-    if (length(character.destination - character.position) < characterNavigationCompletionDistance) {
+    if (length(character.destination - character.position) < characterNavigationCompletionDistance * 0.8f) {
         const uint count = atomic_fetch_add_explicit(&characterCount[1], 1, memory_order_relaxed);
         navigationCharacterIndices[count] = index;
     }
@@ -697,6 +747,18 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     if (character.states.x == 0 && character.stats[7] > 1.0f) {
         const uint count = atomic_fetch_add_explicit(&characterCount[2], 1, memory_order_relaxed);
         socializationCharacterIndices[count] = index;
+    }
+    
+    // store the current character index for possible entertainment building entrance
+    if (character.states.x == 0 && character.stats[0] > 0.0f) {
+        const uint count = atomic_fetch_add_explicit(&characterCount[3], 1, memory_order_relaxed);
+        entertainmentEntranceCharacterIndices[count] = index;
+    }
+    
+    // store the current character index for possible entertainment building exit
+    if (character.states.x == 4 && character.stats[0] < 0.0f) {
+        const uint count = atomic_fetch_add_explicit(&characterCount[4], 1, memory_order_relaxed);
+        entertainmentExitCharacterIndices[count] = index;
     }
 }
 
@@ -928,22 +990,121 @@ kernel void SocializationFunction(constant FrameData& frame [[buffer(0)]],
     characters[characterIndex].stats[7] -= 0.1f;
 }
 
-// define the compute building character count function
-kernel void ComputeBuildingCharacterCountFunction(constant FrameData& frame [[buffer(0)]],
-                                                  const device CharacterData* characters [[buffer(1)]],
-                                                  device atomic<uint>* characterCountPerBuilding [[buffer(2)]],
-                                                  const uint index [[thread_position_in_grid]]) {
+// define the ind closest entertainment building function
+int findClosestEntertainmentBuilding(constant FrameData& frame, const device BuildingData* buildings, float3 characterPosition, float3 characterPersonality) {
     
+    // aquire the block data
+    const uint blockCount = frame.blockCountData.x;
+    const float blockSideLength = frame.blockLengthData.x;
+    const float blockDistance = frame.blockLengthData.y;
+    const float blockLength = blockCount * blockSideLength;
+    const float intervalLength = blockCount * blockDistance;
+    const float2 origin = float2((blockLength + intervalLength) * 0.5f);
+    
+    // compute the building index based on the character position
+    const float2 position = characterPosition.xz;
+    const float2 centeredPosition = clamp(position + origin, float2(0.0f), float2(blockLength + intervalLength));
+    const uint2 buildingCoordinate = uint2(centeredPosition / (blockSideLength + blockDistance));
+    const uint buildingIndex = buildingCoordinate.x * blockCount + buildingCoordinate.y;
+    
+    // compute the building coordinate boundaries
+    const uint2 minBuildingCoordinate = uint2(max(int2(buildingCoordinate) - 1, 0));
+    const uint2 maxBuildingCoordinate = uint2(min(int2(buildingCoordinate) + 1, int2(frame.blockCountData.x) - 1));
+    
+    float distance = FLT_MAX;
+    int closestBuildingIndex = -1;
+    
+    // iterate through all the neighbor buildings
+    for (uint x = minBuildingCoordinate.x; x <= maxBuildingCoordinate.x; x += 1) {
+        for (uint y = minBuildingCoordinate.y; y <= maxBuildingCoordinate.y; y += 1) {
+            
+            // compute the building index
+            const uint neighborIndex = x * blockCount + y;
+            BuildingData neighborBuilding = buildings[neighborIndex];
+            if (neighborIndex == buildingIndex) {
+                continue;
+            }
+            
+            if (neighborBuilding.data.x == 3 && dot(neighborBuilding.quality.xyz, characterPersonality) > 0.0f) {
+                const float distanceToNeighbor = length(characterPosition - neighborBuilding.position.xyz);
+                if (distanceToNeighbor < distance) {
+                    distance = distanceToNeighbor;
+                    closestBuildingIndex = neighborIndex;
+                }
+            }
+        }
+    }
+    return closestBuildingIndex;
+}
+
+// define the entertainment entrance function
+kernel void EntertianmentEntranceFunction(constant FrameData& frame [[buffer(0)]],
+                                                  device CharacterData* characters [[buffer(1)]],
+                                                  const device uint* characterCount [[buffer(2)]],
+                                                  const device uint* entertainmentEntranceCharacterIndices [[buffer(3)]],
+                                                  device BuildingData* buildings [[buffer(4)]],
+                                                  device atomic<uint>* characterCountPerBuilding [[buffer(5)]],
+                                                  const uint index [[thread_position_in_grid]]) {
+                                                      
     // avoid execution when the index exceeds the total number of characters
-    if (index >= frame.characterData.x) {
+    if (index >= characterCount[3]) {
         return;
     }
     
-    const int buildingIndex = characters[index].addresses[0].x;
-    if (buildingIndex != -1) {
-        
-        // increase the character count of the current building
-        atomic_fetch_add_explicit(&characterCountPerBuilding[buildingIndex], 1, memory_order_relaxed);
+    // acquire the character index
+    const uint characterIndex = entertainmentEntranceCharacterIndices[index];
+    
+    // acquire the current character
+    CharacterData character = characters[characterIndex];
+    const int closestEntertainmentBuildingIndex = findClosestEntertainmentBuilding(frame, buildings, character.position.xyz, character.personalities.xyz);
+    if (closestEntertainmentBuildingIndex != -1) {
+        BuildingData targetBuilding = buildings[closestEntertainmentBuildingIndex];
+        const uint count = atomic_fetch_add_explicit(&characterCountPerBuilding[closestEntertainmentBuildingIndex], 1, memory_order_relaxed);
+        if (count == 0) {
+            for (int i = 0; i < targetBuilding.data.z; i += 1) {
+                if (targetBuilding.interactableNodeAvailabilities[i] == 1) {
+                    character.addresses[3] = int4(closestEntertainmentBuildingIndex, targetBuilding.interactableNodes[i], -1, 0);
+                    targetBuilding.interactableNodeAvailabilities[i] = 0;
+                    buildings[closestEntertainmentBuildingIndex] = targetBuilding;
+                    character.states.x = 4;
+                    character.states.y = 0;
+                    characters[characterIndex] = character;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+// define the entertainment exit function
+kernel void EntertianmentExitFunction(constant FrameData& frame [[buffer(0)]],
+                                      device CharacterData* characters [[buffer(1)]],
+                                      const device uint* characterCount [[buffer(2)]],
+                                      const device uint* entertainmentExitCharacterIndices [[buffer(3)]],
+                                      device BuildingData* buildings [[buffer(4)]],
+                                      const uint index [[thread_position_in_grid]]) {
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (index >= characterCount[4]) {
+        return;
+    }
+    
+    // acquire the character index
+    const uint characterIndex = entertainmentExitCharacterIndices[index];
+    
+    // acquire the current character
+    CharacterData character = characters[characterIndex];
+    BuildingData targetBuilding = buildings[character.target.x];
+    for (int i = 0; i < targetBuilding.data.z; i += 1) {
+        if (targetBuilding.interactableNodes[i] == character.target.y) {
+            targetBuilding.interactableNodeAvailabilities[i] = 1;
+            buildings[character.target.x] = targetBuilding;
+            character.addresses[3] = int4(-1);
+            character.states.x = 1;
+            character.states.y = 0;
+            characters[characterIndex] = character;
+            break;
+        }
     }
 }
 

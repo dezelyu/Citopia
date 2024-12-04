@@ -80,6 +80,7 @@ struct CharacterData {
     //  - stats[7] = socialization impulse
     //  - stats[8] = socialization impulse restoration
     //  - stats[9] = socialization impulse consumption
+    //  - stats[10] = entertainment energy consumption
     var stats: (
         Float, Float, Float, Float,
         Float, Float, Float, Float,
@@ -94,6 +95,7 @@ struct CharacterData {
     //  - addresses[0] = the current address
     //  - addresses[1] = the bed in the apartment
     //  - addresses[2] = the office in the office building
+    //  - addresses[3] = the entertainment address
     var addresses: (
         simd_int4, simd_int4,
         simd_int4, simd_int4
@@ -163,6 +165,7 @@ struct MapNodeData {
     //      - 4 = bed
     //      - 5 = office
     //      - 6 = treadmill
+    //  - data.y = orientation
     //  - data.w = connection count
     var data: simd_int4 = .zero
     
@@ -184,17 +187,27 @@ struct BuildingData {
     //      - 1 = apartment
     //      - 2 = office
     //      - 3 = gym
+    //  - data.z = capacity
     //  - data.w = entrance count
     var data: simd_int4 = .zero
     
     // define the position of the building
     var position: simd_float4 = .zero
     
+    // define the quality of the building
+    var quality: simd_float4 = .zero
+    
     // define the external entrances of the building
     var externalEntrances: simd_int4 = simd_int4(repeating: -1)
     
     // define the internal entrances of the building
     var internalEntrances: simd_int4 = simd_int4(repeating: -1)
+    
+    // define the interactable nodes
+    var interactableNodes: simd_int16 = simd_int16(repeating: -1)
+    
+    // define the interactable node availabilities
+    var interactableNodeAvailabilities: simd_int16 = simd_int16(repeating: 1)
 }
 
 // define the grid data
@@ -248,6 +261,12 @@ class Citopia {
     // define the socialization character index buffer
     var socializationCharacterIndexBuffer: MTLBuffer!
     
+    // define the entertainment entrance character index buffer
+    var entertainmentEntranceCharacterIndexBuffer: MTLBuffer!
+    
+    // define the entertainment exit character index buffer
+    var entertainmentExitCharacterIndexBuffer: MTLBuffer!
+    
     // define the storage buffer for the indices of the potentially visible characters
     var potentiallyVisibleCharacterIndexBuffer: MTLBuffer!
     
@@ -290,8 +309,11 @@ class Citopia {
     // define the socialization pipeline
     var socializationPipeline: MTLComputePipelineState!
     
-    // define the compute character count per building pipeline
-    var computeCharacterCountPerBuildingPipeline: MTLComputePipelineState!
+    // define the entertainment entrance pipeline
+    var entertainmentEntrancePipeline: MTLComputePipelineState!
+    
+    // define the entertainment exit pipeline
+    var entertainmentExitPipeline: MTLComputePipelineState!
     
     // define the compute grid pipeline
     var computeGridPipeline: MTLComputePipelineState!
@@ -397,8 +419,11 @@ class Citopia {
         // create the socialization pipeline
         self.createSocializationPipeline()
         
-        // create the compute character count per building pipeline
-        self.createComputeCharacterCountPerBuildingPipeline()
+        // create the entertainment entrance pipeline
+        self.createEntertainmentEntrancePipeline()
+        
+        // create the entertainment exit pipeline
+        self.createEntertainmentExitPipeline()
         
         // create the compute grid pipeline
         self.createComputeGridPipeline()
@@ -462,6 +487,11 @@ class Citopia {
                 range: 0..<self.nextAvailableGridBuffer.length,
                 value: 0
             )
+            encoder.fill(
+                buffer: self.characterCountPerBuildingBuffer,
+                range: 0..<self.characterCountPerBuildingBuffer.length,
+                value: 0
+            )
             encoder.endEncoding()
         } else {
             fatalError()
@@ -490,6 +520,8 @@ class Citopia {
             encoder.setBuffer(self.physicsSimulationCharacterIndexBuffer, offset: 0, index: 3)
             encoder.setBuffer(self.navigationCharacterIndexBuffer, offset: 0, index: 4)
             encoder.setBuffer(self.socializationCharacterIndexBuffer, offset: 0, index: 5)
+            encoder.setBuffer(self.entertainmentEntranceCharacterIndexBuffer, offset: 0, index: 6)
+            encoder.setBuffer(self.entertainmentExitCharacterIndexBuffer, offset: 0, index: 7)
             
             // dispatch threadgroups for the simulation pipeline
             encoder.dispatchThreadgroups(
@@ -556,6 +588,37 @@ class Citopia {
                 threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
             )
             
+            // configure the entertainment entrance pipeline
+            encoder.setComputePipelineState(self.entertainmentEntrancePipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.entertainmentEntranceCharacterIndexBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.buildingBuffer, offset: 0, index: 4)
+            encoder.setBuffer(self.characterCountPerBuildingBuffer, offset: 0, index: 5)
+            
+            // dispatch threadgroups for the entertainment entrance pipeline
+            encoder.dispatchThreadgroups(
+                indirectBuffer: self.characterIndirectBuffer,
+                indirectBufferOffset: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 2,
+                threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
+            )
+            
+            // configure the entertainment exit pipeline
+            encoder.setComputePipelineState(self.entertainmentExitPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.characterCountBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.entertainmentExitCharacterIndexBuffer, offset: 0, index: 3)
+            encoder.setBuffer(self.buildingBuffer, offset: 0, index: 4)
+            
+            // dispatch threadgroups for the entertainment exit pipeline
+            encoder.dispatchThreadgroups(
+                indirectBuffer: self.characterIndirectBuffer,
+                indirectBufferOffset: MemoryLayout<MTLDispatchThreadgroupsIndirectArguments>.stride * 2,
+                threadsPerThreadgroup: MTLSizeMake(64, 1, 1)
+            )
+            
             // finish encoding
             encoder.endEncoding()
         } else {
@@ -574,11 +637,6 @@ class Citopia {
                 range: 0..<self.gridDataBuffer.length,
                 value: 0
             )
-            encoder.fill(
-                buffer: self.characterCountPerBuildingBuffer,
-                range: 0..<self.characterCountPerBuildingBuffer.length,
-                value: 0
-            )
             encoder.endEncoding()
         } else {
             fatalError()
@@ -586,18 +644,6 @@ class Citopia {
         
         // create a new compute command encoder
         if let encoder = commandBuffer.makeComputeCommandEncoder() {
-            
-            // configure the compute character count per building pipeline
-            encoder.setComputePipelineState(self.computeCharacterCountPerBuildingPipeline)
-            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
-            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
-            encoder.setBuffer(self.characterCountPerBuildingBuffer,  offset: 0, index: 2)
-            
-            // dispatch threadgroups for the compute character count per building pipeline
-            encoder.dispatchThreadgroups(
-                MTLSizeMake(self.characterCount / (self.computeCharacterCountPerBuildingPipeline.threadExecutionWidth * 2) + 1, 1, 1),
-                threadsPerThreadgroup: MTLSizeMake(self.computeCharacterCountPerBuildingPipeline.threadExecutionWidth * 2, 1, 1)
-            )
             
             // configure the compute grid pipeline
             encoder.setComputePipelineState(self.computeGridPipeline)

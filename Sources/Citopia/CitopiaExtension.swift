@@ -106,22 +106,40 @@ extension Citopia {
         ).0
     }
     
-    // define the function that creates the compute character count per building pipeline
-    func createComputeCharacterCountPerBuildingPipeline() {
+    // define the function that creates the entertainment entrance pipeline
+    func createEntertainmentEntrancePipeline() {
         
         // acquire the function from the library
-        let function = self.library.makeFunction(name: "ComputeBuildingCharacterCountFunction")
+        let function = self.library.makeFunction(name: "EntertianmentEntranceFunction")
         
         // define the compute pipline descriptor
         let descriptor = MTLComputePipelineDescriptor()
         descriptor.computeFunction = function
-        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = false
         
         // create the compute pipeline state
-        self.computeCharacterCountPerBuildingPipeline = try! self.device
+        self.entertainmentEntrancePipeline = try! self.device
             .makeComputePipelineState(
             descriptor: descriptor, options: []
         ).0
+    }
+    
+    // define the function that creates the entertainment exit pipeline
+    func createEntertainmentExitPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "EntertianmentExitFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = false
+        
+        // create the compute pipeline state
+        self.entertainmentExitPipeline = try! self.device
+            .makeComputePipelineState(
+                descriptor: descriptor, options: []
+            ).0
     }
     
     // define the function that creates the compute grid pipeline
@@ -266,8 +284,9 @@ extension Citopia {
                 character.stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
                 character.stats.6 = character.stats.5 / (Float.random(in: 12.0...18.0) * 60.0)
                 character.stats.7 = Float.random(in: 0.0...1.0)
-                character.stats.8 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+                character.stats.8 = 1.0 / (Float.random(in: 24.0...36.0) * 60.0)
                 character.stats.9 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+                character.stats.10 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
                 
                 // initialize the addresses
                 character.addresses.0 = bedData
@@ -419,6 +438,28 @@ extension Citopia {
         
         // update the label of the buffer
         self.socializationCharacterIndexBuffer.label = "SocializationCharacterIndexBuffer"
+        
+        // create a private storage buffer
+        self.entertainmentEntranceCharacterIndexBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.characterCount,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the buffer
+        self.entertainmentEntranceCharacterIndexBuffer.label = "EntertainmentEntranceCharacterIndexBuffer"
+        
+        // create a private storage buffer
+        self.entertainmentExitCharacterIndexBuffer = self.device.makeBuffer(
+            length: MemoryLayout<UInt32>.stride * self.characterCount,
+            options: [
+                .storageModePrivate,
+            ]
+        )!
+        
+        // update the label of the buffer
+        self.entertainmentExitCharacterIndexBuffer.label = "EntertainmentExitCharacterIndexBuffer"
     }
     
     // define the function that creates the visible character index buffer
