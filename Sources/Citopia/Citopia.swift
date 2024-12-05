@@ -66,6 +66,8 @@ struct CharacterData {
     //      - 1 = sleeping (determined by energy)
     //      - 2 = working (determined by gold)
     //      - 3 = socializing (determined by socialization impulse)
+    //      - 4 = entertaining
+    //      - 5 = idling
     //  - states.y = goal planner state
     //  - states.z = target character
     var states: simd_uint4 = .zero
@@ -82,6 +84,7 @@ struct CharacterData {
     //  - stats[8] = socialization impulse restoration
     //  - stats[9] = socialization impulse consumption
     //  - stats[10] = entertainment energy consumption
+    //  - stats[11] = idle termination time
     var stats: (
         Float, Float, Float, Float,
         Float, Float, Float, Float,

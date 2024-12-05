@@ -306,6 +306,10 @@ class Renderer {
             ("Assets.scnassets/Motions/WalkLoop1.scn", true, false),
             ("Assets.scnassets/Motions/WalkLoop2.scn", true, false),
             ("Assets.scnassets/Motions/RunLoop.scn", true, false),
+            ("Assets.scnassets/Motions/IdleAction0.scn", false, false),
+            ("Assets.scnassets/Motions/IdleAction1.scn", false, false),
+            ("Assets.scnassets/Motions/IdleAction2.scn", false, false),
+            ("Assets.scnassets/Motions/IdleAction3.scn", false, false),
         ]
         
         // load the motion scene assets
@@ -401,6 +405,18 @@ class Renderer {
                         break
                     case 8:
                         visibleCharacterData.motionControllerIndices.8 = Int32(motionNode.data.1)
+                        break
+                    case 9:
+                        visibleCharacterData.motionControllerIndices.9 = Int32(motionNode.data.1)
+                        break
+                    case 10:
+                        visibleCharacterData.motionControllerIndices.10 = Int32(motionNode.data.1)
+                        break
+                    case 11:
+                        visibleCharacterData.motionControllerIndices.11 = Int32(motionNode.data.1)
+                        break
+                    case 12:
+                        visibleCharacterData.motionControllerIndices.12 = Int32(motionNode.data.1)
                         break
                     default:
                         break

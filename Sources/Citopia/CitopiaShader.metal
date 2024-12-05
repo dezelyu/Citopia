@@ -16,7 +16,7 @@ constant float characterModelScale = 0.01f;
 constant float zombificationRadius = 10.0f;
 
 // define the motion controller constants
-constant uint motionCount = 9;
+constant uint motionCount = 13;
 constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
@@ -27,6 +27,10 @@ constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
     1.0f,
+    -5.0f,
+    -2.0f,
+    -4.0f,
+    -2.0f,
 };
 constant float motionAttacks[motionCount] = {
     0.4f,
@@ -38,6 +42,10 @@ constant float motionAttacks[motionCount] = {
     0.4f,
     0.4f,
     0.4f,
+    0.6f,
+    0.4f,
+    0.8f,
+    0.4f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
     0.0325f,
@@ -48,6 +56,10 @@ constant float motionRelatedMovementSpeed[motionCount] = {
     0.0f,
     0.0225f,
     0.02f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
     0.0f,
 };
 
@@ -107,6 +119,8 @@ struct CharacterData {
     //      - 1 = sleeping (determined by energy)
     //      - 2 = working (determined by gold)
     //      - 3 = socializing (determined by socialization impulse)
+    //      - 4 = entertaining
+    //      - 5 = idling
     //  - states.y = goal planner state
     //  - states.z = target character
     uint4 states;
@@ -123,6 +137,7 @@ struct CharacterData {
     //  - stats[8] = socialization impulse restoration
     //  - stats[9] = socialization impulse consumption
     //  - stats[10] = entertainment energy consumption
+    //  - stats[11] = idle termination time
     float stats[12];
     
     // define the unique addresses of the character
@@ -559,9 +574,10 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     float energyConsumptionFactor = 1.0f;
     energyConsumptionFactor *= (character.states.x == 1 && character.states.y == 2) ? 0.0f : 1.0f;
     energyConsumptionFactor *= (character.states.x == 2) ? 0.0f : 1.0f;
-    energyConsumptionFactor *= (character.states.x == 4 && character.states.y == 2) ? 1.0f : 0.0f;
+    energyConsumptionFactor *= (character.states.x == 4 && character.states.y < 2) ? 0.0f : 1.0f;
     float baseEnergyConsumption = (character.states.x == 4) ? character.stats[10] : character.stats[2];
     character.stats[0] -= baseEnergyConsumption * energyConsumptionFactor * frame.data.y;
+    character.stats[0] = clamp(character.stats[0], -0.1f, 1.1f);
     const float goldRestorationFactor = (character.states.x == 2 && character.states.y == 2) ? 1.0f : 0.0f;
     character.stats[3] += character.stats[6] * goldRestorationFactor * frame.data.y;
     character.stats[4] += character.stats[6] * goldRestorationFactor * frame.data.y;
@@ -581,7 +597,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     switch (character.states.x) {
             
             // sleeping
-        case 1:
+        case 1: {
             
             // update the character's navigation target
             character.target = character.addresses[1];
@@ -609,7 +625,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 
                 // update the character's movement explicitly
-                updateMovement(character, frame, character.destination, 
+                updateMovement(character, frame, character.destination,
                                float(character.addresses[1].z) * PI * 0.5f);
                 
                 // store the new character data
@@ -619,9 +635,10 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 return;
             }
             break;
+        }
             
             // working
-        case 2:
+        case 2: {
             
             // update the character's navigation target
             character.target = character.addresses[2];
@@ -656,6 +673,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 return;
             }
             break;
+        }
             
             // socializing
         case 3: {
@@ -732,6 +750,21 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             break;
         }
             
+            // idling
+        case 5: {
+            
+            // wait until the idle action is complete
+            if (currentTime > character.stats[11]) {
+                character.states.x = 0;
+                character.states.y = 0;
+                
+                // store the new character data
+                characters[index] = character;
+            }
+            
+            // avoid further execution
+            return;
+        }
     }
     
     // update the character position
@@ -901,6 +934,28 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     
     // compute the motion speed factor based on the character age
     const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
+    
+    // make the character idle conditionally
+    if (character.states.x < 5 && character.mapNodeData.x == 0 && currentTime - character.stats[11] > 10.0f && randomNumber.y > 0.5f) {
+        
+        // update the character's states
+        character.states.x = 5;
+        character.states.y = 1;
+        
+        // update the character's motions
+        const int index = 9 + int(fract(randomNumber.x) * 4.0f);
+        character.stats[11] = currentTime - motionDurations[index] / motionSpeedFactor + 0.1f;
+        updateMotion(character, index, motionSpeedFactor, 1.0f, currentTime);
+        updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
+        
+        // store the new character data
+        characters[characterIndex] = character;
+        
+        // avoid further execution
+        return;
+    }
     
     // compute the scale factor based on the character age
     const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
