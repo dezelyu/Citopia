@@ -13,6 +13,7 @@ constant float characterCollisionTurbulenceFactor = 0.01f;
 constant float characterSocializationDistance = 2.0f;
 constant float characterSocializationFactor = 0.001f;
 constant float characterModelScale = 0.01f;
+constant float zombificationRadius = 10.0f;
 
 // define the motion controller constants
 constant uint motionCount = 9;
@@ -56,6 +57,7 @@ struct FrameData {
     // define the general frame data
     //  - data.x = time
     //  - data.y = delta time scale factor
+    //  - data.z = zombification
     float4 data;
     
     // define the grid count data
@@ -542,6 +544,11 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     
     // acquire the current character
     CharacterData character = characters[index];
+    
+    // zombification
+    if (frame.data.z > 0.5f && distance(character.position.xz, frame.observerPosition.xz) < zombificationRadius) {
+        character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
+    }
     
     // compute the motion speed factor based on the character age
     const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;

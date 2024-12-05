@@ -118,8 +118,7 @@ extension Citopia {
         descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = false
         
         // create the compute pipeline state
-        self.entertainmentEntrancePipeline = try! self.device
-            .makeComputePipelineState(
+        self.entertainmentEntrancePipeline = try! self.device.makeComputePipelineState(
             descriptor: descriptor, options: []
         ).0
     }
@@ -136,10 +135,9 @@ extension Citopia {
         descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = false
         
         // create the compute pipeline state
-        self.entertainmentExitPipeline = try! self.device
-            .makeComputePipelineState(
-                descriptor: descriptor, options: []
-            ).0
+        self.entertainmentExitPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
     }
     
     // define the function that creates the compute grid pipeline
@@ -523,6 +521,10 @@ extension Citopia {
         // update the delta time scale factor
         pointer.pointee.data.y = (time - self.previousTime) / (1.0 / 60.0)
         self.previousTime = time
+        
+        // update the zombification indicator
+        pointer.pointee.data.z = self.zombification ? 1.0 : 0.0
+        self.zombification = false
         
         // update the grid data
         pointer.pointee.gridCountData.x = UInt32(self.gridCount)

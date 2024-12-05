@@ -8,6 +8,7 @@ struct FrameData {
     // define the general frame data
     //  - data.x = time
     //  - data.y = delta time scale factor
+    //  - data.z = zombification
     var data: simd_float4 = .zero
     
     // define the grid count data
@@ -380,6 +381,9 @@ class Citopia {
     
     // define the storage buffer for the character count per building data
     var characterCountPerBuildingBuffer: MTLBuffer!
+    
+    // define the variable that indicates whether to turn the characters near the observer into zombies
+    var zombification: Bool = false
     
     // define the constructor
     init(device: MTLDevice,

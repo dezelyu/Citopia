@@ -194,6 +194,11 @@ import CameraKit
         
         // record the press
         self.renderer.start(press: press)
+        
+        // check for zombification
+        if (press.lowercased() == "z") {
+            self.simulator.zombification = true
+        }
     }
     
     // define the key up behavior
