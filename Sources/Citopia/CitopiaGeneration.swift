@@ -7,7 +7,7 @@ extension Citopia {
     
     // define the function that generates the exterior map
     func generateExteriorMap() {
-
+        
         // iterate through all the grid points to initialize the exterior connection data
         for x in 0...self.blockCount {
             for z in 0...self.blockCount {

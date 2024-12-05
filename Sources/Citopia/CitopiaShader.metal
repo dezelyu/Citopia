@@ -15,7 +15,7 @@ constant float characterSocializationFactor = 0.001f;
 constant float characterModelScale = 0.01f;
 
 // define the motion controller constants
-constant uint motionCount = 8;
+constant uint motionCount = 9;
 constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
@@ -25,10 +25,12 @@ constant float motionDurations[motionCount] = {
     8.0f,
     1.0f,
     1.0f,
+    1.0f,
 };
 constant float motionAttacks[motionCount] = {
     0.4f,
     1.0f,
+    0.4f,
     0.4f,
     0.4f,
     0.4f,
@@ -45,6 +47,7 @@ constant float motionRelatedMovementSpeed[motionCount] = {
     0.0f,
     0.0225f,
     0.02f,
+    0.0f,
 };
 
 // define the frame data
@@ -699,14 +702,16 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
+                    updateMotion(character, 8, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[0] < 0.0f) {
                         character.states.y = 3;
+                        updateMotion(character, 8, motionSpeedFactor, 0.0f, currentTime);
                     }
                 } else if (character.states.y == 3) {
                     break;
                 }
-
+                
                 // update the character's movement explicitly
                 updateMovement(character, frame, character.destination,
                                float(character.mapNodeData.y) * PI * 0.5f);
