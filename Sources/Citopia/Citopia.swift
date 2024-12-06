@@ -168,7 +168,7 @@ struct MapNodeData {
     //      - 3 = building
     //      - 4 = bed
     //      - 5 = office
-    //      - 6 = treadmill
+    //      - 6 = interactable node
     //  - data.y = orientation
     //  - data.w = connection count
     var data: simd_int4 = .zero
@@ -191,15 +191,13 @@ struct BuildingData {
     //      - 1 = apartment
     //      - 2 = office
     //      - 3 = gym
+    //      - 4 = restaurant
     //  - data.z = capacity
     //  - data.w = entrance count
     var data: simd_int4 = .zero
     
     // define the position of the building
     var position: simd_float4 = .zero
-    
-    // define the quality of the building
-    var quality: simd_float4 = .zero
     
     // define the external entrances of the building
     var externalEntrances: simd_int4 = simd_int4(repeating: -1)
@@ -369,6 +367,9 @@ class Citopia {
     
     // define the dictionary for all the office data
     var officeData: [Int : Set<simd_int4>] = [:]
+    
+    // define the dictionary for all the service industry worker
+    var serviceIndustryWorkersData: [(simd_int4, simd_int4)] = []
     
     // define an array of all the map nodes
     var mapNodes: [MapNodeData] = []

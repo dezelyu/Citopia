@@ -228,7 +228,7 @@ struct MapNodeData {
     //      - 3 = building
     //      - 4 = bed
     //      - 5 = office
-    //      - 6 = treadmill
+    //      - 6 = interactable node
     //  - data.y = orientation
     //  - data.w = connection count
     int4 data;
@@ -251,15 +251,13 @@ struct BuildingData {
     //      - 1 = apartment
     //      - 2 = office
     //      - 3 = gym
+    //      - 4 = restaurant
     //  - data.z = capacity
     //  - data.w = entrance count
     int4 data;
     
     // define the position of the building
     float4 position;
-    
-    // define the quality of the building
-    float4 quality;
     
     // define the external entrances of the building
     int externalEntrances[4];
@@ -973,7 +971,7 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
     
     // make the character idle conditionally
-    if (character.states.x < 5 && character.mapNodeData.x == 0 && currentTime - character.stats[11] > 10.0f && randomNumber.y > 0.5f) {
+    if (character.states.x < 4 && character.mapNodeData.x == 0 && currentTime - character.stats[11] > 10.0f && randomNumber.y > 0.5f) {
         
         // update the character's states
         character.states.x = 5;
@@ -1131,8 +1129,7 @@ int findClosestEntertainmentBuilding(constant FrameData& frame, const device Bui
             if (neighborIndex == buildingIndex) {
                 continue;
             }
-            
-            if (neighborBuilding.data.x == 3 && dot(neighborBuilding.quality.xyz, characterPersonality) > 0.0f) {
+            if (neighborBuilding.data.x >= 3) {
                 const float distanceToNeighbor = length(characterPosition - neighborBuilding.position.xyz);
                 if (distanceToNeighbor < distance) {
                     distance = distanceToNeighbor;

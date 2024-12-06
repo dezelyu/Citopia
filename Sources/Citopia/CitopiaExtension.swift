@@ -334,6 +334,61 @@ extension Citopia {
             }
         }
         
+        // iterate through all the service workers bed data
+        for serviceIndustryWorkersData in self.serviceIndustryWorkersData {
+            
+            // create a new character
+            var character = CharacterData()
+            
+            // initialize gender
+            character.data.x = UInt32.random(in: 0...1)
+            
+            // initialize age
+            character.data.y = UInt32.random(in: 20...40)
+            
+            // initialize the personalities
+            character.personalities = normalize(simd_float4(
+                Float.random(in: -1.0...1.0),
+                Float.random(in: -1.0...1.0),
+                Float.random(in: -1.0...1.0),
+                0.0
+            ))
+            
+            // initialize the stats
+            character.stats.0 = Float.random(in: 0.0...1.0)
+            character.stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+            character.stats.2 = 1.0
+            character.stats.3 = Float.random(in: 0.0...200.0)
+            character.stats.4 = Bool.random() ? 0.0 : 200.0
+            character.stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
+            character.stats.6 = character.stats.5 / (Float.random(in: 12.0...18.0) * 60.0)
+            character.stats.7 = Float.random(in: 0.0...1.0)
+            character.stats.8 = 1.0 / (Float.random(in: 24.0...36.0) * 60.0)
+            character.stats.9 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+            character.stats.10 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
+            
+            // initialize the addresses
+            character.addresses.0 = serviceIndustryWorkersData.0
+            character.addresses.1 = serviceIndustryWorkersData.0
+            character.addresses.2 = serviceIndustryWorkersData.1
+            
+            // initialize the navigation data
+            character.navigation = simd_int4(
+                -1, -1,
+                 Int32(serviceIndustryWorkersData.0.y),
+                 Int32(serviceIndustryWorkersData.0.y)
+            )
+            
+            // initialize position
+            character.position = self.mapNodes[Int(serviceIndustryWorkersData.0.y)].position
+            
+            // initialize destination
+            character.destination = character.position
+            
+            // store the new character
+            characters.append(character)
+        }
+        
         // update the total number of characters
         self.characterCount = characters.count
         
