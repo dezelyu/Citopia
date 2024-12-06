@@ -4,7 +4,6 @@
 using namespace metal;
 
 // define the global constants
-constant float PI = 3.1415926535f;
 constant float characterMovementDampingFactor = 0.1f;
 constant float characterNavigationCompletionDistance = 0.8f;
 constant float rigidBodyCollisionRadius = 400.0f;
@@ -16,7 +15,7 @@ constant float characterModelScale = 0.01f;
 constant float zombificationRadius = 10.0f;
 
 // define the motion controller constants
-constant uint motionCount = 13;
+constant uint motionCount = 15;
 constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
@@ -31,6 +30,8 @@ constant float motionDurations[motionCount] = {
     -2.0f,
     -4.0f,
     -2.0f,
+    0.5f,
+    -3.0f,
 };
 constant float motionAttacks[motionCount] = {
     0.4f,
@@ -46,6 +47,8 @@ constant float motionAttacks[motionCount] = {
     0.4f,
     0.8f,
     0.4f,
+    0.4f,
+    0.4f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
     0.0325f,
@@ -60,6 +63,8 @@ constant float motionRelatedMovementSpeed[motionCount] = {
     0.0f,
     0.0f,
     0.0f,
+    0.0f,
+    0.06f,
     0.0f,
 };
 
@@ -121,6 +126,7 @@ struct CharacterData {
     //      - 3 = socializing (determined by socialization impulse)
     //      - 4 = entertaining
     //      - 5 = idling
+    //      - 100 = zombification
     //  - states.y = goal planner state
     //  - states.z = target character
     uint4 states;
@@ -314,7 +320,7 @@ void updateMotion(thread CharacterData& character, const int motionIndex,
     } else {
         const float offset = targetSpeed * (currentTime - motionController[3][1]);
         if (offset < motionAttacks[motionIndex]) {
-            const float factor = 0.5f - cos(offset / motionAttacks[motionIndex] * PI) * 0.5f;
+            const float factor = 0.5f - cos(offset / motionAttacks[motionIndex] * M_PI_F) * 0.5f;
             motionController[1][0] = motionController[1][0] * (1.0 - factor) + motionController[1][1] * factor;
         } else {
             motionController[1][0] = motionController[1][1];
@@ -512,8 +518,12 @@ float3 updateMovement(thread CharacterData& character, constant FrameData& frame
     if (distance(character.destination, character.position) > 0.0f) {
         const float4 targetDirection = normalize(character.destination - character.position);
         character.movement.w = atan2(targetDirection.z, targetDirection.x);
-        const float difference = fmod(character.movement.w - character.movement.z + PI, PI * 2.0f) - PI;
-        character.movement.w = character.movement.z + (difference < PI ? difference + PI * 2.0f : difference);
+        while (character.movement.w - character.movement.z > M_PI_F) {
+            character.movement.w -= M_PI_F * 2.0f;
+        }
+        while (character.movement.z - character.movement.w > M_PI_F) {
+            character.movement.w += M_PI_F * 2.0f;
+        }
         const float rotationOffset = character.movement.w - character.movement.z;
         const float rotationFactor = frame.data.y * characterMovementDampingFactor;
         character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
@@ -528,8 +538,12 @@ float3 updateMovement(thread CharacterData& character, constant FrameData& frame
 void updateMovement(thread CharacterData& character, constant FrameData& frame,
                     const float4 position, const float rotation) {
     character.movement.w = rotation;
-    const float difference = fmod(character.movement.w - character.movement.z + PI, PI * 2.0f) - PI;
-    character.movement.w = character.movement.z + (difference < PI ? difference + PI * 2.0f : difference);
+    while (character.movement.w - character.movement.z > M_PI_F) {
+        character.movement.w -= M_PI_F * 2.0f;
+    }
+    while (character.movement.z - character.movement.w > M_PI_F) {
+        character.movement.w += M_PI_F * 2.0f;
+    }
     const float rotationOffset = character.movement.w - character.movement.z;
     const float rotationFactor = frame.data.y * characterMovementDampingFactor;
     character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
@@ -560,13 +574,18 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     // acquire the current character
     CharacterData character = characters[index];
     
-    // zombification
-    if (frame.data.z > 0.5f && distance(character.position.xz, frame.observerPosition.xz) < zombificationRadius) {
-        character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
-    }
+    // compute the scale factor based on the character age
+    const float scaleFactor = 0.6f + float(character.data.y) * 0.01f;
     
     // compute the motion speed factor based on the character age
     const float motionSpeedFactor = (1.0f - pow(float(character.data.y) - 30.0f, 2.0f) * 0.01f) * 0.4f + 0.8f;
+    
+    // zombification
+    if (character.states.x < 100 && frame.data.z > 0.5f && distance(character.position.xz, frame.observerPosition.xz) < zombificationRadius) {
+        character.states.x = 100;
+        character.states.y = 1;
+        character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
+    }
     
     // update the character's stats
     const float energyRestorationFactor = (character.states.x == 1 && character.states.y == 2) ? 1.0f : 0.0f;
@@ -625,8 +644,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 
                 // update the character's movement explicitly
-                updateMovement(character, frame, character.destination,
-                               float(character.addresses[1].z) * PI * 0.5f);
+                updateMovement(character, frame, character.destination, float(character.addresses[1].z) * M_PI_F * 0.5f);
                 
                 // store the new character data
                 characters[index] = character;
@@ -663,8 +681,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 
                 // update the character's movement explicitly
-                updateMovement(character, frame, character.destination,
-                               float(character.addresses[2].z) * PI * 0.5f);
+                updateMovement(character, frame, character.destination, float(character.addresses[2].z) * M_PI_F * 0.5f);
                 
                 // store the new character data
                 characters[index] = character;
@@ -689,10 +706,10 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 } else if (targetCharacterDistance > 0.0f) {
                     const float4 targetDirection = normalize(targetCharacterPosition - character.position);
                     float targetAngle = atan2(targetDirection.z, targetDirection.x);
-                    targetAngle += character.movement.z - targetAngle > PI ? PI * 2.0f : 0.0f;
-                    targetAngle += character.movement.z - targetAngle > PI ? PI * 2.0f : 0.0f;
-                    targetAngle -= targetAngle - character.movement.z > PI ? PI * 2.0f : 0.0f;
-                    targetAngle -= targetAngle - character.movement.z > PI ? PI * 2.0f : 0.0f;
+                    targetAngle += character.movement.z - targetAngle > M_PI_F ? M_PI_F * 2.0f : 0.0f;
+                    targetAngle += character.movement.z - targetAngle > M_PI_F ? M_PI_F * 2.0f : 0.0f;
+                    targetAngle -= targetAngle - character.movement.z > M_PI_F ? M_PI_F * 2.0f : 0.0f;
+                    targetAngle -= targetAngle - character.movement.z > M_PI_F ? M_PI_F * 2.0f : 0.0f;
                     const float rotationOffset = targetAngle - character.movement.z;
                     const float rotationFactor = frame.data.y * characterMovementDampingFactor;
                     character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
@@ -738,8 +755,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 
                 // update the character's movement explicitly
-                updateMovement(character, frame, character.destination,
-                               float(character.mapNodeData.y) * PI * 0.5f);
+                updateMovement(character, frame, character.destination, float(character.mapNodeData.y) * M_PI_F * 0.5f);
                 
                 // store the new character data
                 characters[index] = character;
@@ -761,6 +777,27 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 // store the new character data
                 characters[index] = character;
             }
+            
+            // avoid further execution
+            return;
+        }
+            
+            // zombification
+        case 100: {
+            
+            // update the motions
+            if (character.states.y == 1) {
+                character.states.y = 2;
+                updateMotion(character, 13, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 14, motionSpeedFactor, 1.0f, currentTime);
+                character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[13];
+            } else if (character.states.y == 2 && motionDurationPlayed(character, 14, currentTime) > 3.0f / motionSpeedFactor) {
+                character.states.x = 101;
+                character.states.y = 1;
+            }
+            
+            // store the new character data
+            characters[index] = character;
             
             // avoid further execution
             return;
@@ -964,7 +1001,10 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     updateNavigation(character, mapNodes, buildings, randomNumber);
     
     // update the walk motion controller with the new parameters and the target speed
-    if (character.states.x == 2) {
+    if (character.states.x >= 100) {
+        updateMotion(character, 13, motionSpeedFactor, 1.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[13];
+    } else if (character.states.x == 2) {
         updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
         updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
         updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
@@ -1318,7 +1358,7 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     VisibleCharacterData visibleCharacter;
     visibleCharacter.data.x = character.data.x;
     visibleCharacter.personalities.xyz = character.personalities.xyz;
-    const float matrixAngle = PI * 0.5f - character.movement.z;
+    const float matrixAngle = M_PI_F * 0.5f - character.movement.z;
     const float scale = 0.6f + float(character.data.y) * 0.01f;
     const float3x3 rotationMatrixY = scale * characterModelScale * float3x3(
         cos(matrixAngle), 0.0f, -sin(matrixAngle),
