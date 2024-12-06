@@ -545,6 +545,7 @@ extension Citopia {
             buildingIndices.remove(randomBuildingIndex)
             gymIndices.insert(randomBuildingIndex)
         }
+        
         // initialize the restaurants
         var restaurantIndices: Set<simd_int2> = []
         while (buildingIndices.count > 0 && restaurantIndices.count < recreationBuildingCountPerType) {
