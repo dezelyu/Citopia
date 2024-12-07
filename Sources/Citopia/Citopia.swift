@@ -69,6 +69,8 @@ struct CharacterData {
     //      - 3 = socializing (determined by socialization impulse)
     //      - 4 = entertaining
     //      - 5 = idling
+    //      - 6 = scared
+    //      - 7 = fleeing
     //      - 100 = zombification
     //      - 101 = zombie wandering
     //      - 102 = zombie attack

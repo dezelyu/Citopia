@@ -320,6 +320,8 @@ class Renderer {
             ("Assets.scnassets/Motions/CrawlLoop.scn", true, false),
             ("Assets.scnassets/Motions/Zombification.scn", false, false),
             ("Assets.scnassets/Motions/ZombieAttack.scn", false, false),
+            ("Assets.scnassets/Motions/FleeLoop.scn", true, false),
+            ("Assets.scnassets/Motions/Scared.scn", false, false),
         ]
         
         // load the motion scene assets
@@ -436,6 +438,12 @@ class Renderer {
                         break
                     case 15:
                         visibleCharacterData.motionControllerIndices.15 = Int32(motionNode.data.1)
+                        break
+                    case 16:
+                        visibleCharacterData.motionControllerIndices.16 = Int32(motionNode.data.1)
+                        break
+                    case 17:
+                        visibleCharacterData.motionControllerIndices.17 = Int32(motionNode.data.1)
                         break
                     default:
                         break

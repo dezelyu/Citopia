@@ -10,6 +10,7 @@ constant float characterZombificationDampingFactor = 0.15f;
 constant float characterZombificationFactor = 0.1f;
 constant float characterZombificationRadius = 3.0f;
 constant float zombieObservationDistance = 8.0f;
+constant float characterObservationDistance = 12.0f;
 constant float rigidBodyCollisionRadius = 400.0f;
 constant float characterCollisionRadius = 0.3f;
 constant float characterCollisionTurbulenceFactor = 0.01f;
@@ -19,7 +20,7 @@ constant float characterModelScale = 0.01f;
 constant float zombificationRadius = 10.0f;
 
 // define the motion controller constants
-constant uint motionCount = 16;
+constant uint motionCount = 18;
 constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
@@ -36,6 +37,8 @@ constant float motionDurations[motionCount] = {
     -2.0f,
     0.5f,
     -3.0f,
+    -1.0f,
+    0.5f,
     -1.0f,
 };
 constant float motionAttacks[motionCount] = {
@@ -55,6 +58,8 @@ constant float motionAttacks[motionCount] = {
     0.4f,
     0.2f,
     0.2f,
+    0.2f,
+    0.2f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
     0.0325f,
@@ -72,6 +77,8 @@ constant float motionRelatedMovementSpeed[motionCount] = {
     0.0f,
     0.06f,
     0.0f,
+    0.0f,
+    0.06f,
     0.0f,
 };
 
@@ -134,6 +141,8 @@ struct CharacterData {
     //      - 3 = socializing (determined by socialization impulse)
     //      - 4 = entertaining
     //      - 5 = idling
+    //      - 6 = scared
+    //      - 7 = fleeing
     //      - 100 = zombification
     //      - 101 = zombie wandering
     //      - 102 = zombie attack
@@ -793,6 +802,41 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             return;
         }
             
+            // scared
+        case 6: {
+            if (character.states.y < 2) {
+                character.states.y = 2;
+                updateMotion(character, 16, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 17, motionSpeedFactor, 1.0f, currentTime);
+                character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[16];
+                const float4 targetCharacterPosition = characters[character.states.z].position;
+                const float targetCharacterDistance = distance(targetCharacterPosition, character.position);
+                if (targetCharacterDistance > 0.0f) {
+                    const float4 targetDirection = normalize(targetCharacterPosition - character.position);
+                    character.movement.w = atan2(targetDirection.z, targetDirection.x);
+                    while (character.movement.w - character.movement.z > M_PI_F) {
+                        character.movement.w -= M_PI_F * 2.0f;
+                    }
+                    while (character.movement.z - character.movement.w > M_PI_F) {
+                        character.movement.w += M_PI_F * 2.0f;
+                    }
+                }
+            } else if (character.states.y == 2) {
+                if (motionDurationPlayed(character, 17, currentTime) > 1.0f / motionSpeedFactor) {
+                    character.states.xy = uint2(7, 1);
+                }
+                const float rotationOffset = character.movement.w - character.movement.z;
+                const float rotationFactor = frame.data.y * characterMovementDampingFactor;
+                character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
+            }
+            
+            // store the new character data
+            characters[index] = character;
+            
+            // avoid further execution
+            return;
+        }
+            
             // zombification
         case 100: {
             
@@ -801,6 +845,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 character.states.y = 2;
                 updateMotion(character, 13, motionSpeedFactor, 1.0f, currentTime);
                 updateMotion(character, 14, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 16, motionSpeedFactor, 0.0f, currentTime);
                 character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[13];
             } else if (character.states.y == 2 && motionDurationPlayed(character, 14, currentTime) > 3.0f / motionSpeedFactor) {
                 character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
@@ -838,6 +883,10 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 const uint targetCharacterGoal = characters[character.states.z].states.x;
                 if (currentTime > character.stats[11] || targetCharacterGoal >= 100) {
                     characters[index].states.xy = uint2(101, 1);
+                    return;
+                }
+                const int4 targetCharacterNavigation = characters[character.states.z].navigation;
+                if (character.navigation.z != targetCharacterNavigation.z && character.navigation.z != targetCharacterNavigation.w) {
                     return;
                 }
                 if (targetCharacterDistance < 1.0f) {
@@ -926,7 +975,7 @@ kernel void ObservationFunction(constant FrameData& frame [[buffer(0)]],
     CharacterData character = characters[characterIndex];
     
     // avoid execution on special cases
-    if (character.states.x == 102 || character.states.x == 1000) {
+    if (character.states.x == 6 || character.states.x == 7 || character.states.x == 102 || character.states.x == 1000) {
         return;
     }
     
@@ -960,29 +1009,37 @@ kernel void ObservationFunction(constant FrameData& frame [[buffer(0)]],
                 if (neighborGoal == 1000) {
                     continue;
                 }
-                if (neighborGoal > 100 && character.states.x > 100) {
-                    continue;
-                }
-                const int4 neighborNavigation = characters[neighborIndex].navigation;
-                if (character.navigation.z != neighborNavigation.z && character.navigation.z != neighborNavigation.w) {
-                    continue;
-                }
-                const float3 neighborPosition = characters[neighborIndex].position.xyz;
-                const float neighborDistance = distance(neighborPosition, character.position.xyz);
-                if (neighborDistance >= zombieObservationDistance) {
-                    continue;
-                };
-                const float3 neighborVector = normalize(neighborPosition - character.position.xyz);
-                const float3 characterVector = normalize(character.destination.xyz - character.position.xyz);
-                if (neighborDistance >= 2.0f && dot(neighborVector, characterVector) <= 0.0f) {
-                    continue;
-                }
                 if (character.states.x > 100 && neighborGoal < 100) {
-                    character.states.xy = uint2(102, 1);
-                    character.states.z = neighborIndex;
-                    characters[characterIndex].states = character.states;
+                    const int4 neighborNavigation = characters[neighborIndex].navigation;
+                    if (character.navigation.z != neighborNavigation.z && character.navigation.z != neighborNavigation.w) {
+                        continue;
+                    }
+                    const float3 neighborPosition = characters[neighborIndex].position.xyz;
+                    const float neighborDistance = distance(neighborPosition, character.position.xyz);
+                    if (neighborDistance >= zombieObservationDistance) {
+                        continue;
+                    };
+                    const float3 neighborVector = normalize(neighborPosition - character.position.xyz);
+                    const float3 characterVector = normalize(character.destination.xyz - character.position.xyz);
+                    if (neighborDistance >= 2.0f && dot(neighborVector, characterVector) <= 0.0f) {
+                        continue;
+                    }
+                    characters[characterIndex].states.xyz = uint3(102, 1, neighborIndex);
                     characters[characterIndex].stats[11] = frame.data.x + 2.0f;
                     characters[neighborIndex].states.w = characterIndex;
+                    return;
+                } else if (character.states.x < 100 && (neighborGoal == 6 || neighborGoal == 7 || neighborGoal >= 100)) {
+                    const float3 neighborPosition = characters[neighborIndex].position.xyz;
+                    const float neighborDistance = distance(neighborPosition, character.position.xyz);
+                    if (neighborDistance >= characterObservationDistance) {
+                        continue;
+                    };
+                    const float3 neighborVector = normalize(neighborPosition - character.position.xyz);
+                    const float3 characterVector = normalize(character.destination.xyz - character.position.xyz);
+                    if (neighborDistance >= 4.0f && dot(neighborVector, characterVector) <= 0.0f) {
+                        continue;
+                    }
+                    characters[characterIndex].states.xyz = uint3(6, 1, neighborIndex);
                     return;
                 }
             }
@@ -1146,7 +1203,10 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     updateNavigation(character, mapNodes, buildings, randomNumber);
     
     // update the walk motion controller with the new parameters and the target speed
-    if (character.states.x >= 100) {
+    if (character.states.x == 7) {
+        updateMotion(character, 16, motionSpeedFactor, 1.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[16];
+    } else if (character.states.x >= 100) {
         updateMotion(character, 13, motionSpeedFactor, 1.0f, currentTime);
         character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[13];
     } else if (character.states.x == 2) {
