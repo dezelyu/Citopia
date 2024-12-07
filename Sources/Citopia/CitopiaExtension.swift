@@ -38,6 +38,23 @@ extension Citopia {
         ).0
     }
     
+    // define the function that creates the observation pipeline
+    func createObservationPipeline() {
+        
+        // acquire the function from the library
+        let function = self.library.makeFunction(name: "ObservationFunction")
+        
+        // define the compute pipline descriptor
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction = function
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        
+        // create the compute pipeline state
+        self.observationPipeline = try! self.device.makeComputePipelineState(
+            descriptor: descriptor, options: []
+        ).0
+    }
+    
     // define the function that creates the initialize indirect buffer pipeline
     func createInitializeIndirectBufferPipeline() {
         
@@ -357,7 +374,7 @@ extension Citopia {
             // initialize the stats
             character.stats.0 = Float.random(in: 0.0...1.0)
             character.stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
-            character.stats.2 = 1.0
+            character.stats.2 = 2.0
             character.stats.3 = Float.random(in: 0.0...200.0)
             character.stats.4 = Bool.random() ? 0.0 : 200.0
             character.stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)
@@ -591,11 +608,12 @@ extension Citopia {
         pointer.pointee.blockLengthData.y = self.blockDistance
         
         // update the character data
+        self.characterGroupIndex = (self.characterGroupIndex + 1) % 30
         pointer.pointee.characterData = simd_uint4(
             UInt32(self.characterCount),
             UInt32(self.visibleCharacterCount),
             UInt32(self.actualVisibleCharacterCount),
-            0
+            UInt32(self.characterGroupIndex)
         )
         
         // update the position of the observer

@@ -70,8 +70,11 @@ struct CharacterData {
     //      - 5 = idling
     //      - 100 = zombification
     //      - 101 = zombie wandering
+    //      - 102 = zombie attack
+    //      - 1000 = dead
     //  - states.y = goal planner state
     //  - states.z = target character
+    //  - states.w = enemy character
     var states: simd_uint4 = .zero
     
     // define the stats of the character
@@ -302,6 +305,9 @@ class Citopia {
     // define the simulation pipeline
     var simulationPipeline: MTLComputePipelineState!
     
+    // define the observation pipeline
+    var observationPipeline: MTLComputePipelineState!
+    
     // define the initialize indirect buffer pipeline
     var initializeIndirectBufferPipeline: MTLComputePipelineState!
     
@@ -392,6 +398,9 @@ class Citopia {
     // define the variable that indicates whether to turn the characters near the observer into zombies
     var zombification: Bool = false
     
+    // define the character group index
+    var characterGroupIndex: Int = 0
+    
     // define the constructor
     init(device: MTLDevice,
          characterCount: Int, visibleCharacterCount: Int,
@@ -417,6 +426,9 @@ class Citopia {
         
         // create the simulation pipeline
         self.createSimulationPipeline()
+        
+        // create the observation pipeline
+        self.createObservationPipeline()
         
         // create the initialize indirect buffer pipeline
         self.createInitializeIndirectBufferPipeline()
@@ -538,6 +550,20 @@ class Citopia {
             // dispatch threadgroups for the simulation pipeline
             encoder.dispatchThreadgroups(
                 MTLSizeMake(self.characterCount / (self.simulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
+                threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth * 2, 1, 1)
+            )
+            
+            // configure the observation pipeline
+            encoder.setComputePipelineState(self.observationPipeline)
+            encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)
+            encoder.setBuffer(self.characterBuffer, offset: 0, index: 1)
+            encoder.setBuffer(self.gridDataBuffer, offset: 0, index: 2)
+            encoder.setBuffer(self.characterIndexBufferPerGrid, offset: 0, index: 3)
+            
+            // dispatch threadgroups for the observation pipeline
+            let workload = Int(self.characterCount / 30)
+            encoder.dispatchThreadgroups(
+                MTLSizeMake(workload / (self.simulationPipeline.threadExecutionWidth * 2) + 1, 1, 1),
                 threadsPerThreadgroup: MTLSizeMake(self.simulationPipeline.threadExecutionWidth * 2, 1, 1)
             )
             

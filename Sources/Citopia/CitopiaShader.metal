@@ -6,6 +6,10 @@ using namespace metal;
 // define the global constants
 constant float characterMovementDampingFactor = 0.1f;
 constant float characterNavigationCompletionDistance = 0.8f;
+constant float characterZombificationDampingFactor = 0.15f;
+constant float characterZombificationFactor = 0.1f;
+constant float characterZombificationRadius = 3.0f;
+constant float zombieObservationDistance = 8.0f;
 constant float rigidBodyCollisionRadius = 400.0f;
 constant float characterCollisionRadius = 0.3f;
 constant float characterCollisionTurbulenceFactor = 0.01f;
@@ -15,7 +19,7 @@ constant float characterModelScale = 0.01f;
 constant float zombificationRadius = 10.0f;
 
 // define the motion controller constants
-constant uint motionCount = 15;
+constant uint motionCount = 16;
 constant float motionDurations[motionCount] = {
     1.0f,
     1.0f,
@@ -32,6 +36,7 @@ constant float motionDurations[motionCount] = {
     -2.0f,
     0.5f,
     -3.0f,
+    -1.0f,
 };
 constant float motionAttacks[motionCount] = {
     0.4f,
@@ -49,6 +54,7 @@ constant float motionAttacks[motionCount] = {
     0.4f,
     0.4f,
     0.2f,
+    0.2f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
     0.0325f,
@@ -65,6 +71,7 @@ constant float motionRelatedMovementSpeed[motionCount] = {
     0.0f,
     0.0f,
     0.06f,
+    0.0f,
     0.0f,
 };
 
@@ -128,8 +135,11 @@ struct CharacterData {
     //      - 5 = idling
     //      - 100 = zombification
     //      - 101 = zombie wandering
+    //      - 102 = zombie attack
+    //      - 1000 = dead
     //  - states.y = goal planner state
     //  - states.z = target character
+    //  - states.w = enemy character
     uint4 states;
     
     // define the stats of the character
@@ -466,7 +476,7 @@ void updateNavigation(thread CharacterData& character,
                     }
                 }
             }
-        } else if (connection != character.navigation.w) {
+        } else if (connection != character.navigation.w && currentMapNode.data.x <= 3) {
             connections[connectionCount] = connection;
             connectionCount += 1;
             if (character.navigation.x >= 0) {
@@ -582,9 +592,13 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     
     // zombification
     if (character.states.x < 100 && frame.data.z > 0.5f && distance(character.position.xz, frame.observerPosition.xz) < zombificationRadius) {
-        character.states.x = 100;
-        character.states.y = 1;
-        character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
+        character.states.xy = uint2(100, 1);
+    }
+    const uint4 enemyCharacterStates = characters[character.states.w].states;
+    const float3 enemyCharacterPosition = characters[character.states.w].position.xyz;
+    const float enemyCharacterDistance = distance(enemyCharacterPosition, character.position.xyz);
+    if (character.states.x < 100 && enemyCharacterStates.x == 102 && enemyCharacterStates.y == 2 && enemyCharacterDistance < characterZombificationRadius) {
+        character.states.xy = uint2(100, 1);
     }
     
     // update the character's stats
@@ -637,8 +651,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     }
                 } else if (character.states.y == 3) {
                     if (motionDurationPlayed(character, 3, currentTime) > 2.0f) {
-                        character.states.x = 0;
-                        character.states.y = 0;
+                        character.states.xy = uint2(0, 0);
                         character.stats[4] = 0.0f;
                     }
                 }
@@ -675,8 +688,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     }
                 } else if (character.states.y == 3) {
                     if (motionDurationPlayed(character, 4, currentTime) > 0.4f) {
-                        character.states.x = 0;
-                        character.states.y = 0;
+                        character.states.xy = uint2(0, 0);
                     }
                 }
                 
@@ -721,8 +733,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     character.personalities = normalize(character.personalities);
                 }
             } else if (character.states.y == 3) {
-                character.states.x = 0;
-                character.states.y = 0;
+                character.states.xy = uint2(0, 0);
                 character.stats[7] = 0.0f;
                 updateMotion(character, 6, motionSpeedFactor, 1.0f, currentTime);
                 updateMotion(character, 5, motionSpeedFactor, 0.0f, currentTime);
@@ -771,8 +782,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             
             // wait until the idle action is complete
             if (currentTime > character.stats[11]) {
-                character.states.x = 0;
-                character.states.y = 0;
+                character.states.xy = uint2(0, 0);
                 
                 // store the new character data
                 characters[index] = character;
@@ -792,8 +802,60 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 updateMotion(character, 14, motionSpeedFactor, 1.0f, currentTime);
                 character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[13];
             } else if (character.states.y == 2 && motionDurationPlayed(character, 14, currentTime) > 3.0f / motionSpeedFactor) {
-                character.states.x = 101;
-                character.states.y = 1;
+                character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
+                character.states.xy = uint2(101, 1);
+            }
+            const float4 zombificationOffset = float4(1.0f, -1.0f, -1.0f, 0.0f) - character.personalities;
+            const float zombificationFactor = frame.data.y * characterZombificationFactor;
+            character.personalities += clamp(zombificationOffset, -characterZombificationDampingFactor, characterZombificationDampingFactor) * zombificationFactor;
+            
+            // store the new character data
+            characters[index] = character;
+            
+            // avoid further execution
+            return;
+        }
+            
+            // zombie attack
+        case 102: {
+            const float4 targetCharacterPosition = characters[character.states.z].position;
+            const float targetCharacterDistance = distance(targetCharacterPosition, character.position);
+            if (targetCharacterDistance > 0.0f) {
+                const float4 targetDirection = normalize(targetCharacterPosition - character.position);
+                float targetAngle = atan2(targetDirection.z, targetDirection.x);
+                while (targetAngle - character.movement.z > M_PI_F) {
+                    targetAngle -= M_PI_F * 2.0f;
+                }
+                while (character.movement.z - targetAngle > M_PI_F) {
+                    targetAngle += M_PI_F * 2.0f;
+                }
+                const float rotationOffset = targetAngle - character.movement.z;
+                const float rotationFactor = frame.data.y * characterMovementDampingFactor;
+                character.movement.z += clamp(rotationOffset * rotationFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
+            }
+            if (character.states.y < 2) {
+                const uint targetCharacterGoal = characters[character.states.z].states.x;
+                if (currentTime > character.stats[11] || targetCharacterGoal >= 100) {
+                    characters[index].states.xy = uint2(101, 1);
+                    return;
+                }
+                if (targetCharacterDistance < 1.0f) {
+                    character.states.y = 2;
+                    updateMotion(character, 15, motionSpeedFactor, 1.0f, currentTime);
+                } else {
+                    const float speedOffset = character.movement.y - character.movement.x;
+                    const float speedFactor = frame.data.y * characterMovementDampingFactor;
+                    character.movement.x += clamp(speedOffset * speedFactor, -characterMovementDampingFactor, characterMovementDampingFactor);
+                    const float directionX = cos(character.movement.z);
+                    const float directionZ = sin(character.movement.z);
+                    const float3 currentDirection = normalize(float3(directionX, 0.0f, directionZ));
+                    character.position.xyz += character.velocity.xyz;
+                    character.velocity.xyz = currentDirection * character.movement.x * frame.data.y;
+                }
+            } else if (character.states.y == 2) {
+                if (motionDurationPlayed(character, 15, currentTime) > 1.0f / motionSpeedFactor) {
+                    character.states.xy = uint2(101, 1);
+                }
             }
             
             // store the new character data
@@ -841,6 +903,89 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     if (character.states.x == 4 && character.stats[0] < 0.0f) {
         const uint count = atomic_fetch_add_explicit(&characterCount[4], 1, memory_order_relaxed);
         entertainmentExitCharacterIndices[count] = index;
+    }
+}
+
+// define the observation function
+kernel void ObservationFunction(constant FrameData& frame [[buffer(0)]],
+                                device CharacterData* characters [[buffer(1)]],
+                                const device GridData* gridData [[buffer(2)]],
+                                const device uint* characterIndexBuffer [[buffer(3)]],
+                                const uint index [[thread_position_in_grid]]) {
+    
+    // compute the character index
+    const uint characterIndex = frame.characterData.w * (frame.characterData.x / 30) + index;
+    
+    // avoid execution when the index exceeds the total number of characters
+    if (characterIndex >= frame.characterData.x) {
+        return;
+    }
+    
+    // acquire the current character
+    CharacterData character = characters[characterIndex];
+    
+    // avoid execution on special cases
+    if (character.states.x == 102 || character.states.x == 1000) {
+        return;
+    }
+    
+    // compute the grid coordinate based on the character position
+    const float2 gridSize = float2(frame.gridLengthData.x * float(frame.gridCountData.x));
+    const float2 gridCenter = gridSize * 0.5f;
+    const float2 gridPosition = clamp(character.position.xz + gridCenter, float2(0.0f), gridSize);
+    const uint2 gridCoordinate = uint2(gridPosition / frame.gridLengthData.x);
+    
+    // compute the grid coordinate boundaries
+    const uint2 minGridCoordinate = uint2(max(int2(gridCoordinate) - 1, 0));
+    const uint2 maxGridCoordinate = uint2(min(int2(gridCoordinate) + 1, int2(frame.gridCountData.x) - 1));
+    
+    // iterate through all the neighbor grids
+    for (uint x = minGridCoordinate.x; x <= maxGridCoordinate.x; x += 1) {
+        for (uint y = minGridCoordinate.y; y <= maxGridCoordinate.y; y += 1) {
+            
+            // compute the grid index
+            const uint gridIndex = x + y * frame.gridCountData.x;
+            
+            // acquire the iteration boundaries index
+            const uint2 iterationBoundaries = gridData[gridIndex].data.xy;
+            
+            // iterate through all the characters in the grid
+            for (uint currentIndex = iterationBoundaries.x; currentIndex < iterationBoundaries.y; currentIndex += 1) {
+                const uint neighborIndex = characterIndexBuffer[currentIndex];
+                if (neighborIndex == characterIndex) {
+                    continue;
+                }
+                const uint neighborGoal = characters[neighborIndex].states.x;
+                if (neighborGoal == 1000) {
+                    continue;
+                }
+                if (neighborGoal > 100 && character.states.x > 100) {
+                    continue;
+                }
+                const int4 neighborNavigation = characters[neighborIndex].navigation;
+                if (character.navigation.z != neighborNavigation.z && character.navigation.z != neighborNavigation.w) {
+                    continue;
+                }
+                const float3 neighborPosition = characters[neighborIndex].position.xyz;
+                const float neighborDistance = distance(neighborPosition, character.position.xyz);
+                if (neighborDistance >= zombieObservationDistance) {
+                    continue;
+                };
+                const float3 neighborVector = normalize(neighborPosition - character.position.xyz);
+                const float3 characterVector = normalize(character.destination.xyz - character.position.xyz);
+                if (neighborDistance >= 2.0f && dot(neighborVector, characterVector) <= 0.0f) {
+                    continue;
+                }
+                if (character.states.x > 100 && neighborGoal < 100) {
+                    character.states.xy = uint2(102, 1);
+                    character.states.z = neighborIndex;
+                    characters[characterIndex].states = character.states;
+                    characters[characterIndex].stats[11] = frame.data.x + 2.0f;
+                    characters[neighborIndex].states.w = characterIndex;
+                    return;
+                }
+            }
+        }
     }
 }
 
@@ -976,8 +1121,7 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     if (character.states.x < 4 && character.mapNodeData.x == 0 && currentTime - character.stats[11] > 10.0f && randomNumber.y > 0.5f) {
         
         // update the character's states
-        character.states.x = 5;
-        character.states.y = 1;
+        character.states.xy = uint2(5, 1);
         
         // update the character's motions
         const int index = 9 + int(fract(randomNumber.x) * 4.0f);
@@ -1172,8 +1316,7 @@ kernel void EntertianmentEntranceFunction(constant FrameData& frame [[buffer(0)]
                     character.addresses[3] = int4(closestEntertainmentBuildingIndex, targetBuilding.interactableNodes[i], -1, 0);
                     targetBuilding.interactableNodeAvailabilities[i] = 0;
                     buildings[closestEntertainmentBuildingIndex] = targetBuilding;
-                    character.states.x = 4;
-                    character.states.y = 0;
+                    character.states.xy = uint2(4, 0);
                     characters[characterIndex] = character;
                     break;
                 }
@@ -1206,8 +1349,7 @@ kernel void EntertianmentExitFunction(constant FrameData& frame [[buffer(0)]],
             targetBuilding.interactableNodeAvailabilities[i] = 1;
             buildings[character.target.x] = targetBuilding;
             character.addresses[3] = int4(-1);
-            character.states.x = 1;
-            character.states.y = 0;
+            character.states.xy = uint2(1, 0);
             characters[characterIndex] = character;
             break;
         }
