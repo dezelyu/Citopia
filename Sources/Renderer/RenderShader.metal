@@ -94,6 +94,9 @@ constant float3 colors[] = {
     
     // seats (index: 56)
     float3(0.67f, 0.27f, 0.63f),
+    
+    // fire (index: 57)
+    float3(1.0f, 0.0f, 0.0f),
 };
 
 // define the visible character data

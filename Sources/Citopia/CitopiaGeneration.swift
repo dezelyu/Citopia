@@ -66,12 +66,30 @@ extension Citopia {
                         Float(z) * (self.blockSideLength + self.blockDistance)
                     )
                     let blockSize = simd_float3(
-                        self.blockSideLength - 1.0, Float(Int.random(in: 1...5) * 3),
+                        self.blockSideLength - 1.0, Float(Int.random(in: 2...5) * 3),
                         self.blockDistance
                     )
                     self.buildingBlocks.append((
                         blockPosition + origin, -0.2, blockSize, 2, true
                     ))
+                    
+                    // create the rooftop building
+                    let shouldCreateRooftopBuilding = Int.random(in: 0...4)
+                    let rooftopBuildingSideLengthX = Float.random(in: Float(blockSize.x / 5.0)...Float(blockSize.x / 3.0))
+                    let rooftopBuildingSideLengthZ = Float.random(in: Float(blockSize.z / 5.0)...Float(blockSize.z / 3.0))
+                    let rooftopBuldingOffset = simd_float2(Float.random(in: -3.0...3.0), Float.random(in: -3.0...3.0))
+                    if (shouldCreateRooftopBuilding == 1) {
+                        self.buildingBlocks.append((
+                            blockPosition + origin + rooftopBuldingOffset, blockSize.y + 0.5,
+                            simd_float3(rooftopBuildingSideLengthX, 2, rooftopBuildingSideLengthZ),
+                            2, false
+                        ))
+                        self.buildingBlocks.append((
+                            blockPosition + origin + rooftopBuldingOffset, blockSize.y + 2.5,
+                            simd_float3(rooftopBuildingSideLengthX + 0.5, 0.5, rooftopBuildingSideLengthZ + 0.5),
+                            2, false
+                        ))
+                    }
                 }
                 
                 // break the connection along the z direction
@@ -87,6 +105,24 @@ extension Citopia {
                     self.buildingBlocks.append((
                         blockPosition + origin, -0.2, blockSize, 2, true
                     ))
+                    
+                    // create the rooftop building
+                    let shouldCreateRooftopBuilding = Int.random(in: 0...4)
+                    let rooftopBuildingSideLengthX = Float.random(in: Float(blockSize.x / 5.0)...Float(blockSize.x / 3.0))
+                    let rooftopBuildingSideLengthZ = Float.random(in: Float(blockSize.z / 5.0)...Float(blockSize.z / 3.0))
+                    let rooftopBuldingOffset = simd_float2(Float.random(in: -3.0...3.0), Float.random(in: -3.0...3.0))
+                    if (shouldCreateRooftopBuilding == 1) {
+                        self.buildingBlocks.append((
+                            blockPosition + origin + rooftopBuldingOffset, blockSize.y + 0.5,
+                            simd_float3(rooftopBuildingSideLengthX, 2, rooftopBuildingSideLengthZ),
+                            2, false
+                        ))
+                        self.buildingBlocks.append((
+                            blockPosition + origin + rooftopBuldingOffset, blockSize.y + 2.5,
+                            simd_float3(rooftopBuildingSideLengthX + 0.5, 0.5, rooftopBuildingSideLengthZ + 0.5),
+                            2, false
+                        ))
+                    }
                 }
             }
         }
@@ -822,8 +858,6 @@ extension Citopia {
                     building.externalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 2)
                     building.internalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 1)
                     building.data.w += 1
-                    
-                    // create a large wall
                 } else {
                     self.buildingBlocks.append((
                         simd_float2(
@@ -885,8 +919,6 @@ extension Citopia {
                     building.externalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 2)
                     building.internalEntrances[Int(building.data.w)] = Int32(self.mapNodes.count - 1)
                     building.data.w += 1
-                    
-                    // create a large wall
                 } else {
                     self.buildingBlocks.append((
                         simd_float2(
@@ -1312,8 +1344,24 @@ extension Citopia {
         // create the chef's table
         let tablePosition = blockPosition + origin + simd_float2(0, 2.2)
         self.furnitureBlocks.append((
+            tablePosition + simd_float2(-0.6, 0), 0.05,
+            simd_float3(0.5, 0.8, 1.0), 48
+        ))
+        self.furnitureBlocks.append((
+            tablePosition + simd_float2(0.6, 0), 0.05,
+            simd_float3(0.5, 0.8, 1.0), 48
+        ))
+        self.furnitureBlocks.append((
+            tablePosition, 0.85,
+            simd_float3(1.8, 0.2, 1.0), 48
+        ))
+        self.furnitureBlocks.append((
+            tablePosition, 1.05,
+            simd_float3(0.5, 0.02, 0.3), 34
+        ))
+        self.furnitureBlocks.append((
             tablePosition, 0.05,
-            simd_float3(2.0, 1.0, 1.0), 48
+            simd_float3(0.5, 0.5, 0.5), 57
         ))
         
         // create the chef's bed
@@ -1374,6 +1422,22 @@ extension Citopia {
             blockPosition + origin + simd_float2(-deskOffset, 0), 0.05,
             simd_float3(deskHeight, 1.0, deskWidth), 34
         ))
+        self.furnitureBlocks.append((
+            blockPosition + origin + simd_float2(deskOffset, deskOffset), 0.05,
+            simd_float3(deskHeight, 1.0, deskHeight), 48
+        ))
+        self.furnitureBlocks.append((
+            blockPosition + origin + simd_float2(deskOffset, -deskOffset), 0.05,
+            simd_float3(deskHeight, 1.0, deskHeight), 48
+        ))
+        self.furnitureBlocks.append((
+            blockPosition + origin + simd_float2(-deskOffset, deskOffset), 0.05,
+            simd_float3(deskHeight, 1.0, deskHeight), 48
+        ))
+        self.furnitureBlocks.append((
+            blockPosition + origin + simd_float2(-deskOffset, -deskOffset), 0.05,
+            simd_float3(deskHeight, 1.0, deskHeight), 48
+        ))
         
         // create an array storing the desk node position and index
         var nodePositionIndexArray: [(simd_float4, Int)] = []
@@ -1388,6 +1452,15 @@ extension Citopia {
             self.furnitureBlocks.append((
                 chairPosition, 0.05,
                 simd_float3(0.4, 0.4, 0.4), 34
+            ))
+            
+            // create the plate
+            var platePosition = blockPosition + origin + simd_float2(0, deskOffset)
+            platePosition -= simd_float2(deskWidth * 0.5, 0)
+            platePosition += simd_float2(Float(numChair) * chairOffset, 0)
+            self.furnitureBlocks.append((
+                platePosition, 1.05,
+                simd_float3(0.4, 0.02, 0.4), 48
             ))
         }
         var edgePosition = blockPosition + origin + simd_float2(-(2.0 * deskHeight + 0.5 * deskWidth), 2.0 * deskHeight + 0.5 * deskWidth)
@@ -1415,6 +1488,15 @@ extension Citopia {
                 chairPosition, 0.05,
                 simd_float3(0.4, 0.4, 0.4), 34
             ))
+            
+            // create the plate
+            var platePosition = blockPosition + origin + simd_float2(0, -deskOffset)
+            platePosition -= simd_float2(deskWidth * 0.5, 0)
+            platePosition += simd_float2(Float(numChair) * chairOffset, 0)
+            self.furnitureBlocks.append((
+                platePosition, 1.05,
+                simd_float3(0.4, 0.02, 0.4), 48
+            ))
         }
         edgePosition = blockPosition + origin + simd_float2(2.0 * deskHeight + 0.5 * deskWidth, 2.0 * deskHeight + 0.5 * deskWidth)
         mapNode = MapNodeData()
@@ -1441,6 +1523,15 @@ extension Citopia {
                 chairPosition, 0.05,
                 simd_float3(0.4, 0.4, 0.4), 34
             ))
+            
+            // create the plate
+            var platePosition = blockPosition + origin + simd_float2(deskOffset, 0)
+            platePosition -= simd_float2(0, deskWidth * 0.5)
+            platePosition += simd_float2(0, Float(numChair) * chairOffset)
+            self.furnitureBlocks.append((
+                platePosition, 1.05,
+                simd_float3(0.4, 0.02, 0.4), 48
+            ))
         }
         edgePosition = blockPosition + origin + simd_float2(2.0 * deskHeight + 0.5 * deskWidth, -(2.0 * deskHeight + 0.5 * deskWidth))
         mapNode = MapNodeData()
@@ -1466,6 +1557,15 @@ extension Citopia {
             self.furnitureBlocks.append((
                 chairPosition, 0.05,
                 simd_float3(0.4, 0.4, 0.4), 34
+            ))
+            
+            // create the plate
+            var platePosition = blockPosition + origin + simd_float2(-deskOffset, 0)
+            platePosition -= simd_float2(0, deskWidth * 0.5)
+            platePosition += simd_float2(0, Float(numChair) * chairOffset)
+            self.furnitureBlocks.append((
+                platePosition, 1.05,
+                simd_float3(0.4, 0.02, 0.4), 48
             ))
         }
         edgePosition = blockPosition + origin + simd_float2(-(2.0 * deskHeight + 0.5 * deskWidth), -(2.0 * deskHeight + 0.5 * deskWidth))
