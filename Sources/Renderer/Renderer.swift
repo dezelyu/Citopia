@@ -95,6 +95,9 @@ class Renderer {
     // define the render targets
     var attachment: (Attachment, Attachment)!
     
+    // define the time buffer
+    var timeBuffer: UniformBuffer<Float>!
+    
     // define the commands
     var commands: [Command] = []
     
@@ -176,6 +179,9 @@ class Renderer {
         // create the render targets
         self.attachment = CameraManager.attachment(scale: 2.0)
         
+        // create the time buffer
+        self.timeBuffer = UniformBuffer<Float>(data: 0.0)
+        
         // create the commands
         self.commands = [
             Command(),
@@ -226,6 +232,7 @@ class Renderer {
             pipeline: self.presentPipeline,
             descriptors: [
                 CameraBuffer.buffer,
+                self.timeBuffer,
                 self.attachment.0,
                 self.attachment.1,
             ], prerequisite: (
@@ -462,6 +469,9 @@ class Renderer {
         // update the current phase index
         self.phase = (self.phase + 1) % 3
         
+        // update the time buffer
+        self.timeBuffer.data = Application.time
+        
         // wait for the previous command to finish
         self.commands[self.phase].complete()
         
@@ -484,6 +494,7 @@ class Renderer {
                 self.visibleCharacterBuffer.1,
                 LocalNodeBuffer.buffer,
                 MotionControllerBuffer.buffer,
+                self.timeBuffer,
             ], workload: self.visibleCharacterCount
         )
         self.commands[self.phase].wait()

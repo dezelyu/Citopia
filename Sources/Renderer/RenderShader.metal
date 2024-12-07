@@ -154,7 +154,8 @@ struct PresentIntermediateData {
 kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]],
                            device NodeData* nodes [[buffer(1)]],
                            device MotionControllerData* controllers [[buffer(2)]],
-                           constant uint& workload [[buffer(3)]],
+                           constant float& time [[buffer(3)]],
+                           constant uint& workload [[buffer(4)]],
                            const uint index [[thread_position_in_grid]]) {
     
     // avoid execution when the index exceeds the total number of characters
@@ -207,8 +208,11 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
 // define the present fragment function
 fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[stage_in]],
                                         const device CameraData* cameras [[buffer(0)]],
+                                        constant float& time [[buffer(1)]],
                                         const texture2d<float> color [[texture(0)]],
                                         const texture2d<float> depth [[texture(1)]]) {
+    
+    // compute the fragment world position
     const CameraData camera = cameras[0];
     const float4 buffer = color.sample(sampler(filter::nearest), data.coordinate);
     const uint b = as_type<uint>(buffer.b);
@@ -221,13 +225,10 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     point = camera.matrices[1] * point;
     point /= point.w;
     point = camera.matrices[2] * point;
-    const float3 light = normalize(float3(1.0f, 2.0f, 3.0f));
-    const float3 view = normalize(camera.matrices[2][3].xyz - point.xyz);
+    
+    // acquire the material color
     const uint a = as_type<uint>(buffer.a);
     const uint material = (a >> 16) & 65535;
-    float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
-    lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
-    const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
     float3 materialColor;
     if (material >= 1000) {
         uint colorIndex = material - 1000;
@@ -241,5 +242,12 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     } else {
         materialColor = colors[material];
     }
+    
+    // perform shading
+    const float3 light = normalize(float3(1.0f, 2.0f, 3.0f));
+    const float3 view = normalize(camera.matrices[2][3].xyz - point.xyz);
+    float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
+    lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
+    const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
     return float4(float3(r < 1.0f ? lambert * 0.8f + 0.2f : 0.0f) * materialColor * fog, 1.0f);
 }

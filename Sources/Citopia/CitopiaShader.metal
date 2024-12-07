@@ -432,11 +432,11 @@ void updateNavigation(thread CharacterData& character,
         character.navigation.x = character.target.y;
         character.navigation.y = 3;
     }
+    const MapNodeData mapNode = mapNodes[character.navigation.z];
     float4 destinationVector;
     if (character.navigation.x >= 0) {
-        destinationVector = normalize(mapNodes[character.navigation.x].position - character.position);
+        destinationVector = normalize(mapNodes[character.navigation.x].position - mapNode.position);
     }
-    const MapNodeData mapNode = mapNodes[character.navigation.z];
     int connections[16];
     int connectionCount = 0;
     int desiredConnections[16];
@@ -459,8 +459,8 @@ void updateNavigation(thread CharacterData& character,
                 connections[connectionCount] = connection;
                 connectionCount += 1;
                 if (character.navigation.x >= 0) {
-                    const float4 vector = normalize(currentMapNode.position - character.position);
-                    if (dot(destinationVector.xz, vector.xz) > 0.3f) {
+                    const float4 vector = normalize(currentMapNode.position - mapNode.position);
+                    if (dot(destinationVector.xz, vector.xz) > 0.7f) {
                         desiredConnections[desiredConnectionCount] = connection;
                         desiredConnectionCount += 1;
                     }
@@ -470,8 +470,8 @@ void updateNavigation(thread CharacterData& character,
             connections[connectionCount] = connection;
             connectionCount += 1;
             if (character.navigation.x >= 0) {
-                const float4 vector = normalize(currentMapNode.position - character.position);
-                if (dot(destinationVector.xz, vector.xz) > 0.3f) {
+                const float4 vector = normalize(currentMapNode.position - mapNode.position);
+                if (dot(destinationVector.xz, vector.xz) > 0.7f) {
                     desiredConnections[desiredConnectionCount] = connection;
                     desiredConnectionCount += 1;
                 }
