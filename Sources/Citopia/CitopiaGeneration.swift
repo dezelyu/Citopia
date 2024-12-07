@@ -571,7 +571,7 @@ extension Citopia {
         }
         
         // define the number of recreation building types
-        let recreationBuildingTypeCount = Int(4)
+        let recreationBuildingTypeCount = Int(5)
         let recreationBuildingCountPerType = buildingIndices.count / recreationBuildingTypeCount
         
         // initialize the gyms
@@ -604,6 +604,14 @@ extension Citopia {
             let randomBuildingIndex = buildingIndices.randomElement()!
             buildingIndices.remove(randomBuildingIndex)
             barIndices.insert(randomBuildingIndex)
+        }
+        
+        // initialize the redemption buildings
+        var redemptionBuildingIndices: Set<simd_int2> = []
+        while (buildingIndices.count > 0 && redemptionBuildingIndices.count < recreationBuildingCountPerType) {
+            let randomBuildingIndex = buildingIndices.randomElement()!
+            buildingIndices.remove(randomBuildingIndex)
+            redemptionBuildingIndices.insert(randomBuildingIndex)
         }
         
         // initialize the buildings
@@ -645,6 +653,9 @@ extension Citopia {
                 } else if (barIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 6
                     buildingColorIndex = Int.random(in: 65...69)
+                } else if (redemptionBuildingIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    building.data.x = 7
+                    buildingColorIndex = 79
                 }
                 
                 // generate the building decorations
@@ -680,8 +691,8 @@ extension Citopia {
                 }
                 if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z + 1), Int32(x + 1), Int32(z + 1)))) {
                     
-                    // exclude entrance direction for bar building
-                    if (!barIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    // exclude entrance direction for bar and redemption building
+                    if (!barIndices.contains(simd_int2(Int32(x), Int32(z))) && !redemptionBuildingIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                         directions.append(3)
                     }
                 }
@@ -994,6 +1005,16 @@ extension Citopia {
                 // initialize the building as a bar building
                 if (barIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     self.initializeBarBuildingInterior(
+                        index: self.buildings.count, origin: origin, blockPosition: blockPosition,
+                        interiorEntranceNodeIndices: interiorEntranceNodeIndices,
+                        building: &building,
+                        connect: connect
+                    )
+                }
+                
+                // initialize the building as a church building
+                if (redemptionBuildingIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    self.initializeRedemptionBuildingInterior(
                         index: self.buildings.count, origin: origin, blockPosition: blockPosition,
                         interiorEntranceNodeIndices: interiorEntranceNodeIndices,
                         building: &building,
@@ -2353,6 +2374,221 @@ extension Citopia {
         
         // connect the closest chair nodes with the interior entrance nodes
         nodePositionIndexArray = nodePositionIndexArray + nodePositionIndexArrayChair
+        for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
+            let position = self.mapNodes[interiorEntranceNodeIndex].position
+            let array = nodePositionIndexArray.sorted {
+                distance(position, $0.0) < distance(position, $1.0)
+            }
+            connect(interiorEntranceNodeIndex, array[0].1)
+            connect(interiorEntranceNodeIndex, array[1].1)
+        }
+    }
+    
+    // define the function that initializes the redemption building interior
+    func initializeRedemptionBuildingInterior(index: Int,
+                                       origin: simd_float2,
+                                       blockPosition: simd_float2,
+                                       interiorEntranceNodeIndices: [Int],
+                                       building: inout BuildingData,
+                                       connect: (Int, Int) -> ()) {
+        
+        // create the statues
+        let statueScaleFactor = Float(1.75)
+        let statuePosition = blockPosition + origin + simd_float2(0, self.blockSideLength * 0.3)
+        let statueHeight = Float(0.15)
+        self.furnitureBlocks.append((
+            statuePosition, 0.0,
+            simd_float3(4.0, statueHeight, 2.0), 72
+        ))
+        
+        // create the hair
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.581933365, 0.02327027881), statueHeight + statueScaleFactor * 1.04188463,
+            simd_float3(0.2596835316, 0.3800015241, 0.2007751417) * statueScaleFactor, 73
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.001486096662, 0.01733287699), statueHeight + statueScaleFactor * 1.361774826,
+            simd_float3(0.2380062541, 0.2296255479, 0.2276786366) * statueScaleFactor, 48
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.5862810891, 0.02819098707), statueHeight + statueScaleFactor * 0.7233811937,
+            simd_float3(0.2637247289, 0.6127775215, 0.1952956246) * statueScaleFactor, 48
+        ))
+        
+        // create the face
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.0002568969254, -0.01604589338), statueHeight + statueScaleFactor * 1.331496337,
+            simd_float3(0.181204881, 0.237689247, 0.2034472332) * statueScaleFactor, 74
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.5863117147, 0.001105843954), statueHeight + statueScaleFactor * 1.060589473,
+            simd_float3(0.1937050498, 0.2455539199, 0.1915325471) * statueScaleFactor, 74
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.581933365, -0.004278560032), statueHeight + statueScaleFactor * 1.13171934,
+            simd_float3(0.1977087687, 0.2574033699, 0.2007751417) * statueScaleFactor, 74
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.8865872688, -0.03216996435), statueHeight + statueScaleFactor * 1.305809301,
+            simd_float3(0.02261361236, 0.08678846654, 0.02261361236) * statueScaleFactor, 74
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.9252778644, -0.03216996435), statueHeight + statueScaleFactor * 1.305809301,
+            simd_float3(0.02261361236, 0.08678846654, 0.02261361236) * statueScaleFactor, 74
+        ))
+        
+        // create the clothes
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.4035312914, 0.01496036774), statueHeight + statueScaleFactor * 0.5260174014,
+            simd_float3(0.1066401047, 0.5739397723, 0.1066401047) * statueScaleFactor, 0
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.582232825, 0), statueHeight + statueScaleFactor * 0.5851342217,
+            simd_float3(0.3207021237, 0.5489202853, 0.1753183008) * statueScaleFactor, 0
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.8519906705, 0.01496036774), statueHeight + statueScaleFactor * 1.016861791,
+            simd_float3(0.2641617531, 0.09160609619, 0.1066401047) * statueScaleFactor, 0
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.9298736548, 0.01496036774), statueHeight + statueScaleFactor * 1.019311382,
+            simd_float3(0.1066401047, 0.2935259799, 0.1066401047) * statueScaleFactor, 0
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.1717302971, 0.01496036774), statueHeight + statueScaleFactor * 0.5792904494,
+            simd_float3(0.09396111297, 0.7282339735, 0.1066401047) * statueScaleFactor, 75
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.003398998241, 0), statueHeight + statueScaleFactor * 0.6831701758,
+            simd_float3(0.2957615201, 0.6546605901, 0.1753183008) * statueScaleFactor, 75
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.172570147, 0.01496036774), statueHeight + statueScaleFactor * 0.5792904494,
+            simd_float3(0.09396111297, 0.7282339735, 0.1066401047) * statueScaleFactor, 75
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.7665140021, 0.01496036774), statueHeight + statueScaleFactor * 0.4576156421,
+            simd_float3(0.09749571652, 0.5640317145, 0.09749571652) * statueScaleFactor, 76
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.5877503366, 0), statueHeight + statueScaleFactor * 0.4947893841,
+            simd_float3(0.3356711992, 0.5689757503, 0.1753183008) * statueScaleFactor, 76
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.4054004755, 0.01496036774), statueHeight + statueScaleFactor * 0.4576156421,
+            simd_float3(0.09749571652, 0.5640317145, 0.09749571652) * statueScaleFactor, 76
+        ))
+        
+        // create the glasses
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.0002568969254, -0.06814481438), statueHeight + statueScaleFactor * 1.460943619,
+            simd_float3(0.1390816829, 0.06112504357, 0.1411943171) * statueScaleFactor, 48
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.5833357359, -0.05314677935), statueHeight + statueScaleFactor * 1.265635709,
+            simd_float3(0.1517490486, 0.06619480014, 0.1411943171) * statueScaleFactor, 48
+        ))
+        
+        // create the pants
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.6543522567, 0), statueHeight + statueScaleFactor * 0,
+            simd_float3(0.1066401047, 0.6702141281, 0.1066401047) * statueScaleFactor, 48
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.5010691695, 0), statueHeight + statueScaleFactor * 0,
+            simd_float3(0.1066401047, 0.6702141281, 0.1066401047) * statueScaleFactor, 48
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(-0.07107623241, 0), statueHeight + statueScaleFactor * 0,
+            simd_float3(0.1130258639, 0.7354864547, 0.1066401047) * statueScaleFactor, 77
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.07139734938, 0), statueHeight + statueScaleFactor * 0,
+            simd_float3(0.1130258639, 0.7354864547, 0.1066401047) * statueScaleFactor, 77
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.5114557842, 0), statueHeight + statueScaleFactor * 0,
+            simd_float3(0.09688570176, 0.6089094371, 0.103228158) * statueScaleFactor, 78
+        ))
+        self.furnitureBlocks.append((
+            statuePosition + statueScaleFactor * simd_float2(0.6622459053, 0), statueHeight + statueScaleFactor * 0,
+            simd_float3(0.09688570176, 0.6089094371, 0.103228158) * statueScaleFactor, 78
+        ))
+        
+        // create the carpets
+        let numCarpetsX = Int(self.blockSideLength / 4.5)
+        let numCarpetsZ = Int(self.blockSideLength * 0.7 / 3.5)
+        let distanceBetweenCarpetsX = self.blockSideLength / Float(numCarpetsX + 1)
+        let distanceBetweenCarpetsZ = self.blockSideLength * 0.7 / Float(numCarpetsZ + 1)
+        for carpetZ in 1...numCarpetsZ {
+            for carpetX in 1...numCarpetsX {
+                let offsetX = distanceBetweenCarpetsX * Float(carpetX)
+                let offsetZ = distanceBetweenCarpetsZ * Float(carpetZ)
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ), 0.0,
+                    simd_float3(2.0, 0.1, 1.0), 48
+                ))
+            }
+        }
+        
+        // create an array storing the node position and index
+        var nodePositionIndexArray: [(simd_float4, Int)] = []
+        
+        // create a map node for each space between carpets
+        let nodeOffset = simd_float2((distanceBetweenCarpetsX) / 2.0, (distanceBetweenCarpetsZ) / 2.0)
+        for carpetZ in 0...numCarpetsZ {
+            for carpetX in 0...numCarpetsX {
+                let offsetX = distanceBetweenCarpetsX * Float(carpetX)
+                let offsetZ = distanceBetweenCarpetsZ * Float(carpetZ)
+                let nodePosition = blockPosition + origin + nodeOffset - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ)
+                var mapNode = MapNodeData()
+                mapNode.data.x = 3
+                mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+                self.mapNodes.append(mapNode)
+                nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
+            }
+        }
+        var interactableNodes: [Int32] = []
+        for carpetZ in 0...numCarpetsZ {
+            for carpetX in 0...numCarpetsX {
+                let nodeIndexInArray = carpetX + carpetZ * (numCarpetsX + 1)
+                let nodeIndex = nodePositionIndexArray[nodeIndexInArray].1
+                if (carpetX > 0) {
+                    let targetNodeIndex = nodePositionIndexArray[(carpetX - 1) + carpetZ * (numCarpetsX + 1)].1
+                    connect(nodeIndex, targetNodeIndex)
+                }
+                if (carpetZ > 0) {
+                    let targetNodeIndex = nodePositionIndexArray[carpetX + (carpetZ - 1) * (numCarpetsX + 1)].1
+                    connect(nodeIndex, targetNodeIndex)
+                }
+                if (carpetX > 0 && carpetZ < numCarpetsZ) {
+                    
+                    // create a map node for redemption spot
+                    let targetNodeIndex = nodePositionIndexArray[(carpetX - 1) + carpetZ * (numCarpetsX + 1)].1
+                    var mapNode = MapNodeData()
+                    mapNode.data.x = 6
+                    mapNode.data.y = 1
+                    mapNode.position += self.mapNodes[nodeIndex].position
+                    mapNode.position += self.mapNodes[targetNodeIndex].position
+                    mapNode.position /= 2.0
+                    mapNode.position.z += 0.5
+                    self.mapNodes.append(mapNode)
+                    if (interactableNodes.count < 16) {
+                        interactableNodes.append(Int32(self.mapNodes.count - 1))
+                    }
+                    
+                    // connect the node with the left and right node
+                    connect(self.mapNodes.count - 1, nodeIndex)
+                    connect(self.mapNodes.count - 1, targetNodeIndex)
+                }
+            }
+        }
+        building.data.z = Int32(interactableNodes.count)
+        for (i, interactableNode) in interactableNodes.enumerated() {
+            building.interactableNodes[i] = interactableNode
+        }
+        
+        // connect the closest carpet node with the interior entrance nodes
         for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
             let position = self.mapNodes[interiorEntranceNodeIndex].position
             let array = nodePositionIndexArray.sorted {

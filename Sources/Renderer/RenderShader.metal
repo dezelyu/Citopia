@@ -116,9 +116,19 @@ constant float3 colors[] = {
     float3(0.45f, 0.30f, 0.20f),
     float3(0.42f, 0.25f, 0.15f),
     
-    // bar furniture (index: 70)
+    // bar furniture (index: 70 - 71)
     float3(0.80f, 0.60f, 0.40f),
     float3(0.54f, 0.35f, 0.22f),
+    
+    // redemption building (index: 72 - 79)
+    float3(0.45f, 0.25f, 0.15f),
+    float3(0.02f, 0.005f, 0.00f),
+    float3(1.00f, 0.90f, 0.78f),
+    float3(0.25f, 0.27f, 0.26f),
+    float3(0.03f, 0.03f, 0.03f),
+    float3(0.07f, 0.20f, 0.34f),
+    float3(0.03f, 0.09f, 0.24f),
+    float3(0.80f, 0.80f, 0.80f),
 };
 
 // define the visible character data
