@@ -571,7 +571,7 @@ extension Citopia {
         }
         
         // define the number of recreation building types
-        let recreationBuildingTypeCount = Int(3)
+        let recreationBuildingTypeCount = Int(4)
         let recreationBuildingCountPerType = buildingIndices.count / recreationBuildingTypeCount
         
         // initialize the gyms
@@ -596,6 +596,14 @@ extension Citopia {
             let randomBuildingIndex = buildingIndices.randomElement()!
             buildingIndices.remove(randomBuildingIndex)
             libraryIndices.insert(randomBuildingIndex)
+        }
+        
+        // initialize the bars
+        var barIndices: Set<simd_int2> = []
+        while (buildingIndices.count > 0 && barIndices.count < recreationBuildingCountPerType) {
+            let randomBuildingIndex = buildingIndices.randomElement()!
+            buildingIndices.remove(randomBuildingIndex)
+            barIndices.insert(randomBuildingIndex)
         }
         
         // initialize the buildings
@@ -630,10 +638,13 @@ extension Citopia {
                     buildingColorIndex = Int.random(in: 43...47)
                 } else if (restaurantIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 4
-                    buildingColorIndex = 0
+                    buildingColorIndex = Int.random(in: 58...62)
                 } else if (libraryIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 5
                     buildingColorIndex = Int.random(in: 51...53)
+                } else if (barIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    building.data.x = 6
+                    buildingColorIndex = Int.random(in: 65...69)
                 }
                 
                 // generate the building decorations
@@ -668,7 +679,11 @@ extension Citopia {
                     directions.append(2)
                 }
                 if (self.exteriorConnectionData.contains(simd_int4(Int32(x), Int32(z + 1), Int32(x + 1), Int32(z + 1)))) {
-                    directions.append(3)
+                    
+                    // exclude entrance direction for bar building
+                    if (!barIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                        directions.append(3)
+                    }
                 }
                 
                 // randomly remove some entrances
@@ -969,6 +984,16 @@ extension Citopia {
                 // initialize the building as a library building
                 if (libraryIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     self.initializeLibraryBuildingInterior(
+                        index: self.buildings.count, origin: origin, blockPosition: blockPosition,
+                        interiorEntranceNodeIndices: interiorEntranceNodeIndices,
+                        building: &building,
+                        connect: connect
+                    )
+                }
+                
+                // initialize the building as a bar building
+                if (barIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    self.initializeBarBuildingInterior(
                         index: self.buildings.count, origin: origin, blockPosition: blockPosition,
                         interiorEntranceNodeIndices: interiorEntranceNodeIndices,
                         building: &building,
@@ -1408,35 +1433,35 @@ extension Citopia {
         let deskOffset = (deskWidth + deskHeight) / 2.0
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(0, deskOffset), 0.05,
-            simd_float3(deskWidth, 1.0, deskHeight), 34
+            simd_float3(deskWidth, 1.0, deskHeight), 63
         ))
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(0, -deskOffset), 0.05,
-            simd_float3(deskWidth, 1.0, deskHeight), 34
+            simd_float3(deskWidth, 1.0, deskHeight), 63
         ))
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(deskOffset, 0), 0.05,
-            simd_float3(deskHeight, 1.0, deskWidth), 34
+            simd_float3(deskHeight, 1.0, deskWidth), 63
         ))
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(-deskOffset, 0), 0.05,
-            simd_float3(deskHeight, 1.0, deskWidth), 34
+            simd_float3(deskHeight, 1.0, deskWidth), 63
         ))
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(deskOffset, deskOffset), 0.05,
-            simd_float3(deskHeight, 1.0, deskHeight), 48
+            simd_float3(deskHeight, 1.0, deskHeight), 64
         ))
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(deskOffset, -deskOffset), 0.05,
-            simd_float3(deskHeight, 1.0, deskHeight), 48
+            simd_float3(deskHeight, 1.0, deskHeight), 64
         ))
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(-deskOffset, deskOffset), 0.05,
-            simd_float3(deskHeight, 1.0, deskHeight), 48
+            simd_float3(deskHeight, 1.0, deskHeight), 64
         ))
         self.furnitureBlocks.append((
             blockPosition + origin + simd_float2(-deskOffset, -deskOffset), 0.05,
-            simd_float3(deskHeight, 1.0, deskHeight), 48
+            simd_float3(deskHeight, 1.0, deskHeight), 64
         ))
         
         // create an array storing the desk node position and index
@@ -1451,7 +1476,7 @@ extension Citopia {
             chairPosition += simd_float2(Float(numChair) * chairOffset, deskHeight)
             self.furnitureBlocks.append((
                 chairPosition, 0.05,
-                simd_float3(0.4, 0.4, 0.4), 34
+                simd_float3(0.4, 0.4, 0.4), 64
             ))
             
             // create the plate
@@ -1486,7 +1511,7 @@ extension Citopia {
             chairPosition += simd_float2(Float(numChair) * chairOffset, -deskHeight)
             self.furnitureBlocks.append((
                 chairPosition, 0.05,
-                simd_float3(0.4, 0.4, 0.4), 34
+                simd_float3(0.4, 0.4, 0.4), 64
             ))
             
             // create the plate
@@ -1521,7 +1546,7 @@ extension Citopia {
             chairPosition += simd_float2(deskHeight, Float(numChair) * chairOffset)
             self.furnitureBlocks.append((
                 chairPosition, 0.05,
-                simd_float3(0.4, 0.4, 0.4), 34
+                simd_float3(0.4, 0.4, 0.4), 64
             ))
             
             // create the plate
@@ -1556,7 +1581,7 @@ extension Citopia {
             chairPosition += simd_float2(-deskHeight, Float(numChair) * chairOffset)
             self.furnitureBlocks.append((
                 chairPosition, 0.05,
-                simd_float3(0.4, 0.4, 0.4), 34
+                simd_float3(0.4, 0.4, 0.4), 64
             ))
             
             // create the plate
@@ -1996,6 +2021,338 @@ extension Citopia {
         }
       
         // connect the map node with the interior entrance nodes
+        for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
+            let position = self.mapNodes[interiorEntranceNodeIndex].position
+            let array = nodePositionIndexArray.sorted {
+                distance(position, $0.0) < distance(position, $1.0)
+            }
+            connect(interiorEntranceNodeIndex, array[0].1)
+            connect(interiorEntranceNodeIndex, array[1].1)
+        }
+    }
+    
+    // define the function that initializes the bar building interior
+    func initializeBarBuildingInterior(index: Int,
+                                              origin: simd_float2,
+                                              blockPosition: simd_float2,
+                                              interiorEntranceNodeIndices: [Int],
+                                              building: inout BuildingData,
+                                              connect: (Int, Int) -> ()) {
+        
+        // create the shelf
+        let shelfLength = self.blockSideLength * 0.5
+        let shelfPosition = blockPosition + origin + simd_float2(0, self.blockSideLength * 0.5 - 0.5)
+        self.furnitureBlocks.append((
+            shelfPosition, 1.55,
+            simd_float3(shelfLength, 0.05, 0.75), 70
+        ))
+        
+        // create the beer bottles
+        let numBottles = Int(shelfLength / 1.0)
+        let bottleOffset = shelfLength / (Float(numBottles + 1))
+        for numBottle in 1...numBottles {
+            let bottlePosition = shelfPosition - simd_float2(shelfLength * 0.5 + Float.random(in: -bottleOffset * 0.3...bottleOffset * 0.3), 0) + simd_float2(Float(numBottle) * bottleOffset, 0.0)
+            let bottleHeight = Float.random(in: 0.35...0.5)
+            let bottleWidth = Float.random(in: 0.14...0.2)
+            let bottleColor = Int.random(in: 3...22)
+            self.furnitureBlocks.append((
+                bottlePosition, 1.60,
+                simd_float3(bottleWidth, bottleHeight, bottleWidth), bottleColor
+            ))
+            self.furnitureBlocks.append((
+                bottlePosition, 1.60 + bottleHeight,
+                simd_float3(bottleWidth * 0.4, bottleHeight * 0.6, bottleWidth * 0.4), bottleColor
+            ))
+        }
+        
+        // create the bartender's table
+        let tablePosition = blockPosition + origin + simd_float2(0, self.blockSideLength * 0.2)
+        let tableLength = self.blockSideLength * 0.7
+        self.furnitureBlocks.append((
+            tablePosition, 0.05,
+            simd_float3(tableLength, 1.0, 1.0), 70
+        ))
+        let sideTableLength = self.blockSideLength * 0.3 - 0.2
+        self.furnitureBlocks.append((
+            tablePosition + simd_float2(-(tableLength * 0.5 - 0.5), sideTableLength * 0.5), 0.05,
+            simd_float3(1.0, 1.0, sideTableLength), 70
+        ))
+        self.furnitureBlocks.append((
+            tablePosition + simd_float2(tableLength * 0.5 - 0.5, sideTableLength * 0.5), 0.05,
+            simd_float3(1.0, 1.0, sideTableLength), 70
+        ))
+        
+        // create the bartender's bed
+        var bedPosition = tablePosition + simd_float2(-(tableLength * 0.3), sideTableLength * 0.5 + 0.5)
+        self.furnitureBlocks.append((
+            bedPosition, 0.05,
+            simd_float3(2.0, 0.2, 1.0), Int.random(in: 29...33)
+        ))
+        
+        // create the bartender's pillow
+        self.furnitureBlocks.append((
+            bedPosition + simd_float2(-0.75, 0), 0.25,
+            simd_float3(0.25, 0.05, 0.5), 34
+        ))
+        
+        // create the map node for bartender's working spot
+        var mapNode = MapNodeData()
+        mapNode.data.x = 5
+        mapNode.position = simd_float4(tablePosition.x - 1.0, 0, tablePosition.y + 1.0, 0.0)
+        self.mapNodes.append(mapNode)
+        
+        // create the map node for bartender's bed
+        mapNode = MapNodeData()
+        mapNode.data.x = 4
+        mapNode.position = simd_float4(bedPosition.x + 1.5, 0, bedPosition.y, 0.0)
+        self.mapNodes.append(mapNode)
+        self.serviceIndustryWorkersData.append((
+            simd_int4(Int32(index), Int32(mapNodes.count - 1), -2, 0),
+            simd_int4(Int32(index), Int32(mapNodes.count - 2), -1, 0)
+        ))
+        
+        // create the map node for transition
+        mapNode = MapNodeData()
+        mapNode.data.x = 3
+        mapNode.position = simd_float4(bedPosition.x + 1.5, 0, tablePosition.y + 1.0, 0.0)
+        self.mapNodes.append(mapNode)
+        
+        connect(mapNodes.count - 1, mapNodes.count - 2)
+        connect(mapNodes.count - 1, mapNodes.count - 3)
+        
+        // create the second bartender's bed
+        bedPosition = tablePosition + simd_float2(tableLength * 0.3, sideTableLength * 0.5 + 0.5)
+        self.furnitureBlocks.append((
+            bedPosition, 0.05,
+            simd_float3(2.0, 0.2, 1.0), Int.random(in: 29...33)
+        ))
+        
+        // create the second bartender's pillow
+        self.furnitureBlocks.append((
+            bedPosition + simd_float2(0.75, 0), 0.25,
+            simd_float3(0.25, 0.05, 0.5), 34
+        ))
+        
+        // create the map node for the second bartender's working spot
+        mapNode = MapNodeData()
+        mapNode.data.x = 5
+        mapNode.position = simd_float4(tablePosition.x + 1.0, 0, tablePosition.y + 1.0, 0.0)
+        self.mapNodes.append(mapNode)
+        
+        // create the map node for the second bartender's bed
+        mapNode = MapNodeData()
+        mapNode.data.x = 4
+        mapNode.position = simd_float4(bedPosition.x - 1.5, 0, bedPosition.y, 0.0)
+        self.mapNodes.append(mapNode)
+        self.serviceIndustryWorkersData.append((
+            simd_int4(Int32(index), Int32(mapNodes.count - 1), 0, 0),
+            simd_int4(Int32(index), Int32(mapNodes.count - 2), -1, 0)
+        ))
+        
+        // create the map node for transition
+        mapNode = MapNodeData()
+        mapNode.data.x = 3
+        mapNode.position = simd_float4(bedPosition.x - 1.5, 0, tablePosition.y + 1.0, 0.0)
+        self.mapNodes.append(mapNode)
+        
+        connect(mapNodes.count - 1, mapNodes.count - 2)
+        connect(mapNodes.count - 1, mapNodes.count - 3)
+        
+        // create the chairs
+        var chairNodes : [(simd_float4, Int)] = []
+        var endChairNodes : [Int] = []
+        var interactableNodes: [Int32] = []
+        
+        // create an array storing the node position and index
+        var nodePositionIndexArrayChair: [(simd_float4, Int)] = []
+        let numSideChairs = Int(sideTableLength / 1.5)
+        let sideChairOffset = sideTableLength / (Float(numSideChairs + 1))
+        for numChair in 1...numSideChairs {
+            var chairPosition = tablePosition + simd_float2(-(tableLength * 0.5 - 0.5), 0)
+            chairPosition += simd_float2(-1.0, Float(numSideChairs - numChair + 1) * sideChairOffset)
+            self.furnitureBlocks.append((
+                chairPosition, 0.05,
+                simd_float3(0.4, 0.4, 0.4), 71
+            ))
+        }
+        for numChair in 1...numSideChairs {
+            var chairPosition = tablePosition + simd_float2(-(tableLength * 0.5 - 0.5), 0)
+            chairPosition += simd_float2(-2.0, Float(numSideChairs - numChair + 1) * sideChairOffset)
+            chairPosition += simd_float2(0.0, sideChairOffset * 0.5)
+            var mapNode = MapNodeData()
+            mapNode.data.x = 3
+            mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
+            self.mapNodes.append(mapNode)
+            chairNodes.append((mapNode.position, mapNodes.count - 1))
+            nodePositionIndexArrayChair.append((mapNode.position, self.mapNodes.count - 1))
+            
+            // create the interactable node
+            chairPosition += simd_float2(1.0, 0.0)
+            mapNode = MapNodeData()
+            mapNode.data.x = 6
+            mapNode.data.y = 0
+            mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
+            self.mapNodes.append(mapNode)
+            interactableNodes.append(Int32(mapNodes.count - 1))
+            connect(mapNodes.count - 1, mapNodes.count - 2)
+        }
+        let numChairs = Int(tableLength / 1.5)
+        let chairOffset = tableLength / (Float(numChairs + 1))
+        for numChair in 1...numChairs {
+            var chairPosition = tablePosition + simd_float2(-(tableLength * 0.5), 0)
+            chairPosition += simd_float2(Float(numChair) * chairOffset, -1.0)
+            self.furnitureBlocks.append((
+                chairPosition, 0.05,
+                simd_float3(0.4, 0.4, 0.4), 71
+            ))
+        }
+        for numChair in 0...(numChairs + 2) {
+            var chairPosition = tablePosition + simd_float2(-(tableLength * 0.5), 0)
+            chairPosition += simd_float2(Float(numChair - 1) * chairOffset, -2.0)
+            chairPosition += simd_float2(chairOffset * 0.5, 0.0)
+            var mapNode = MapNodeData()
+            mapNode.data.x = 3
+            mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
+            self.mapNodes.append(mapNode)
+            chairNodes.append((mapNode.position, mapNodes.count - 1))
+            nodePositionIndexArrayChair.append((mapNode.position, self.mapNodes.count - 1))
+
+            // create the interactable node
+            if (numChair == 0) {
+                endChairNodes.append(mapNodes.count - 1)
+            } else if (numChair <= numChairs) {
+                chairPosition += simd_float2(0.0, 1.0)
+                mapNode = MapNodeData()
+                mapNode.data.x = 6
+                mapNode.data.y = 1
+                mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
+                self.mapNodes.append(mapNode)
+                interactableNodes.append(Int32(mapNodes.count - 1))
+                connect(mapNodes.count - 1, mapNodes.count - 2)
+            } else if (numChair == (numChairs + 2)) {
+                endChairNodes.append(mapNodes.count - 1)
+            }
+        }
+        for numChair in 1...numSideChairs {
+            var chairPosition = tablePosition + simd_float2(tableLength * 0.5 - 0.5, 0)
+            chairPosition += simd_float2(1.0, Float(numChair) * sideChairOffset)
+            self.furnitureBlocks.append((
+                chairPosition, 0.05,
+                simd_float3(0.4, 0.4, 0.4), 71
+            ))
+        }
+        for numChair in 1...numSideChairs {
+            var chairPosition = tablePosition + simd_float2(tableLength * 0.5 - 0.5, 0)
+            chairPosition += simd_float2(2.0, Float(numChair) * sideChairOffset)
+            chairPosition += simd_float2(0.0, -sideChairOffset * 0.5)
+            var mapNode = MapNodeData()
+            mapNode.data.x = 3
+            mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
+            self.mapNodes.append(mapNode)
+            chairNodes.append((mapNode.position, mapNodes.count - 1))
+            nodePositionIndexArrayChair.append((mapNode.position, self.mapNodes.count - 1))
+            
+            // create the interactable node
+            chairPosition -= simd_float2(1.0, 0.0)
+            mapNode = MapNodeData()
+            mapNode.data.x = 6
+            mapNode.data.y = 2
+            mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
+            self.mapNodes.append(mapNode)
+            interactableNodes.append(Int32(mapNodes.count - 1))
+            connect(mapNodes.count - 1, mapNodes.count - 2)
+        }
+        
+        // connect the chair nodes
+        for i in 0...(chairNodes.count - 1) {
+            if (i > 0) {
+                connect(chairNodes[i].1, chairNodes[i - 1].1)
+            }
+        }
+        
+        // create the desks
+        let numDeskX = Int(self.blockSideLength / 3.5)
+        let numDeskZ = Int(self.blockSideLength * 0.7 / 4.5)
+        let distanceBetweenDeskX = self.blockSideLength / Float(numDeskX + 1)
+        let distanceBetweenDeskZ = self.blockSideLength * 0.7 / Float(numDeskZ + 1)
+        for deskZ in 1...numDeskZ {
+            for deskX in 1...numDeskX {
+                let offsetX = distanceBetweenDeskX * Float(deskX)
+                let offsetZ = distanceBetweenDeskZ * Float(deskZ)
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ), 0.02,
+                    simd_float3(1.0, 1.0, 1.5), 70
+                ))
+                
+                // create the chair
+                self.furnitureBlocks.append((
+                    blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ) - simd_float2(0.0, 1.2), 0.02,
+                    simd_float3(0.4, 0.4, 0.4), 71
+                ))
+            }
+        }
+        
+        // create a map node for each space between desks
+        var nodePositionIndexArray: [(simd_float4, Int)] = []
+        let nodeOffset = simd_float2((distanceBetweenDeskX) / 2.0, (distanceBetweenDeskZ) / 2.0)
+        for deskZ in 0..<numDeskZ {
+            for deskX in 0...numDeskX {
+                let offsetX = distanceBetweenDeskX * Float(deskX)
+                let offsetZ = distanceBetweenDeskZ * Float(deskZ)
+                let nodePosition = blockPosition + origin + nodeOffset - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ)
+                var mapNode = MapNodeData()
+                mapNode.data.x = 3
+                mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+                self.mapNodes.append(mapNode)
+                nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
+                if (deskZ == numDeskZ - 1) {
+                    let position = mapNode.position
+                    let array = chairNodes.sorted {
+                        distance(position, $0.0) < distance(position, $1.0)
+                    }
+                    connect(mapNodes.count - 1, array[0].1)
+                }
+            }
+        }
+        for deskZ in 0..<numDeskZ {
+            for deskX in 0...numDeskX {
+                let nodeIndexInArray = deskX + deskZ * (numDeskX + 1)
+                let nodeIndex = nodePositionIndexArray[nodeIndexInArray].1
+                if (deskX > 0) {
+                    let targetNodeIndex = nodePositionIndexArray[(deskX - 1) + deskZ * (numDeskX + 1)].1
+                    connect(nodeIndex, targetNodeIndex)
+                }
+                if (deskZ > 0) {
+                    let targetNodeIndex = nodePositionIndexArray[deskX + (deskZ - 1) * (numDeskX + 1)].1
+                    connect(nodeIndex, targetNodeIndex)
+                }
+                if (deskX > 0 && deskZ < numDeskZ) {
+                    
+                    // create a map node for the seat
+                    let targetNodeIndex = nodePositionIndexArray[(deskX - 1) + deskZ * (numDeskX + 1)].1
+                    var mapNode = MapNodeData()
+                    mapNode.data.x = 6
+                    mapNode.data.y = 1
+                    mapNode.position += self.mapNodes[nodeIndex].position
+                    mapNode.position += self.mapNodes[targetNodeIndex].position
+                    mapNode.position /= 2.0
+                    mapNode.position.x -= 0.5
+                    mapNode.position.z += 0.7
+                    self.mapNodes.append(mapNode)
+                    interactableNodes.append(Int32(mapNodes.count - 1))
+                    connect(self.mapNodes.count - 1, targetNodeIndex)
+                }
+            }
+        }
+        var selectedInteractableNodes: [Int32] = []
+        selectedInteractableNodes.append(contentsOf:interactableNodes.shuffled().prefix(16))
+        building.data.z = Int32(selectedInteractableNodes.count)
+        for (i, interactableNode) in selectedInteractableNodes.enumerated() {
+            building.interactableNodes[i] = interactableNode
+        }
+        
+        // connect the closest chair nodes with the interior entrance nodes
+        nodePositionIndexArray = nodePositionIndexArray + nodePositionIndexArrayChair
         for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
             let position = self.mapNodes[interiorEntranceNodeIndex].position
             let array = nodePositionIndexArray.sorted {

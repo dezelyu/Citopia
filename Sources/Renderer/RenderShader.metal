@@ -97,6 +97,28 @@ constant float3 colors[] = {
     
     // fire (index: 57)
     float3(1.0f, 0.0f, 0.0f),
+    
+    // restaurant (index: 58 - 62)
+    float3(0.42f, 0.56f, 0.14f),
+    float3(0.43f, 0.58f, 0.15f),
+    float3(0.40f, 0.54f, 0.12f),
+    float3(0.45f, 0.57f, 0.16f),
+    float3(0.41f, 0.55f, 0.13f),
+    
+    // restaurant furniture (index: 63 - 64)
+    float3(0.60f, 0.58f, 0.55f),
+    float3(0.80f, 0.75f, 0.70f),
+    
+    // bar (index: 65 - 69)
+    float3(0.45f, 0.25f, 0.15f),
+    float3(0.48f, 0.25f, 0.15f),
+    float3(0.42f, 0.20f, 0.12f),
+    float3(0.45f, 0.30f, 0.20f),
+    float3(0.42f, 0.25f, 0.15f),
+    
+    // bar furniture (index: 70)
+    float3(0.80f, 0.60f, 0.40f),
+    float3(0.54f, 0.35f, 0.22f),
 };
 
 // define the visible character data

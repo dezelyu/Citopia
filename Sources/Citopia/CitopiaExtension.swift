@@ -363,6 +363,9 @@ extension Citopia {
             // initialize age
             character.data.y = UInt32.random(in: 20...40)
             
+            // initialize occupation
+            character.data.z = 1
+            
             // initialize the personalities
             character.personalities = normalize(simd_float4(
                 Float.random(in: -1.0...1.0),
@@ -374,7 +377,7 @@ extension Citopia {
             // initialize the stats
             character.stats.0 = Float.random(in: 0.0...1.0)
             character.stats.1 = 1.0 / (Float.random(in: 12.0...18.0) * 60.0)
-            character.stats.2 = 2.0
+            character.stats.2 = 1.0
             character.stats.3 = Float.random(in: 0.0...200.0)
             character.stats.4 = Bool.random() ? 0.0 : 200.0
             character.stats.5 = self.officeData.isEmpty ? 0.0 : Float.random(in: 100.0...200.0)

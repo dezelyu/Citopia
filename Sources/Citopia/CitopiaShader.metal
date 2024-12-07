@@ -120,6 +120,7 @@ struct CharacterData {
     // define the integer data of the character
     //  - data.x = gender (0: female, 1: male)
     //  - data.y = age (20 - 40)
+    //  - data.z = occupation (0: office, 1: service)
     uint4 data;
     
     // define the personalities of the character
@@ -894,7 +895,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // store the current character index for possible entertainment building entrance
-    if (character.states.x == 0 && character.stats[0] > 0.0f) {
+    if (character.states.x == 0 && character.stats[0] > 0.0f && character.data.z == 0) {
         const uint count = atomic_fetch_add_explicit(&characterCount[3], 1, memory_order_relaxed);
         entertainmentEntranceCharacterIndices[count] = index;
     }
