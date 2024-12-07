@@ -535,7 +535,7 @@ extension Citopia {
         }
         
         // define the number of recreation building types
-        let recreationBuildingTypeCount = Int(2)
+        let recreationBuildingTypeCount = Int(3)
         let recreationBuildingCountPerType = buildingIndices.count / recreationBuildingTypeCount
         
         // initialize the gyms
@@ -552,6 +552,14 @@ extension Citopia {
             let randomBuildingIndex = buildingIndices.randomElement()!
             buildingIndices.remove(randomBuildingIndex)
             restaurantIndices.insert(randomBuildingIndex)
+        }
+        
+        // initialize the libraries
+        var libraryIndices: Set<simd_int2> = []
+        while (buildingIndices.count > 0 && libraryIndices.count < recreationBuildingCountPerType) {
+            let randomBuildingIndex = buildingIndices.randomElement()!
+            buildingIndices.remove(randomBuildingIndex)
+            libraryIndices.insert(randomBuildingIndex)
         }
         
         // initialize the buildings
@@ -587,6 +595,9 @@ extension Citopia {
                 } else if (restaurantIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     building.data.x = 4
                     buildingColorIndex = 0
+                } else if (libraryIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    building.data.x = 5
+                    buildingColorIndex = Int.random(in: 51...53)
                 }
                 
                 // generate the building decorations
@@ -916,6 +927,16 @@ extension Citopia {
                 // initialize the building as a restaurant building
                 if (restaurantIndices.contains(simd_int2(Int32(x), Int32(z)))) {
                     self.initializeRestaurantBuildingInterior(
+                        index: self.buildings.count, origin: origin, blockPosition: blockPosition,
+                        interiorEntranceNodeIndices: interiorEntranceNodeIndices,
+                        building: &building,
+                        connect: connect
+                    )
+                }
+                
+                // initialize the building as a library building
+                if (libraryIndices.contains(simd_int2(Int32(x), Int32(z)))) {
+                    self.initializeLibraryBuildingInterior(
                         index: self.buildings.count, origin: origin, blockPosition: blockPosition,
                         interiorEntranceNodeIndices: interiorEntranceNodeIndices,
                         building: &building,
@@ -1510,6 +1531,378 @@ extension Citopia {
                 distance(position, $0.0) < distance(position, $1.0)
             }
             connect(interiorEntranceNodeIndex, array[0].1)
+        }
+    }
+    
+    // define the function that initializes the library building interior
+    func initializeLibraryBuildingInterior(index: Int,
+                                       origin: simd_float2,
+                                       blockPosition: simd_float2,
+                                       interiorEntranceNodeIndices: [Int],
+                                       building: inout BuildingData,
+                                       connect: (Int, Int) -> ()) {
+        func getBoxCorners(corner1: simd_float2, corner2: simd_float2) -> (b: simd_float2, t: simd_float2) {
+            let bottomLeft = simd_float2(min(corner1.x, corner2.x), min(corner1.y, corner2.y))
+            let topRight = simd_float2(max(corner1.x, corner2.x), max(corner1.y, corner2.y))
+            
+            return (bottomLeft, topRight)
+        }
+        
+        // create an array storing the node position and index
+        var nodePositionIndexArray: [(simd_float4, Int)] = []
+        let mapNodeOffset = simd_float3(0.9, 0.6, 0.3)
+        let libraryPosition = blockPosition + origin
+        let (bottomLeft, topRight) = getBoxCorners(
+            corner1: libraryPosition - self.blockSideLength * 0.5,
+            corner2: libraryPosition + self.blockSideLength * 0.5
+        )
+        let bookshelfThickness = Float(0.5)
+        let distanceBetweenBookshelves = Float(2.5)
+        let bookshelfPadding = Float(2.0)
+
+        // add long bookshelves
+        let longBookshelfDimensions = simd_float3(
+            bookshelfThickness,
+            3.0,
+            self.blockSideLength * 0.8
+        )
+        let numberOfLongBookshelvesPerSide = 2
+        for i in 0..<numberOfLongBookshelvesPerSide {
+            let positionLeft = simd_float2(bottomLeft.x + bookshelfPadding + Float(i) * distanceBetweenBookshelves, libraryPosition.y)
+            let positionRight = simd_float2(topRight.x - bookshelfPadding - Float(i) * distanceBetweenBookshelves, libraryPosition.y)
+            self.furnitureBlocks.append((positionLeft, 0.0, longBookshelfDimensions, 54))
+            self.furnitureBlocks.append((positionRight, 0.0, longBookshelfDimensions, 54))
+        }
+        
+        // add short bookshelves
+        let shortBookshelfLength = self.blockSideLength - bookshelfPadding - 2.0 * Float(numberOfLongBookshelvesPerSide) * distanceBetweenBookshelves
+        let shortBookshelfDimensions = simd_float3(
+            shortBookshelfLength,
+            3.0,
+            bookshelfThickness
+        )
+        let numberOfShortBookshelvesPerSide = 2
+        for i in 0..<numberOfShortBookshelvesPerSide {
+            let position = simd_float2(libraryPosition.x, topRight.y - bookshelfPadding - Float(i) * distanceBetweenBookshelves)
+            self.furnitureBlocks.append((position, 0.0, shortBookshelfDimensions, 54))
+        }
+        
+        // add desk
+        let deskDimensions = simd_float3(
+            self.blockSideLength * 0.15,
+            0.8,
+            self.blockSideLength * 0.3
+        )
+        let deskPosition = simd_float2(
+            libraryPosition.x,
+            libraryPosition.y - Float(numberOfShortBookshelvesPerSide - 1) * distanceBetweenBookshelves
+        )
+        self.furnitureBlocks.append((deskPosition, 0.0, deskDimensions, 55))
+        
+        // add seats
+        let seatDimensions = simd_float3(0.3, 0.5, 0.3)
+        let (deskBottomLeft, deskTopRight) = getBoxCorners(
+            corner1: deskPosition - simd_float2(deskDimensions.x, deskDimensions.z) / 2.0,
+            corner2: deskPosition + simd_float2(deskDimensions.x, deskDimensions.z) / 2.0
+        )
+        let seatDistanceFromDesk = Float(0.3)
+        let numberOfSeatsPerSideX = 3
+        let distanceBetweenSeatsX = deskDimensions.x / Float(numberOfSeatsPerSideX + 1)
+        var seatMapNodeIndices: [Int] = []
+        for i in 0..<numberOfSeatsPerSideX {
+            let xCoordinate = deskBottomLeft.x + Float(i + 1) * distanceBetweenSeatsX
+            let positionTop = simd_float2(xCoordinate, deskTopRight.y + seatDistanceFromDesk)
+            let positionBottom = simd_float2(xCoordinate, deskBottomLeft.y - seatDistanceFromDesk)
+            self.furnitureBlocks.append((positionTop, 0.0, seatDimensions, 56))
+            self.furnitureBlocks.append((positionBottom, 0.0, seatDimensions, 56))
+            
+            // put nodes in between seats horizontally
+            var mapNodeTop = MapNodeData()
+            mapNodeTop.data.x = 6
+            mapNodeTop.data.y = 3
+            mapNodeTop.position = simd_float4(
+                positionTop.x + mapNodeOffset.z,
+                0.0,
+                positionTop.y,
+                0.0
+            )
+            self.mapNodes.append(mapNodeTop)
+            seatMapNodeIndices.append(self.mapNodes.count - 1)
+            
+            var mapNodeBottom = MapNodeData()
+            mapNodeBottom.data.x = 6
+            mapNodeBottom.data.y = 1
+            mapNodeBottom.position = simd_float4(
+                positionBottom.x - mapNodeOffset.z,
+                0.0,
+                positionBottom.y,
+                0.0
+            )
+            self.mapNodes.append(mapNodeBottom)
+            seatMapNodeIndices.append(self.mapNodes.count - 1)
+        }
+
+        let numberOfSeatsPerSideZ = 5
+        let distanceBetweenSeatsZ = deskDimensions.z / Float(numberOfSeatsPerSideZ + 1)
+        for i in 0..<numberOfSeatsPerSideZ {
+            let zCoordinate = deskBottomLeft.y + Float(i + 1) * distanceBetweenSeatsZ
+            let positionLeft = simd_float2(deskBottomLeft.x - seatDistanceFromDesk, zCoordinate)
+            let positionRight = simd_float2(deskTopRight.x + seatDistanceFromDesk, zCoordinate)
+            self.furnitureBlocks.append((positionLeft, 0.0, seatDimensions, 56))
+            self.furnitureBlocks.append((positionRight, 0.0, seatDimensions, 56))
+            
+            // put nodes in between seats vertically
+            var mapNodeLeft = MapNodeData()
+            mapNodeLeft.data.x = 6
+            mapNodeLeft.data.y = 0
+            mapNodeLeft.position = simd_float4(
+                positionLeft.x,
+                0.0,
+                positionLeft.y + mapNodeOffset.z,
+                0.0
+            )
+            self.mapNodes.append(mapNodeLeft)
+            seatMapNodeIndices.append(self.mapNodes.count - 1)
+            
+            var mapNodeRight = MapNodeData()
+            mapNodeRight.data.x = 6
+            mapNodeRight.data.y = 2
+            mapNodeRight.position = simd_float4(
+                positionRight.x,
+                0.0,
+                positionRight.y - mapNodeOffset.z,
+                0.0
+            )
+            self.mapNodes.append(mapNodeRight)
+            seatMapNodeIndices.append(self.mapNodes.count - 1)
+        }
+        
+        // put a node at each corner
+        let mapNodeCornerPositions = [
+            
+            // bottom left
+            bottomLeft + mapNodeOffset.x,
+            
+            // top left
+            simd_float2(
+                bottomLeft.x + mapNodeOffset.x,
+                topRight.y - mapNodeOffset.x
+            ),
+            
+            // bottom right
+            simd_float2(
+                topRight.x - mapNodeOffset.x,
+                bottomLeft.y + mapNodeOffset.x
+            ),
+            
+            // top right
+            topRight - mapNodeOffset.x,
+        ]
+        var mapNodeCornerIndices: [Int] = []
+        let numberOfMapNodesOutsideLongBookshelves = 4
+        let disanceOutsideMapNodesLongBookshelves = (mapNodeCornerPositions[1].y - mapNodeCornerPositions[0].y) / Float(numberOfMapNodesOutsideLongBookshelves + 1)
+        for i in 0..<mapNodeCornerPositions.count {
+            let nodePosition = mapNodeCornerPositions[i]
+            var mapNode = MapNodeData()
+            mapNode.data.x = 3
+            mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+            self.mapNodes.append(mapNode)
+            nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
+            mapNodeCornerIndices.append(self.mapNodes.count - 1)
+            
+            if (i % 2 == 0) {
+                for j in 0..<numberOfMapNodesOutsideLongBookshelves {
+                    let middleNodePositionZ = nodePosition.y + Float(j + 1) * disanceOutsideMapNodesLongBookshelves
+                    var middleNode = MapNodeData()
+                    middleNode.data.x = 3
+                    middleNode.position = simd_float4(nodePosition.x, 0.0, middleNodePositionZ, 0.0)
+                    self.mapNodes.append(middleNode)
+                    nodePositionIndexArray.append((middleNode.position, self.mapNodes.count - 1))
+
+                    connect(self.mapNodes.count - 2, self.mapNodes.count - 1)
+                }
+            }
+            else {
+                connect(self.mapNodes.count - 2, self.mapNodes.count - 1)
+            }
+        }
+        
+        var interactableNodesAtBookshelves: [Int32] = []
+
+        // put nodes in between long bookshelves
+        let mapNodeLeftLongBookshelfPositionX0 = bottomLeft.x + bookshelfPadding + distanceBetweenBookshelves - bookshelfThickness * 0.5 - mapNodeOffset.x
+        let mapNodeLeftLongBookshelfPositionX1 = bottomLeft.x + bookshelfPadding + distanceBetweenBookshelves + bookshelfThickness * 0.5 + mapNodeOffset.x
+        let mapNodeRightLongBookshelfPositionX0 = topRight.x - bookshelfPadding - distanceBetweenBookshelves + bookshelfThickness * 0.5 + mapNodeOffset.x
+        let mapNodeRightLongBookshelfPositionX1 = topRight.x - bookshelfPadding - distanceBetweenBookshelves - bookshelfThickness * 0.5 - mapNodeOffset.x
+        let topY = topRight.y - mapNodeOffset.x
+        let bottomY = bottomLeft.y + mapNodeOffset.x
+        let mapNodeLongBookshelfPositions = [
+            
+            // left side
+            simd_float2(mapNodeLeftLongBookshelfPositionX0, bottomY),
+            simd_float2(mapNodeLeftLongBookshelfPositionX0, topY),
+            simd_float2(mapNodeLeftLongBookshelfPositionX1, bottomY),
+            simd_float2(mapNodeLeftLongBookshelfPositionX1, topY),
+            
+            // right side
+            simd_float2(mapNodeRightLongBookshelfPositionX0, bottomY),
+            simd_float2(mapNodeRightLongBookshelfPositionX0, topY),
+            simd_float2(mapNodeRightLongBookshelfPositionX1, bottomY),
+            simd_float2(mapNodeRightLongBookshelfPositionX1, topY)
+        ]
+        var mapNodeLongBookshelfIndices: [Int] = []
+        let numberOfMapNodesBetweenLongBookshelves = 5
+        let disanceBetweenMapNodesLongBookshelves = (topY - bottomY) / Float(numberOfMapNodesBetweenLongBookshelves + 1)
+        for i in 0..<mapNodeLongBookshelfPositions.count {
+            let nodePosition = mapNodeLongBookshelfPositions[i]
+            var mapNode = MapNodeData()
+            mapNode.data.x = 3
+            mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
+            self.mapNodes.append(mapNode)
+            nodePositionIndexArray.append((mapNode.position, self.mapNodes.count - 1))
+            mapNodeLongBookshelfIndices.append(self.mapNodes.count - 1)
+            
+            if i % 2 == 0 {
+                let isLeft = i < mapNodeLongBookshelfPositions.count / 2
+                for j in 0..<numberOfMapNodesBetweenLongBookshelves {
+                    let walkMapNodeCoordinateZ = nodePosition.y + Float(j + 1) * disanceBetweenMapNodesLongBookshelves
+                    var walkMapNode = MapNodeData()
+                    walkMapNode.data.x = 3
+                    walkMapNode.position = simd_float4(
+                        nodePosition.x,
+                        0.0,
+                        walkMapNodeCoordinateZ,
+                        0.0
+                    )
+                    self.mapNodes.append(walkMapNode)
+                    
+                    if (j == 0) {
+                        connect(self.mapNodes.count - 2, self.mapNodes.count - 1)
+                    }
+                    else {
+                        connect(self.mapNodes.count - 3, self.mapNodes.count - 1)
+                    }
+
+                    var bookshelfMapNode = MapNodeData()
+                    bookshelfMapNode.data.x = 6
+                    bookshelfMapNode.data.y = isLeft ? 2 : 0
+                    bookshelfMapNode.position = simd_float4(
+                        isLeft ?
+                            nodePosition.x - mapNodeOffset.y
+                            : nodePosition.x + mapNodeOffset.y,
+                        0.0,
+                        walkMapNodeCoordinateZ,
+                        0.0
+                    )
+                    self.mapNodes.append(bookshelfMapNode)
+                    interactableNodesAtBookshelves.append(Int32(self.mapNodes.count - 1))
+                    
+                    connect(self.mapNodes.count - 2, self.mapNodes.count - 1)
+                }
+            }
+            else {
+                connect(self.mapNodes.count - 3, self.mapNodes.count - 1)
+            }
+        }
+        connect(mapNodeLongBookshelfIndices[0], mapNodeCornerIndices[0])
+        connect(mapNodeLongBookshelfIndices[1], mapNodeCornerIndices[1])
+        connect(mapNodeLongBookshelfIndices[mapNodeLongBookshelfIndices.count / 2], mapNodeCornerIndices[2])
+        connect(mapNodeLongBookshelfIndices[mapNodeLongBookshelfIndices.count / 2 + 1], mapNodeCornerIndices[3])
+        connect(mapNodeLongBookshelfIndices[0], mapNodeLongBookshelfIndices[2])
+        connect(mapNodeLongBookshelfIndices[1], mapNodeLongBookshelfIndices[3])
+        connect(mapNodeLongBookshelfIndices[2], mapNodeLongBookshelfIndices[6])
+        connect(mapNodeLongBookshelfIndices[3], mapNodeLongBookshelfIndices[7])
+        connect(mapNodeLongBookshelfIndices[6], mapNodeLongBookshelfIndices[4])
+        connect(mapNodeLongBookshelfIndices[7], mapNodeLongBookshelfIndices[5])
+        
+        // put nodes in between short bookshelves
+        var mapNodeShortBookshelfIndices: [Int] = []
+        let numberOfMapNodesBetweenShortBookshelves = 2
+        let disanceBetweenMapNodesShortBookshelves = shortBookshelfLength / Float(numberOfMapNodesBetweenShortBookshelves + 1)
+        for j in 0..<numberOfShortBookshelvesPerSide {
+            for i in 0..<numberOfMapNodesBetweenShortBookshelves {
+                var walkMapNode = MapNodeData()
+                walkMapNode.data.x = 3
+                let walkMapNodePositionX = libraryPosition.x - shortBookshelfLength * 0.5 + Float(i + 1) * disanceBetweenMapNodesShortBookshelves
+                let walkMapNodePositionZ = topRight.y - bookshelfPadding - mapNodeOffset.x - Float(j) * distanceBetweenBookshelves
+                walkMapNode.position = simd_float4(
+                    walkMapNodePositionX,
+                    0.0,
+                    walkMapNodePositionZ,
+                    0.0
+                )
+                self.mapNodes.append(walkMapNode)
+                mapNodeShortBookshelfIndices.append(self.mapNodes.count - 1)
+                
+                if (i > 0) {
+                    connect(self.mapNodes.count - 3, self.mapNodes.count - 1)
+                }
+                
+                var bookshelfMapNode = MapNodeData()
+                bookshelfMapNode.data.x = 6
+                bookshelfMapNode.data.y = 1
+                bookshelfMapNode.position = simd_float4(
+                    walkMapNodePositionX,
+                    0.0,
+                    walkMapNodePositionZ + mapNodeOffset.z,
+                    0.0
+                )
+                self.mapNodes.append(bookshelfMapNode)
+                interactableNodesAtBookshelves.append(Int32(self.mapNodes.count - 1))
+                
+                connect(self.mapNodes.count - 2, self.mapNodes.count - 1)
+            }
+        }
+        connect(mapNodeShortBookshelfIndices[0], mapNodeLongBookshelfIndices[3] - 2)
+        connect(mapNodeShortBookshelfIndices[1], mapNodeLongBookshelfIndices[7] - 2)
+        connect(mapNodeShortBookshelfIndices[2], mapNodeLongBookshelfIndices[3] - 4)
+        connect(mapNodeShortBookshelfIndices[3], mapNodeLongBookshelfIndices[7] - 4)
+        
+        // connect the top seats to the nearest walking nodes by hard coding
+        connect(seatMapNodeIndices[0], mapNodeLongBookshelfIndices[3] - 4)
+        connect(seatMapNodeIndices[0], mapNodeShortBookshelfIndices[2])
+        connect(seatMapNodeIndices[2], mapNodeShortBookshelfIndices[2])
+        connect(seatMapNodeIndices[2], mapNodeShortBookshelfIndices[3])
+        connect(seatMapNodeIndices[4], mapNodeShortBookshelfIndices[3])
+        connect(seatMapNodeIndices[4], mapNodeLongBookshelfIndices[7] - 4)
+        
+        // connect the bottom seats to the nearest walking nodes by hard coding
+        connect(seatMapNodeIndices[1], mapNodeLongBookshelfIndices[2])
+        connect(seatMapNodeIndices[3], mapNodeLongBookshelfIndices[2])
+        connect(seatMapNodeIndices[3], mapNodeLongBookshelfIndices[6])
+        connect(seatMapNodeIndices[5], mapNodeLongBookshelfIndices[6])
+        
+        // connect the side seats to the nearest walking nodes by hard coding
+        connect(seatMapNodeIndices[6], mapNodeLongBookshelfIndices[2])
+        connect(seatMapNodeIndices[6], mapNodeLongBookshelfIndices[2] + 1)
+        connect(seatMapNodeIndices[7], mapNodeLongBookshelfIndices[6])
+        connect(seatMapNodeIndices[7], mapNodeLongBookshelfIndices[6] + 1)
+        connect(seatMapNodeIndices[8], mapNodeLongBookshelfIndices[2] + 1)
+        connect(seatMapNodeIndices[9], mapNodeLongBookshelfIndices[6] + 1)
+        connect(seatMapNodeIndices[10], mapNodeLongBookshelfIndices[2] + 3)
+        connect(seatMapNodeIndices[11], mapNodeLongBookshelfIndices[6] + 3)
+        connect(seatMapNodeIndices[12], mapNodeLongBookshelfIndices[2] + 3)
+        connect(seatMapNodeIndices[13], mapNodeLongBookshelfIndices[6] + 3)
+        connect(seatMapNodeIndices[14], mapNodeLongBookshelfIndices[2] + 5)
+        connect(seatMapNodeIndices[15], mapNodeLongBookshelfIndices[6] + 5)
+        
+        var interactableNodes: [Int32] = []
+        interactableNodes.append(contentsOf:seatMapNodeIndices.shuffled().prefix(8).map {Int32($0)})
+        interactableNodes.append(contentsOf:interactableNodesAtBookshelves.shuffled().prefix(8))
+        interactableNodes = interactableNodes.shuffled()
+        building.data.z = Int32(interactableNodes.count)
+        for (i, interactableNode) in interactableNodes.enumerated() {
+            building.interactableNodes[i] = interactableNode
+        }
+      
+        // connect the map node with the interior entrance nodes
+        for interiorEntranceNodeIndex in interiorEntranceNodeIndices {
+            let position = self.mapNodes[interiorEntranceNodeIndex].position
+            let array = nodePositionIndexArray.sorted {
+                distance(position, $0.0) < distance(position, $1.0)
+            }
+            connect(interiorEntranceNodeIndex, array[0].1)
+            connect(interiorEntranceNodeIndex, array[1].1)
         }
     }
 }

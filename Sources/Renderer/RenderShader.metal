@@ -80,6 +80,20 @@ constant float3 colors[] = {
     float3(0.02f, 0.02f, 0.02f),
     float3(0.2f, 0.2f, 0.2f),
     float3(0.4f, 0.4f, 0.4f),
+    
+    // library (index: 51 - 53)
+    float3(0.92f, 0.41f, 0.55f),
+    float3(0.84f, 0.36f, 0.57f),
+    float3(0.75f, 0.32f, 0.60f),
+    
+    // bookshelves (index: 54)
+    float3(0.51f, 0.18f, 0.69f),
+    
+    // desk (index: 55)
+    float3(0.59f, 0.23f, 0.66f),
+    
+    // seats (index: 56)
+    float3(0.67f, 0.27f, 0.63f),
 };
 
 // define the visible character data

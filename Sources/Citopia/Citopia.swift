@@ -192,6 +192,7 @@ struct BuildingData {
     //      - 2 = office
     //      - 3 = gym
     //      - 4 = restaurant
+    //      - 5 = library
     //  - data.z = capacity
     //  - data.w = entrance count
     var data: simd_int4 = .zero
