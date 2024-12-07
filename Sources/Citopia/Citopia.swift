@@ -68,6 +68,8 @@ struct CharacterData {
     //      - 3 = socializing (determined by socialization impulse)
     //      - 4 = entertaining
     //      - 5 = idling
+    //      - 100 = zombification
+    //      - 101 = zombie wandering
     //  - states.y = goal planner state
     //  - states.z = target character
     var states: simd_uint4 = .zero
@@ -508,6 +510,7 @@ class Citopia {
         
         // create a new compute command encoder
         if let encoder = commandBuffer.makeComputeCommandEncoder() {
+            
             // configure the simulate visible character pipeline
             encoder.setComputePipelineState(self.simulateVisibleCharacterPipeline)
             encoder.setBuffer(self.frameBuffer, offset: 0, index: 0)

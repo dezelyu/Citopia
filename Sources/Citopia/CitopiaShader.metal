@@ -44,11 +44,11 @@ constant float motionAttacks[motionCount] = {
     0.4f,
     0.4f,
     0.6f,
-    0.4f,
+    0.8f,
     0.8f,
     0.4f,
     0.4f,
-    0.4f,
+    0.2f,
 };
 constant float motionRelatedMovementSpeed[motionCount] = {
     0.0325f,
@@ -127,6 +127,7 @@ struct CharacterData {
     //      - 4 = entertaining
     //      - 5 = idling
     //      - 100 = zombification
+    //      - 101 = zombie wandering
     //  - states.y = goal planner state
     //  - states.z = target character
     uint4 states;
