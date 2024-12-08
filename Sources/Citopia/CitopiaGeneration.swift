@@ -1394,18 +1394,18 @@ extension Citopia {
         let tablePosition = blockPosition + origin + simd_float2(0, 2.6)
         self.furnitureBlocks.append((
             tablePosition + simd_float2(-0.6, 0), 0.05,
-            simd_float3(0.5, 0.6, 1.0), 48
+            simd_float3(0.5, 0.5, 1.0), 48
         ))
         self.furnitureBlocks.append((
             tablePosition + simd_float2(0.6, 0), 0.05,
-            simd_float3(0.5, 0.6, 1.0), 48
+            simd_float3(0.5, 0.5, 1.0), 48
         ))
         self.furnitureBlocks.append((
-            tablePosition, 0.65,
+            tablePosition, 0.55,
             simd_float3(1.8, 0.2, 1.0), 48
         ))
         self.furnitureBlocks.append((
-            tablePosition, 0.85,
+            tablePosition, 0.75,
             simd_float3(0.5, 0.02, 0.3), 34
         ))
         self.furnitureBlocks.append((
@@ -2098,16 +2098,16 @@ extension Citopia {
         let tableLength = self.blockSideLength * 0.7
         self.furnitureBlocks.append((
             tablePosition, 0.05,
-            simd_float3(tableLength, 1.0, 1.0), 70
+            simd_float3(tableLength, 0.6, 1.0), 70
         ))
         let sideTableLength = self.blockSideLength * 0.3 - 0.2
         self.furnitureBlocks.append((
             tablePosition + simd_float2(-(tableLength * 0.5 - 0.5), sideTableLength * 0.5), 0.05,
-            simd_float3(1.0, 1.0, sideTableLength), 70
+            simd_float3(1.0, 0.6, sideTableLength), 70
         ))
         self.furnitureBlocks.append((
             tablePosition + simd_float2(tableLength * 0.5 - 0.5, sideTableLength * 0.5), 0.05,
-            simd_float3(1.0, 1.0, sideTableLength), 70
+            simd_float3(1.0, 0.6, sideTableLength), 70
         ))
         
         // create the bartender's bed
@@ -2126,7 +2126,7 @@ extension Citopia {
         // create the map node for bartender's working spot
         var mapNode = MapNodeData()
         mapNode.data.x = 5
-        mapNode.data.z = 11
+        mapNode.data.z = 15
         mapNode.position = simd_float4(tablePosition.x - 1.0, 0, tablePosition.y + 1.0, 0.0)
         self.mapNodes.append(mapNode)
         
@@ -2165,7 +2165,7 @@ extension Citopia {
         // create the map node for the second bartender's working spot
         mapNode = MapNodeData()
         mapNode.data.x = 5
-        mapNode.data.z = 11
+        mapNode.data.z = 15
         mapNode.position = simd_float4(tablePosition.x + 1.0, 0, tablePosition.y + 1.0, 0.0)
         self.mapNodes.append(mapNode)
         
@@ -2314,7 +2314,7 @@ extension Citopia {
                 let offsetZ = distanceBetweenDeskZ * Float(deskZ)
                 self.furnitureBlocks.append((
                     blockPosition + origin - simd_float2(repeating: self.blockSideLength / 2.0) + simd_float2(offsetX, offsetZ), 0.02,
-                    simd_float3(1.0, 1.0, 1.5), 70
+                    simd_float3(1.0, 0.6, 1.5), 70
                 ))
                 
                 // create the chair

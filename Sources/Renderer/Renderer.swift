@@ -323,7 +323,7 @@ class Renderer {
         motionSceneNames.append("Assets.scnassets/Motions/RunLoop.scn")
         motionSceneNames.append("Assets.scnassets/Motions/PrayLoop.scn")
         motionSceneNames.append("Assets.scnassets/Motions/CookLoop.scn")
-        motionSceneNames.append(nil)
+        motionSceneNames.append("Assets.scnassets/Motions/BartendLoop.scn")
         motionSceneNames.append(nil)
         motionSceneNames.append(nil)
         motionSceneNames.append(nil)
