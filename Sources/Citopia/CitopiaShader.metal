@@ -197,6 +197,9 @@ struct CharacterData {
     // define the position of the character
     float4 position;
     
+    // define the origin of the character
+    float4 origin;
+    
     // define the destination of the character
     float4 destination;
     
@@ -471,6 +474,7 @@ void updateNavigation(thread CharacterData& character,
             character.navigation.z = connection;
             character.navigation.y = -1;
             character.navigation.x = -1;
+            character.origin.xyz = character.destination.xyz;
             character.destination.xyz = currentMapNode.position.xyz;
             character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
             character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
@@ -506,6 +510,7 @@ void updateNavigation(thread CharacterData& character,
             int(float(desiredConnectionCount) * fract(randomNumber.y))
         ];
         const MapNodeData currentMapNode = mapNodes[character.navigation.z];
+        character.origin.xyz = character.destination.xyz;
         character.destination.xyz = currentMapNode.position.xyz;
         character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
         character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
@@ -517,6 +522,7 @@ void updateNavigation(thread CharacterData& character,
             int(float(connectionCount) * fract(randomNumber.y))
         ];
         const MapNodeData currentMapNode = mapNodes[character.navigation.z];
+        character.origin.xyz = character.destination.xyz;
         character.destination.xyz = currentMapNode.position.xyz;
         character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
         character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
@@ -526,10 +532,10 @@ void updateNavigation(thread CharacterData& character,
     character.navigation.w = character.navigation.z;
     character.navigation.z = previousMapNodeIndex;
     const MapNodeData currentMapNode = mapNodes[character.navigation.z];
+    character.origin.xyz = character.destination.xyz;
     character.destination.xyz = currentMapNode.position.xyz;
     character.destination.x += (2.0f * randomNumber.x - 1.0f) * currentMapNode.dimension.x * 0.3f;
     character.destination.z += (2.0f * randomNumber.z - 1.0f) * currentMapNode.dimension.z * 0.3f;
-    return;
 }
 
 // define the function that updates the character movement
@@ -977,7 +983,7 @@ kernel void ObservationFunction(constant FrameData& frame [[buffer(0)]],
     CharacterData character = characters[characterIndex];
     
     // avoid execution on special cases
-    if (character.states.x == 6 || character.states.x == 7 || character.states.x == 102 || character.states.x == 1000) {
+    if (character.states.x == 6 || character.states.x == 102 || character.states.x == 1000) {
         return;
     }
     
@@ -1030,7 +1036,23 @@ kernel void ObservationFunction(constant FrameData& frame [[buffer(0)]],
                     characters[characterIndex].stats[11] = frame.data.x + 2.0f;
                     characters[neighborIndex].states.w = characterIndex;
                     return;
-                } else if (character.states.x < 100 && (neighborGoal == 6 || neighborGoal == 7 || neighborGoal >= 100)) {
+                } else if (character.states.x == 7 && neighborGoal >= 100) {
+                    const float3 neighborPosition = characters[neighborIndex].position.xyz;
+                    const float neighborDistance = distance(neighborPosition, character.position.xyz);
+                    if (neighborDistance >= characterObservationDistance) {
+                        continue;
+                    };
+                    const float3 neighborVector = normalize(neighborPosition - character.position.xyz);
+                    const float3 characterVector = normalize(character.destination.xyz - character.position.xyz);
+                    if (dot(neighborVector, characterVector) <= 0.5f) {
+                        continue;
+                    }
+                    const float3 origin = character.origin.xyz;
+                    characters[characterIndex].origin.xyz = character.destination.xyz;
+                    characters[characterIndex].destination.xyz = origin;
+                    characters[characterIndex].navigation.zw = character.navigation.wz;
+                    return;
+                } else if (character.states.x < 6 && (neighborGoal == 6 || neighborGoal == 7 || neighborGoal >= 100)) {
                     const float3 neighborPosition = characters[neighborIndex].position.xyz;
                     const float neighborDistance = distance(neighborPosition, character.position.xyz);
                     if (neighborDistance >= characterObservationDistance) {

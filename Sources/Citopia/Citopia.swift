@@ -139,6 +139,9 @@ struct CharacterData {
     // define the position of the character
     var position: simd_float4 = .zero
     
+    // define the origin of the character
+    var origin: simd_float4 = .zero
+    
     // define the destination of the character
     var destination: simd_float4 = .zero
     
