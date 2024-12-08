@@ -34,8 +34,10 @@ struct VisibleCharacterData {
         Int32, Int32, Int32, Int32, Int32,
         Int32, Int32, Int32, Int32, Int32,
         Int32, Int32, Int32, Int32, Int32,
+        Int32, Int32, Int32, Int32, Int32,
         Int32, Int32, Int32, Int32, Int32
     ) = (
+        -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1,
@@ -49,8 +51,10 @@ struct VisibleCharacterData {
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
+        simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2,
         simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2, simd_float4x2
     ) = (
+        simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
         simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
         simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
         simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0), simd_float4x2(0.0),
@@ -302,41 +306,67 @@ class Renderer {
         let skeleton = meshSceneAssets.last!.root
         
         // define the names of the motion scene assets to load
-        let motionSceneNames = [
-            ("Assets.scnassets/Motions/IdleLoop0.scn", true, false),
-            ("Assets.scnassets/Motions/WalkLoop0.scn", true, false),
-            ("Assets.scnassets/Motions/SleepLoop.scn", true, false),
-            ("Assets.scnassets/Motions/SleepStart.scn", false, false),
-            ("Assets.scnassets/Motions/SleepEnd.scn", false, false),
-            ("Assets.scnassets/Motions/WorkLoop.scn", true, false),
-            ("Assets.scnassets/Motions/TalkLoop.scn", true, false),
-            ("Assets.scnassets/Motions/WalkLoop1.scn", true, false),
-            ("Assets.scnassets/Motions/WalkLoop2.scn", true, false),
-            ("Assets.scnassets/Motions/RunLoop.scn", true, false),
-            ("Assets.scnassets/Motions/IdleAction0.scn", false, false),
-            ("Assets.scnassets/Motions/IdleAction1.scn", false, false),
-            ("Assets.scnassets/Motions/IdleAction2.scn", false, false),
-            ("Assets.scnassets/Motions/IdleAction3.scn", false, false),
-            ("Assets.scnassets/Motions/CrawlLoop.scn", true, false),
-            ("Assets.scnassets/Motions/Zombification.scn", false, false),
-            ("Assets.scnassets/Motions/ZombieAttack.scn", false, false),
-            ("Assets.scnassets/Motions/FleeLoop.scn", true, false),
-            ("Assets.scnassets/Motions/Scared.scn", false, false),
-        ]
+        var motionSceneNames = [String?]()
+        motionSceneNames.append("Assets.scnassets/Motions/IdleLoop0.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/WalkLoop0.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/WalkLoop1.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/WalkLoop2.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/TalkLoop.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/IdleAction0.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/IdleAction1.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/IdleAction2.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/IdleAction3.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/SleepLoop.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/SleepStart.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/SleepEnd.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/WorkLoop.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/RunLoop.scn")
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append(nil)
+        motionSceneNames.append("Assets.scnassets/Motions/FleeLoop.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/Scared.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/CrawlLoop.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/Zombification.scn")
+        motionSceneNames.append("Assets.scnassets/Motions/ZombieAttack.scn")
+        motionSceneNames.append(nil)
         
         // load the motion scene assets
-        let motionSceneAssets = motionSceneNames.map { motionSceneName in
-            return SceneAsset(name: motionSceneName.0)
+        var motionSceneAssets = [SceneAsset?]()
+        motionSceneAssets = motionSceneNames.map { motionSceneName in
+            if let motionSceneName = motionSceneName {
+                return SceneAsset(name: motionSceneName)
+            } else {
+                return nil
+            }
         }
         
         // load the motion assets
-        let motionAssets = motionSceneAssets.map { motionSceneAsset in
-            return motionSceneAsset.motions.first!
+        var motionAssets = [MotionAsset?]()
+        motionAssets = motionSceneAssets.map { motionSceneAsset in
+            if let motionSceneAsset = motionSceneAsset {
+                return motionSceneAsset.motions.first!
+            } else {
+                return nil
+            }
         }
         
         // load the motions
-        let motions = motionAssets.map { motionAsset in
-            return Motion(asset: motionAsset)
+        var motions = [Motion?]()
+        motions = motionAssets.map { motionAsset in
+            if let motionAsset = motionAsset {
+                return Motion(asset: motionAsset)
+            } else {
+                return nil
+            }
         }
         
         // iterate from one to the visible character count
@@ -376,81 +406,108 @@ class Renderer {
             
             // load the motions
             for (index, motion) in motions.enumerated() {
-                let motionNode = MotionNode(
-                    motion: motion,
-                    looped: motionSceneNames[index].1,
-                    clamped: motionSceneNames[index].2
-                )
-                characterNode.attach(node: motionNode)
-                self.motionNodes.append(motionNode)
-                
-                // play the first motion
-                if (index == 0) {
-                    motionNode.play(weight: 1.0, attack: 0.0)
+                if let motion = motion {
+                    let motionNode = MotionNode(motion: motion, looped: true, clamped: false)
+                    characterNode.attach(node: motionNode)
+                    self.motionNodes.append(motionNode)
+                    switch (index) {
+                        case 0:
+                            motionNode.play(weight: 1.0, attack: 0.0)
+                            break
+                        case 1:
+                            visibleCharacterData.motionControllerIndices.0 = Int32(motionNode.data.1)
+                            break
+                        case 2:
+                            visibleCharacterData.motionControllerIndices.1 = Int32(motionNode.data.1)
+                            break
+                        case 3:
+                            visibleCharacterData.motionControllerIndices.2 = Int32(motionNode.data.1)
+                            break
+                        case 4:
+                            visibleCharacterData.motionControllerIndices.3 = Int32(motionNode.data.1)
+                            break
+                        case 5:
+                            visibleCharacterData.motionControllerIndices.4 = Int32(motionNode.data.1)
+                            break
+                        case 6:
+                            visibleCharacterData.motionControllerIndices.5 = Int32(motionNode.data.1)
+                            break
+                        case 7:
+                            visibleCharacterData.motionControllerIndices.6 = Int32(motionNode.data.1)
+                            break
+                        case 8:
+                            visibleCharacterData.motionControllerIndices.7 = Int32(motionNode.data.1)
+                            break
+                        case 9:
+                            visibleCharacterData.motionControllerIndices.8 = Int32(motionNode.data.1)
+                            break
+                        case 10:
+                            visibleCharacterData.motionControllerIndices.9 = Int32(motionNode.data.1)
+                            break
+                        case 11:
+                            visibleCharacterData.motionControllerIndices.10 = Int32(motionNode.data.1)
+                            break
+                        case 12:
+                            visibleCharacterData.motionControllerIndices.11 = Int32(motionNode.data.1)
+                            break
+                        case 13:
+                            visibleCharacterData.motionControllerIndices.12 = Int32(motionNode.data.1)
+                            break
+                        case 14:
+                            visibleCharacterData.motionControllerIndices.13 = Int32(motionNode.data.1)
+                            break
+                        case 15:
+                            visibleCharacterData.motionControllerIndices.14 = Int32(motionNode.data.1)
+                            break
+                        case 16:
+                            visibleCharacterData.motionControllerIndices.15 = Int32(motionNode.data.1)
+                            break
+                        case 17:
+                            visibleCharacterData.motionControllerIndices.16 = Int32(motionNode.data.1)
+                            break
+                        case 18:
+                            visibleCharacterData.motionControllerIndices.17 = Int32(motionNode.data.1)
+                            break
+                        case 19:
+                            visibleCharacterData.motionControllerIndices.18 = Int32(motionNode.data.1)
+                            break
+                        case 20:
+                            visibleCharacterData.motionControllerIndices.19 = Int32(motionNode.data.1)
+                            break
+                        case 21:
+                            visibleCharacterData.motionControllerIndices.20 = Int32(motionNode.data.1)
+                            break
+                        case 22:
+                            visibleCharacterData.motionControllerIndices.21 = Int32(motionNode.data.1)
+                            break
+                        case 23:
+                            visibleCharacterData.motionControllerIndices.22 = Int32(motionNode.data.1)
+                            break
+                        case 24:
+                            visibleCharacterData.motionControllerIndices.23 = Int32(motionNode.data.1)
+                            break
+                        case 25:
+                            visibleCharacterData.motionControllerIndices.24 = Int32(motionNode.data.1)
+                            break
+                        case 26:
+                            visibleCharacterData.motionControllerIndices.25 = Int32(motionNode.data.1)
+                            break
+                        case 27:
+                            visibleCharacterData.motionControllerIndices.26 = Int32(motionNode.data.1)
+                            break
+                        case 28:
+                            visibleCharacterData.motionControllerIndices.27 = Int32(motionNode.data.1)
+                            break
+                        case 29:
+                            visibleCharacterData.motionControllerIndices.28 = Int32(motionNode.data.1)
+                            break
+                        case 30:
+                            visibleCharacterData.motionControllerIndices.29 = Int32(motionNode.data.1)
+                            break
+                        default:
+                            break
+                    }
                 }
-                
-                // register the motion controllers
-                switch (index - 1) {
-                    case 0:
-                        visibleCharacterData.motionControllerIndices.0 = Int32(motionNode.data.1)
-                        break
-                    case 1:
-                        visibleCharacterData.motionControllerIndices.1 = Int32(motionNode.data.1)
-                        break
-                    case 2:
-                        visibleCharacterData.motionControllerIndices.2 = Int32(motionNode.data.1)
-                        break
-                    case 3:
-                        visibleCharacterData.motionControllerIndices.3 = Int32(motionNode.data.1)
-                        break
-                    case 4:
-                        visibleCharacterData.motionControllerIndices.4 = Int32(motionNode.data.1)
-                        break
-                    case 5:
-                        visibleCharacterData.motionControllerIndices.5 = Int32(motionNode.data.1)
-                        break
-                    case 6:
-                        visibleCharacterData.motionControllerIndices.6 = Int32(motionNode.data.1)
-                        break
-                    case 7:
-                        visibleCharacterData.motionControllerIndices.7 = Int32(motionNode.data.1)
-                        break
-                    case 8:
-                        visibleCharacterData.motionControllerIndices.8 = Int32(motionNode.data.1)
-                        break
-                    case 9:
-                        visibleCharacterData.motionControllerIndices.9 = Int32(motionNode.data.1)
-                        break
-                    case 10:
-                        visibleCharacterData.motionControllerIndices.10 = Int32(motionNode.data.1)
-                        break
-                    case 11:
-                        visibleCharacterData.motionControllerIndices.11 = Int32(motionNode.data.1)
-                        break
-                    case 12:
-                        visibleCharacterData.motionControllerIndices.12 = Int32(motionNode.data.1)
-                        break
-                    case 13:
-                        visibleCharacterData.motionControllerIndices.13 = Int32(motionNode.data.1)
-                        break
-                    case 14:
-                        visibleCharacterData.motionControllerIndices.14 = Int32(motionNode.data.1)
-                        break
-                    case 15:
-                        visibleCharacterData.motionControllerIndices.15 = Int32(motionNode.data.1)
-                        break
-                    case 16:
-                        visibleCharacterData.motionControllerIndices.16 = Int32(motionNode.data.1)
-                        break
-                    case 17:
-                        visibleCharacterData.motionControllerIndices.17 = Int32(motionNode.data.1)
-                        break
-                    default:
-                        break
-                }
-                
-                // print the duration of the motion
-                // print(motionSceneNames[index], motionNode.duration)
             }
             
             // position the character node

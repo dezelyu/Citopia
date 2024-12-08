@@ -20,33 +20,39 @@ constant float characterModelScale = 0.01f;
 constant float zombificationRadius = 10.0f;
 
 // define the motion controller constants
-constant uint motionCount = 18;
-constant float motionDurations[motionCount] = {
+constant float motionDurations[30] = {
     1.0f,
     1.0f,
-    -2.0f,
-    -2.0f,
-    0.75f,
+    1.0f,
     8.0f,
-    1.0f,
-    1.0f,
-    1.0f,
     -5.0f,
     -2.0f,
     -4.0f,
     -2.0f,
+    1.0f,
+    -2.0f,
+    -2.0f,
+    0.75f,
+    1.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.5f,
+    -1.0f,
     0.5f,
     -3.0f,
     -1.0f,
-    0.5f,
-    -1.0f,
+    0.0f,
 };
-constant float motionAttacks[motionCount] = {
-    0.4f,
-    1.0f,
-    0.4f,
-    0.4f,
-    0.4f,
+constant float motionAttacks[30] = {
     0.4f,
     0.4f,
     0.4f,
@@ -55,19 +61,31 @@ constant float motionAttacks[motionCount] = {
     0.8f,
     0.8f,
     0.4f,
+    1.0f,
+    0.4f,
+    0.4f,
+    0.4f,
+    0.4f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    0.2f,
+    0.2f,
     0.4f,
     0.2f,
     0.2f,
-    0.2f,
-    0.2f,
+    -1.0f,
 };
-constant float motionRelatedMovementSpeed[motionCount] = {
+constant float motionRelatedMovementSpeed[30] = {
     0.0325f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
     0.0225f,
     0.02f,
     0.0f,
@@ -75,11 +93,28 @@ constant float motionRelatedMovementSpeed[motionCount] = {
     0.0f,
     0.0f,
     0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    0.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    -1.0f,
+    0.06f,
+    0.0f,
     0.06f,
     0.0f,
     0.0f,
-    0.06f,
-    0.0f,
+    -1.0f,
 };
 
 // define the frame data
@@ -211,7 +246,7 @@ struct CharacterData {
     float4 movement;
     
     // define the motion controllers
-    float4x2 motionControllers[25];
+    float4x2 motionControllers[30];
 };
 
 // define the visible character data
@@ -235,10 +270,10 @@ struct VisibleCharacterData {
     float4x4 transform;
     
     // define the motion controller indices
-    int motionControllerIndices[25];
+    int motionControllerIndices[30];
     
     // define the motion controllers
-    float4x2 motionControllers[25];
+    float4x2 motionControllers[30];
 };
 
 // define the map node data
@@ -658,17 +693,17 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
-                    updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
-                    updateMotion(character, 1, 1.0f, 1.0f, currentTime);
-                    updateMotion(character, 2, 1.0f, 1.0f, currentTime);
+                    updateMotion(character, 2, motionSpeedFactor, 0.0f, currentTime);
+                    updateMotion(character, 8, motionSpeedFactor, 1.0f, currentTime);
+                    updateMotion(character, 9, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[0] > 1.0f) {
                         character.states.y = 3;
-                        updateMotion(character, 1, 1.0f, 0.0f, currentTime);
-                        updateMotion(character, 3, 1.0f, 1.0f, currentTime);
+                        updateMotion(character, 8, motionSpeedFactor, 0.0f, currentTime);
+                        updateMotion(character, 10, motionSpeedFactor, 1.0f, currentTime);
                     }
                 } else if (character.states.y == 3) {
-                    if (motionDurationPlayed(character, 3, currentTime) > 2.0f) {
+                    if (motionDurationPlayed(character, 10, currentTime) > 2.0f / motionSpeedFactor) {
                         character.states.xy = uint2(0, 0);
                         character.stats[4] = 0.0f;
                     }
@@ -698,14 +733,14 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     character.states.y = 2;
                     character.movement.y = 0.0f;
                     updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
-                    updateMotion(character, 4, 1.0, 1.0f, currentTime);
+                    updateMotion(character, 11, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[4] > character.stats[5]) {
                         character.states.y = 3;
-                        updateMotion(character, 4, 1.0, 0.0f, currentTime);
+                        updateMotion(character, 11, motionSpeedFactor, 0.0f, currentTime);
                     }
                 } else if (character.states.y == 3) {
-                    if (motionDurationPlayed(character, 4, currentTime) > 0.4f) {
+                    if (motionDurationPlayed(character, 11, currentTime) > 0.4f / motionSpeedFactor) {
                         character.states.xy = uint2(0, 0);
                     }
                 }
@@ -726,8 +761,8 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
         case 3: {
             if (character.states.y < 2) {
                 character.states.y = 2;
-                updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
-                updateMotion(character, 5, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
+                updateMotion(character, 3, motionSpeedFactor, 1.0f, currentTime);
             } else if (character.states.y == 2) {
                 const float4 targetCharacterPosition = characters[character.states.z].position;
                 const float targetCharacterDistance = distance(targetCharacterPosition, character.position);
@@ -753,8 +788,8 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             } else if (character.states.y == 3) {
                 character.states.xy = uint2(0, 0);
                 character.stats[7] = 0.0f;
-                updateMotion(character, 6, motionSpeedFactor, 1.0f, currentTime);
-                updateMotion(character, 5, motionSpeedFactor, 0.0f, currentTime);
+                updateMotion(character, 1, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 3, motionSpeedFactor, 0.0f, currentTime);
             }
             
             // store the new character data
@@ -772,12 +807,12 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             if (character.mapNodeData.x == 6 && length(character.destination - character.position) < characterNavigationCompletionDistance) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
-                    updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
-                    updateMotion(character, 8, motionSpeedFactor, 1.0f, currentTime);
+                    updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
+                    updateMotion(character, 12, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[0] < 0.0f) {
                         character.states.y = 3;
-                        updateMotion(character, 8, motionSpeedFactor, 0.0f, currentTime);
+                        updateMotion(character, 12, motionSpeedFactor, 0.0f, currentTime);
                     }
                 } else if (character.states.y == 3) {
                     break;
@@ -814,9 +849,9 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
         case 6: {
             if (character.states.y < 2) {
                 character.states.y = 2;
-                updateMotion(character, 16, motionSpeedFactor, 1.0f, currentTime);
-                updateMotion(character, 17, motionSpeedFactor, 1.0f, currentTime);
-                character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[16];
+                updateMotion(character, 24, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 25, motionSpeedFactor, 1.0f, currentTime);
+                character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[24];
                 const float4 targetCharacterPosition = characters[character.states.z].position;
                 const float targetCharacterDistance = distance(targetCharacterPosition, character.position);
                 if (targetCharacterDistance > 0.0f) {
@@ -830,7 +865,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     }
                 }
             } else if (character.states.y == 2) {
-                if (motionDurationPlayed(character, 17, currentTime) > 1.0f / motionSpeedFactor) {
+                if (motionDurationPlayed(character, 25, currentTime) > 1.0f / motionSpeedFactor) {
                     character.states.xy = uint2(7, 1);
                 }
                 const float rotationOffset = character.movement.w - character.movement.z;
@@ -851,11 +886,11 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             // update the motions
             if (character.states.y == 1) {
                 character.states.y = 2;
-                updateMotion(character, 13, motionSpeedFactor, 1.0f, currentTime);
-                updateMotion(character, 14, motionSpeedFactor, 1.0f, currentTime);
-                updateMotion(character, 16, motionSpeedFactor, 0.0f, currentTime);
-                character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[13];
-            } else if (character.states.y == 2 && motionDurationPlayed(character, 14, currentTime) > 3.0f / motionSpeedFactor) {
+                updateMotion(character, 26, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 27, motionSpeedFactor, 1.0f, currentTime);
+                updateMotion(character, 24, motionSpeedFactor, 0.0f, currentTime);
+                character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[26];
+            } else if (character.states.y == 2 && motionDurationPlayed(character, 27, currentTime) > 3.0f / motionSpeedFactor) {
                 character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
                 character.states.xy = uint2(101, 1);
             }
@@ -895,11 +930,12 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 }
                 const int4 targetCharacterNavigation = characters[character.states.z].navigation;
                 if (character.navigation.z != targetCharacterNavigation.z && character.navigation.z != targetCharacterNavigation.w) {
+                    characters[index].states.xy = uint2(101, 1);
                     return;
                 }
                 if (targetCharacterDistance < 1.0f) {
                     character.states.y = 2;
-                    updateMotion(character, 15, motionSpeedFactor, 1.0f, currentTime);
+                    updateMotion(character, 28, motionSpeedFactor, 1.0f, currentTime);
                 } else {
                     const float speedOffset = character.movement.y - character.movement.x;
                     const float speedFactor = frame.data.y * characterMovementDampingFactor;
@@ -911,7 +947,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     character.velocity.xyz = currentDirection * character.movement.x * frame.data.y;
                 }
             } else if (character.states.y == 2) {
-                if (motionDurationPlayed(character, 15, currentTime) > 1.0f / motionSpeedFactor) {
+                if (motionDurationPlayed(character, 28, currentTime) > 1.0f / motionSpeedFactor) {
                     character.states.xy = uint2(101, 1);
                 }
             }
@@ -1206,12 +1242,12 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
         character.states.xy = uint2(5, 1);
         
         // update the character's motions
-        const int index = 9 + int(fract(randomNumber.x) * 4.0f);
+        const int index = 4 + int(fract(randomNumber.x) * 4.0f);
         character.stats[11] = currentTime - motionDurations[index] / motionSpeedFactor + 0.1f;
         updateMotion(character, index, motionSpeedFactor, 1.0f, currentTime);
         updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
-        updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
-        updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 2, motionSpeedFactor, 0.0f, currentTime);
         
         // store the new character data
         characters[characterIndex] = character;
@@ -1228,26 +1264,26 @@ kernel void NavigationFunction(constant FrameData& frame [[buffer(0)]],
     
     // update the walk motion controller with the new parameters and the target speed
     if (character.states.x == 7) {
-        updateMotion(character, 16, motionSpeedFactor, 1.0f, currentTime);
-        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[16];
+        updateMotion(character, 24, motionSpeedFactor, 1.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[24];
     } else if (character.states.x >= 100) {
-        updateMotion(character, 13, motionSpeedFactor, 1.0f, currentTime);
-        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[13];
+        updateMotion(character, 26, motionSpeedFactor, 1.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[26];
     } else if (character.states.x == 2) {
         updateMotion(character, 0, motionSpeedFactor, 1.0f, currentTime);
-        updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
-        updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 2, motionSpeedFactor, 0.0f, currentTime);
         character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[0];
     } else if (character.states.x == 1) {
         updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
-        updateMotion(character, 6, motionSpeedFactor, 0.0f, currentTime);
-        updateMotion(character, 7, motionSpeedFactor, 1.0f, currentTime);
-        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[7];
+        updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
+        updateMotion(character, 2, motionSpeedFactor, 1.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[2];
     } else {
         updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
-        updateMotion(character, 6, motionSpeedFactor, 1.0f, currentTime);
-        updateMotion(character, 7, motionSpeedFactor, 0.0f, currentTime);
-        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[6];
+        updateMotion(character, 1, motionSpeedFactor, 1.0f, currentTime);
+        updateMotion(character, 2, motionSpeedFactor, 0.0f, currentTime);
+        character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[1];
     }
     
     // update the current map node data
@@ -1600,7 +1636,7 @@ kernel void SimulateVisibleCharacterFunction(constant FrameData& frame [[buffer(
     }
     
     // synchronize the motion controllers
-    for (int motionIndex = 0; motionIndex < 25; motionIndex += 1) {
+    for (int motionIndex = 0; motionIndex < 30; motionIndex += 1) {
         const float4x2 motionController = character.motionControllers[motionIndex];
         visibleCharacter.motionControllers[motionIndex] = motionController;
     }

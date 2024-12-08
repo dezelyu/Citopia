@@ -152,10 +152,10 @@ struct VisibleCharacterData {
     float4x4 transform;
     
     // define the motion controller indices
-    int motionControllerIndices[25];
+    int motionControllerIndices[30];
     
     // define the motion controllers
-    float4x2 motionControllers[25];
+    float4x2 motionControllers[30];
 };
 
 // define the node data
@@ -228,12 +228,11 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
     nodes[character.data.w].matrix = character.transform;
     
     // update the motions
-    for (int i = 0; i < 25; i += 1) {
+    for (int i = 0; i < 30; i += 1) {
         const int motionControllerIndex = character.motionControllerIndices[i];
-        if (motionControllerIndex == -1) {
-            break;
+        if (motionControllerIndex > -1) {
+            controllers[motionControllerIndex].controller = character.motionControllers[i];
         }
-        controllers[motionControllerIndex].controller = character.motionControllers[i];
     }
 }
 
