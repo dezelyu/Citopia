@@ -183,6 +183,7 @@ struct MapNodeData {
     //      - 5 = office
     //      - 6 = interactable node
     //  - data.y = orientation
+    //  - data.z = animation index
     //  - data.w = connection count
     var data: simd_int4 = .zero
     

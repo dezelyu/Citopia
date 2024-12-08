@@ -34,8 +34,8 @@ constant float motionDurations[30] = {
     -2.0f,
     0.75f,
     1.0f,
-    0.0f,
-    0.0f,
+    3.0f,
+    2.0f,
     0.0f,
     0.0f,
     0.0f,
@@ -66,8 +66,8 @@ constant float motionAttacks[30] = {
     0.4f,
     0.4f,
     0.4f,
-    -1.0f,
-    -1.0f,
+    0.6f,
+    0.4f,
     -1.0f,
     -1.0f,
     -1.0f,
@@ -98,8 +98,8 @@ constant float motionRelatedMovementSpeed[30] = {
     0.0f,
     0.0f,
     0.0f,
-    -1.0f,
-    -1.0f,
+    0.0f,
+    0.0f,
     -1.0f,
     -1.0f,
     -1.0f,
@@ -289,6 +289,7 @@ struct MapNodeData {
     //      - 5 = office
     //      - 6 = interactable node
     //  - data.y = orientation
+    //  - data.z = animation index
     //  - data.w = connection count
     int4 data;
     
@@ -733,14 +734,14 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                     character.states.y = 2;
                     character.movement.y = 0.0f;
                     updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
-                    updateMotion(character, 11, motionSpeedFactor, 1.0f, currentTime);
+                    updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[4] > character.stats[5]) {
                         character.states.y = 3;
-                        updateMotion(character, 11, motionSpeedFactor, 0.0f, currentTime);
+                        updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 0.0f, currentTime);
                     }
                 } else if (character.states.y == 3) {
-                    if (motionDurationPlayed(character, 11, currentTime) > 0.4f / motionSpeedFactor) {
+                    if (motionDurationPlayed(character, character.mapNodeData.z, currentTime) > motionAttacks[character.mapNodeData.z] / motionSpeedFactor) {
                         character.states.xy = uint2(0, 0);
                     }
                 }
@@ -808,11 +809,11 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
-                    updateMotion(character, 12, motionSpeedFactor, 1.0f, currentTime);
+                    updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[0] < 0.0f) {
                         character.states.y = 3;
-                        updateMotion(character, 12, motionSpeedFactor, 0.0f, currentTime);
+                        updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 0.0f, currentTime);
                     }
                 } else if (character.states.y == 3) {
                     break;
@@ -1184,6 +1185,9 @@ kernel void PhysicsSimulationFunction(constant FrameData& frame [[buffer(0)]],
                     continue;
                 }
                 if (neighborStates.x == 2 && neighborStates.y == 2) {
+                    continue;
+                }
+                if (neighborStates.x == 4 && neighborStates.y == 2) {
                     continue;
                 }
                 const float3 neighborPosition = characters[neighborIndex].position.xyz;

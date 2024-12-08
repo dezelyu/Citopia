@@ -1224,6 +1224,7 @@ extension Citopia {
                             )
                             var mapNode = MapNodeData()
                             mapNode.data.x = 5
+                            mapNode.data.z = 11
                             mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
                             self.mapNodes.append(mapNode)
                             
@@ -1249,6 +1250,7 @@ extension Citopia {
                             )
                             var mapNode = MapNodeData()
                             mapNode.data.x = 5
+                            mapNode.data.z = 11
                             mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
                             self.mapNodes.append(mapNode)
                             
@@ -1348,6 +1350,7 @@ extension Citopia {
                     var mapNode = MapNodeData()
                     mapNode.data.x = 6
                     mapNode.data.y = 1
+                    mapNode.data.z = 12
                     mapNode.position += self.mapNodes[nodeIndex].position
                     mapNode.position += self.mapNodes[targetNodeIndex].position
                     mapNode.position /= 2.0
@@ -1388,26 +1391,26 @@ extension Citopia {
                                               connect: (Int, Int) -> ()) {
         
         // create the chef's table
-        let tablePosition = blockPosition + origin + simd_float2(0, 2.2)
+        let tablePosition = blockPosition + origin + simd_float2(0, 2.6)
         self.furnitureBlocks.append((
             tablePosition + simd_float2(-0.6, 0), 0.05,
-            simd_float3(0.5, 0.8, 1.0), 48
+            simd_float3(0.5, 0.6, 1.0), 48
         ))
         self.furnitureBlocks.append((
             tablePosition + simd_float2(0.6, 0), 0.05,
-            simd_float3(0.5, 0.8, 1.0), 48
+            simd_float3(0.5, 0.6, 1.0), 48
         ))
         self.furnitureBlocks.append((
-            tablePosition, 0.85,
+            tablePosition, 0.65,
             simd_float3(1.8, 0.2, 1.0), 48
         ))
         self.furnitureBlocks.append((
-            tablePosition, 1.05,
+            tablePosition, 0.85,
             simd_float3(0.5, 0.02, 0.3), 34
         ))
         self.furnitureBlocks.append((
             tablePosition, 0.05,
-            simd_float3(0.5, 0.5, 0.5), 57
+            simd_float3(0.4, 0.4, 0.4), 57
         ))
         
         // create the chef's bed
@@ -1426,6 +1429,7 @@ extension Citopia {
         // create the map node for chef's working table
         var mapNode = MapNodeData()
         mapNode.data.x = 5
+        mapNode.data.z = 14
         mapNode.position = simd_float4(tablePosition.x, 0, tablePosition.y - 1.0, 0.0)
         self.mapNodes.append(mapNode)
         
@@ -1657,6 +1661,7 @@ extension Citopia {
                     mapNode.data.y = 4
                 }
                 mapNode.data.x = 6
+                mapNode.data.z = 12
                 mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
                 self.mapNodes.append(mapNode)
                 connect(nodePositionIndexArray[i].1, mapNodes.count - 1)
@@ -1931,6 +1936,7 @@ extension Citopia {
 
                     var bookshelfMapNode = MapNodeData()
                     bookshelfMapNode.data.x = 6
+                    bookshelfMapNode.data.z = 12
                     bookshelfMapNode.data.y = isLeft ? 2 : 0
                     bookshelfMapNode.position = simd_float4(
                         isLeft ?
@@ -1987,6 +1993,7 @@ extension Citopia {
                 var bookshelfMapNode = MapNodeData()
                 bookshelfMapNode.data.x = 6
                 bookshelfMapNode.data.y = 1
+                bookshelfMapNode.data.z = 12
                 bookshelfMapNode.position = simd_float4(
                     walkMapNodePositionX,
                     0.0,
@@ -2119,6 +2126,7 @@ extension Citopia {
         // create the map node for bartender's working spot
         var mapNode = MapNodeData()
         mapNode.data.x = 5
+        mapNode.data.z = 11
         mapNode.position = simd_float4(tablePosition.x - 1.0, 0, tablePosition.y + 1.0, 0.0)
         self.mapNodes.append(mapNode)
         
@@ -2157,6 +2165,7 @@ extension Citopia {
         // create the map node for the second bartender's working spot
         mapNode = MapNodeData()
         mapNode.data.x = 5
+        mapNode.data.z = 11
         mapNode.position = simd_float4(tablePosition.x + 1.0, 0, tablePosition.y + 1.0, 0.0)
         self.mapNodes.append(mapNode)
         
@@ -2212,6 +2221,7 @@ extension Citopia {
             mapNode = MapNodeData()
             mapNode.data.x = 6
             mapNode.data.y = 0
+            mapNode.data.z = 12
             mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
             self.mapNodes.append(mapNode)
             interactableNodes.append(Int32(mapNodes.count - 1))
@@ -2246,6 +2256,7 @@ extension Citopia {
                 mapNode = MapNodeData()
                 mapNode.data.x = 6
                 mapNode.data.y = 1
+                mapNode.data.z = 12
                 mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
                 self.mapNodes.append(mapNode)
                 interactableNodes.append(Int32(mapNodes.count - 1))
@@ -2278,6 +2289,7 @@ extension Citopia {
             mapNode = MapNodeData()
             mapNode.data.x = 6
             mapNode.data.y = 2
+            mapNode.data.z = 12
             mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
             self.mapNodes.append(mapNode)
             interactableNodes.append(Int32(mapNodes.count - 1))
@@ -2354,6 +2366,7 @@ extension Citopia {
                     var mapNode = MapNodeData()
                     mapNode.data.x = 6
                     mapNode.data.y = 1
+                    mapNode.data.z = 12
                     mapNode.position += self.mapNodes[nodeIndex].position
                     mapNode.position += self.mapNodes[targetNodeIndex].position
                     mapNode.position /= 2.0
@@ -2568,6 +2581,7 @@ extension Citopia {
                     var mapNode = MapNodeData()
                     mapNode.data.x = 6
                     mapNode.data.y = 1
+                    mapNode.data.z = 13
                     mapNode.position += self.mapNodes[nodeIndex].position
                     mapNode.position += self.mapNodes[targetNodeIndex].position
                     mapNode.position /= 2.0
