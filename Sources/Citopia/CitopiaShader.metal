@@ -694,7 +694,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
-                    updateMotion(character, 2, motionSpeedFactor, 0.0f, currentTime);
                     updateMotion(character, 8, motionSpeedFactor, 1.0f, currentTime);
                     updateMotion(character, 9, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
@@ -733,7 +732,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
-                    updateMotion(character, 0, motionSpeedFactor, 0.0f, currentTime);
                     updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[4] > character.stats[5]) {
@@ -762,7 +760,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
         case 3: {
             if (character.states.y < 2) {
                 character.states.y = 2;
-                updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
                 updateMotion(character, 3, motionSpeedFactor, 1.0f, currentTime);
             } else if (character.states.y == 2) {
                 const float4 targetCharacterPosition = characters[character.states.z].position;
@@ -789,7 +786,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             } else if (character.states.y == 3) {
                 character.states.xy = uint2(0, 0);
                 character.stats[7] = 0.0f;
-                updateMotion(character, 1, motionSpeedFactor, 1.0f, currentTime);
                 updateMotion(character, 3, motionSpeedFactor, 0.0f, currentTime);
             }
             
@@ -808,7 +804,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             if (character.mapNodeData.x == 6 && length(character.destination - character.position) < characterNavigationCompletionDistance) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
-                    updateMotion(character, 1, motionSpeedFactor, 0.0f, currentTime);
                     updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 1.0f, currentTime);
                 } else if (character.states.y == 2) {
                     if (character.stats[0] < 0.0f) {
@@ -889,7 +884,6 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 character.states.y = 2;
                 updateMotion(character, 26, motionSpeedFactor, 1.0f, currentTime);
                 updateMotion(character, 27, motionSpeedFactor, 1.0f, currentTime);
-                updateMotion(character, 24, motionSpeedFactor, 0.0f, currentTime);
                 character.movement.y = motionSpeedFactor * scaleFactor * motionRelatedMovementSpeed[26];
             } else if (character.states.y == 2 && motionDurationPlayed(character, 27, currentTime) > 3.0f / motionSpeedFactor) {
                 character.personalities = float4(1.0f, -1.0f, -1.0f, 0.0f);
