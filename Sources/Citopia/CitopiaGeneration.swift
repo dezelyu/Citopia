@@ -1661,7 +1661,7 @@ extension Citopia {
                     mapNode.data.y = 4
                 }
                 mapNode.data.x = 6
-                mapNode.data.z = 12
+                mapNode.data.z = 16
                 mapNode.position = simd_float4(nodePosition.x, 0.0, nodePosition.y, 0.0)
                 self.mapNodes.append(mapNode)
                 connect(nodePositionIndexArray[i].1, mapNodes.count - 1)
@@ -1751,12 +1751,12 @@ extension Citopia {
         self.furnitureBlocks.append((deskPosition, 0.0, deskDimensions, 55))
         
         // add seats
-        let seatDimensions = simd_float3(0.3, 0.5, 0.3)
+        let seatDimensions = simd_float3(0.3, 0.4, 0.3)
         let (deskBottomLeft, deskTopRight) = getBoxCorners(
             corner1: deskPosition - simd_float2(deskDimensions.x, deskDimensions.z) / 2.0,
             corner2: deskPosition + simd_float2(deskDimensions.x, deskDimensions.z) / 2.0
         )
-        let seatDistanceFromDesk = Float(0.3)
+        let seatDistanceFromDesk = Float(0.5)
         let numberOfSeatsPerSideX = 3
         let distanceBetweenSeatsX = deskDimensions.x / Float(numberOfSeatsPerSideX + 1)
         var seatMapNodeIndices: [Int] = []
@@ -1771,6 +1771,7 @@ extension Citopia {
             var mapNodeTop = MapNodeData()
             mapNodeTop.data.x = 6
             mapNodeTop.data.y = 3
+            mapNodeTop.data.z = 18
             mapNodeTop.position = simd_float4(
                 positionTop.x + mapNodeOffset.z,
                 0.0,
@@ -1783,6 +1784,7 @@ extension Citopia {
             var mapNodeBottom = MapNodeData()
             mapNodeBottom.data.x = 6
             mapNodeBottom.data.y = 1
+            mapNodeBottom.data.z = 18
             mapNodeBottom.position = simd_float4(
                 positionBottom.x - mapNodeOffset.z,
                 0.0,
@@ -1806,6 +1808,7 @@ extension Citopia {
             var mapNodeLeft = MapNodeData()
             mapNodeLeft.data.x = 6
             mapNodeLeft.data.y = 0
+            mapNodeLeft.data.z = 18
             mapNodeLeft.position = simd_float4(
                 positionLeft.x,
                 0.0,
@@ -1818,6 +1821,7 @@ extension Citopia {
             var mapNodeRight = MapNodeData()
             mapNodeRight.data.x = 6
             mapNodeRight.data.y = 2
+            mapNodeRight.data.z = 18
             mapNodeRight.position = simd_float4(
                 positionRight.x,
                 0.0,
@@ -1936,8 +1940,8 @@ extension Citopia {
 
                     var bookshelfMapNode = MapNodeData()
                     bookshelfMapNode.data.x = 6
-                    bookshelfMapNode.data.z = 12
                     bookshelfMapNode.data.y = isLeft ? 2 : 0
+                    bookshelfMapNode.data.z = 17
                     bookshelfMapNode.position = simd_float4(
                         isLeft ?
                             nodePosition.x - mapNodeOffset.y
@@ -1993,7 +1997,7 @@ extension Citopia {
                 var bookshelfMapNode = MapNodeData()
                 bookshelfMapNode.data.x = 6
                 bookshelfMapNode.data.y = 1
-                bookshelfMapNode.data.z = 12
+                bookshelfMapNode.data.z = 17
                 bookshelfMapNode.position = simd_float4(
                     walkMapNodePositionX,
                     0.0,
@@ -2207,7 +2211,7 @@ extension Citopia {
         }
         for numChair in 1...numSideChairs {
             var chairPosition = tablePosition + simd_float2(-(tableLength * 0.5 - 0.5), 0)
-            chairPosition += simd_float2(-2.0, Float(numSideChairs - numChair + 1) * sideChairOffset)
+            chairPosition += simd_float2(-2.0, Float(numSideChairs - numChair) * sideChairOffset)
             chairPosition += simd_float2(0.0, sideChairOffset * 0.5)
             var mapNode = MapNodeData()
             mapNode.data.x = 3
@@ -2217,11 +2221,11 @@ extension Citopia {
             nodePositionIndexArrayChair.append((mapNode.position, self.mapNodes.count - 1))
             
             // create the interactable node
-            chairPosition += simd_float2(1.0, 0.0)
+            chairPosition += simd_float2(1.4, 0.0)
             mapNode = MapNodeData()
             mapNode.data.x = 6
             mapNode.data.y = 0
-            mapNode.data.z = 12
+            mapNode.data.z = 16
             mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
             self.mapNodes.append(mapNode)
             interactableNodes.append(Int32(mapNodes.count - 1))
@@ -2251,12 +2255,12 @@ extension Citopia {
             // create the interactable node
             if (numChair == 0) {
                 endChairNodes.append(mapNodes.count - 1)
-            } else if (numChair <= numChairs) {
-                chairPosition += simd_float2(0.0, 1.0)
+            } else if (numChair > 1 && numChair < (numChairs + 2)) {
+                chairPosition += simd_float2(0.0, 1.4)
                 mapNode = MapNodeData()
                 mapNode.data.x = 6
                 mapNode.data.y = 1
-                mapNode.data.z = 12
+                mapNode.data.z = 16
                 mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
                 self.mapNodes.append(mapNode)
                 interactableNodes.append(Int32(mapNodes.count - 1))
@@ -2275,7 +2279,7 @@ extension Citopia {
         }
         for numChair in 1...numSideChairs {
             var chairPosition = tablePosition + simd_float2(tableLength * 0.5 - 0.5, 0)
-            chairPosition += simd_float2(2.0, Float(numChair) * sideChairOffset)
+            chairPosition += simd_float2(2.0, Float(numChair + 1) * sideChairOffset)
             chairPosition += simd_float2(0.0, -sideChairOffset * 0.5)
             var mapNode = MapNodeData()
             mapNode.data.x = 3
@@ -2285,11 +2289,11 @@ extension Citopia {
             nodePositionIndexArrayChair.append((mapNode.position, self.mapNodes.count - 1))
             
             // create the interactable node
-            chairPosition -= simd_float2(1.0, 0.0)
+            chairPosition -= simd_float2(1.4, 0.0)
             mapNode = MapNodeData()
             mapNode.data.x = 6
             mapNode.data.y = 2
-            mapNode.data.z = 12
+            mapNode.data.z = 16
             mapNode.position = simd_float4(chairPosition.x, 0.0, chairPosition.y, 0.0)
             self.mapNodes.append(mapNode)
             interactableNodes.append(Int32(mapNodes.count - 1))
@@ -2362,16 +2366,16 @@ extension Citopia {
                 if (deskX > 0 && deskZ < numDeskZ) {
                     
                     // create a map node for the seat
-                    let targetNodeIndex = nodePositionIndexArray[(deskX - 1) + deskZ * (numDeskX + 1)].1
+                    let targetNodeIndex = nodePositionIndexArray[(deskX) + deskZ * (numDeskX + 1)].1
                     var mapNode = MapNodeData()
                     mapNode.data.x = 6
                     mapNode.data.y = 1
-                    mapNode.data.z = 12
+                    mapNode.data.z = 16
                     mapNode.position += self.mapNodes[nodeIndex].position
                     mapNode.position += self.mapNodes[targetNodeIndex].position
                     mapNode.position /= 2.0
-                    mapNode.position.x -= 0.5
-                    mapNode.position.z += 0.7
+                    mapNode.position.x -= 0.8
+                    mapNode.position.z += 1.0
                     self.mapNodes.append(mapNode)
                     interactableNodes.append(Int32(mapNodes.count - 1))
                     connect(self.mapNodes.count - 1, targetNodeIndex)

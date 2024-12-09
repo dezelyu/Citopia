@@ -37,9 +37,9 @@ constant float motionDurations[30] = {
     3.0f,
     2.0f,
     2.0f,
-    0.0f,
-    0.0f,
-    0.0f,
+    2.0f,
+    3.0f,
+    3.0f,
     0.0f,
     0.0f,
     0.0f,
@@ -69,9 +69,9 @@ constant float motionAttacks[30] = {
     0.6f,
     0.4f,
     0.4f,
-    -1.0f,
-    -1.0f,
-    -1.0f,
+    0.4f,
+    0.4f,
+    0.4f,
     -1.0f,
     -1.0f,
     -1.0f,
@@ -101,9 +101,9 @@ constant float motionRelatedMovementSpeed[30] = {
     0.0f,
     0.0f,
     0.0f,
-    -1.0f,
-    -1.0f,
-    -1.0f,
+    0.0f,
+    0.0f,
+    0.0f,
     -1.0f,
     -1.0f,
     -1.0f,
@@ -732,15 +732,37 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
                 if (character.states.y < 2) {
                     character.states.y = 2;
                     character.movement.y = 0.0f;
-                    updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 1.0f, currentTime);
+                    if (character.mapNodeData.z == 11) {
+                        updateMotion(character, 11, motionSpeedFactor, 1.0f, currentTime);
+                    } else if (character.mapNodeData.z == 14) {
+                        updateMotion(character, 14, motionSpeedFactor, 1.0f, currentTime);
+                    } else if (character.mapNodeData.z == 15) {
+                        updateMotion(character, 15, motionSpeedFactor, 1.0f, currentTime);
+                    }
                 } else if (character.states.y == 2) {
                     if (character.stats[4] > character.stats[5]) {
                         character.states.y = 3;
-                        updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 0.0f, currentTime);
+                        if (character.mapNodeData.z == 11) {
+                            updateMotion(character, 11, motionSpeedFactor, 0.0f, currentTime);
+                        } else if (character.mapNodeData.z == 14) {
+                            updateMotion(character, 14, motionSpeedFactor, 0.0f, currentTime);
+                        } else if (character.mapNodeData.z == 15) {
+                            updateMotion(character, 15, motionSpeedFactor, 0.0f, currentTime);
+                        }
                     }
                 } else if (character.states.y == 3) {
-                    if (motionDurationPlayed(character, character.mapNodeData.z, currentTime) > motionAttacks[character.mapNodeData.z] / motionSpeedFactor) {
-                        character.states.xy = uint2(0, 0);
+                    if (character.mapNodeData.z == 11) {
+                        if (motionDurationPlayed(character, 11, currentTime) > motionAttacks[11] / motionSpeedFactor) {
+                            character.states.xy = uint2(0, 0);
+                        }
+                    } else if (character.mapNodeData.z == 14) {
+                        if (motionDurationPlayed(character, 14, currentTime) > motionAttacks[14] / motionSpeedFactor) {
+                            character.states.xy = uint2(0, 0);
+                        }
+                    } else if (character.mapNodeData.z == 15) {
+                        if (motionDurationPlayed(character, 15, currentTime) > motionAttacks[15] / motionSpeedFactor) {
+                            character.states.xy = uint2(0, 0);
+                        }
                     }
                 }
                 
@@ -804,13 +826,55 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
             if (character.mapNodeData.x == 6 && length(character.destination - character.position) < characterNavigationCompletionDistance) {
                 if (character.states.y < 2) {
                     character.states.y = 2;
-                    updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 1.0f, currentTime);
+                    if (character.mapNodeData.z == 12) {
+                        updateMotion(character, 12, motionSpeedFactor, 1.0f, currentTime);
+                    } else if (character.mapNodeData.z == 13) {
+                        updateMotion(character, 13, motionSpeedFactor, 1.0f, currentTime);
+                    } else if (character.mapNodeData.z == 16) {
+                        updateMotion(character, 16, motionSpeedFactor, 1.0f, currentTime);
+                    } else if (character.mapNodeData.z == 17) {
+                        updateMotion(character, 17, motionSpeedFactor, 1.0f, currentTime);
+                    } else if (character.mapNodeData.z == 18) {
+                        updateMotion(character, 18, motionSpeedFactor, 1.0f, currentTime);
+                    }
                 } else if (character.states.y == 2) {
                     if (character.stats[0] < 0.0f) {
                         character.states.y = 3;
-                        updateMotion(character, character.mapNodeData.z, motionSpeedFactor, 0.0f, currentTime);
+                        if (character.mapNodeData.z == 12) {
+                            updateMotion(character, 12, motionSpeedFactor, 0.0f, currentTime);
+                        } else if (character.mapNodeData.z == 13) {
+                            updateMotion(character, 13, motionSpeedFactor, 0.0f, currentTime);
+                        } else if (character.mapNodeData.z == 16) {
+                            updateMotion(character, 16, motionSpeedFactor, 0.0f, currentTime);
+                        } else if (character.mapNodeData.z == 17) {
+                            updateMotion(character, 17, motionSpeedFactor, 0.0f, currentTime);
+                        } else if (character.mapNodeData.z == 18) {
+                            updateMotion(character, 18, motionSpeedFactor, 0.0f, currentTime);
+                        }
                     }
                 } else if (character.states.y == 3) {
+                    if (character.mapNodeData.z == 12) {
+                        if (motionDurationPlayed(character, 12, currentTime) > motionAttacks[12] / motionSpeedFactor) {
+                            character.states.y = 4;
+                        }
+                    } else if (character.mapNodeData.z == 13) {
+                        if (motionDurationPlayed(character, 13, currentTime) > motionAttacks[13] / motionSpeedFactor) {
+                            character.states.y = 4;
+                        }
+                    } else if (character.mapNodeData.z == 16) {
+                        if (motionDurationPlayed(character, 16, currentTime) > motionAttacks[16] / motionSpeedFactor) {
+                            character.states.y = 4;
+                        }
+                    } else if (character.mapNodeData.z == 17) {
+                        if (motionDurationPlayed(character, 17, currentTime) > motionAttacks[17] / motionSpeedFactor) {
+                            character.states.y = 4;
+                        }
+                    } else if (character.mapNodeData.z == 18) {
+                        if (motionDurationPlayed(character, 18, currentTime) > motionAttacks[18] / motionSpeedFactor) {
+                            character.states.y = 4;
+                        }
+                    }
+                } else if (character.states.y == 4) {
                     break;
                 }
                 
@@ -989,7 +1053,7 @@ kernel void SimulationFunction(constant FrameData& frame [[buffer(0)]],
     }
     
     // store the current character index for possible entertainment building exit
-    if (character.states.x == 4 && character.stats[0] < 0.0f) {
+    if (character.states.x == 4 && character.states.y == 4) {
         const uint count = atomic_fetch_add_explicit(&characterCount[4], 1, memory_order_relaxed);
         entertainmentExitCharacterIndices[count] = index;
     }
