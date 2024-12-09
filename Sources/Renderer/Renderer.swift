@@ -129,6 +129,9 @@ class Renderer {
     // define the decoration visibility
     var decorationVisibility: Bool = true
     
+    // define the move vector
+    var moveVector: simd_float3 = .zero
+    
     // define the constructor
     init() {
         

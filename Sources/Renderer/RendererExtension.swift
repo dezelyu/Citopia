@@ -41,6 +41,8 @@ extension Renderer {
         if (self.activeKeys.contains("q")) {
             self.targetPosition -= simd_float3(up.x, up.y, up.z) * speed
         }
+        self.targetPosition -= simd_float3(forward.x, forward.y, forward.z) * self.moveVector.z
+        self.targetPosition -= simd_float3(left.x, left.y, left.z) * self.moveVector.x
         
         // limit the target position
         self.targetPosition.y = max(1.5, min(self.targetPosition.y, 100.0))

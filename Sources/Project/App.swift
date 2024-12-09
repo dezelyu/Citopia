@@ -12,19 +12,19 @@ import CameraKit
 @main class App: Application {
     
     // define the total number of characters to simulate
-    let characterCount: Int = 100000
+    var characterCount: Int = 100000
     
     // define the total number of visible characters
-    let visibleCharacterCount: Int = 400
+    var visibleCharacterCount: Int = 400
     
     // define the number of blocks per row of the map
-    let blockCount: Int = 100
+    var blockCount: Int = 100
     
     // define the side length of the block in meters
-    let blockSideLength: Float = 16
+    var blockSideLength: Float = 16
     
     // define the distance between two blocks in meters
-    let blockDistance: Float = 12
+    var blockDistance: Float = 12
     
     // define the graphics device
     var device: MTLDevice!
@@ -44,14 +44,33 @@ import CameraKit
     // define the status of the simulation
     var isPaused: Bool = true
     
+    // define the frame data
+    var frame: CGRect!
+    
+    // define the move touch data
+    var moveTouch: (Int, CGPoint, Float)?
+    
+    // define the rotate touch data
+    var rotateTouch: (Int, CGPoint, Float)?
+    
     // define the launching behavior
     override func launched() {
+        
+        // update configuration based on the current platform
+        if (!ProcessInfo.processInfo.isiOSAppOnMac) {
+            self.characterCount = 10000
+            self.visibleCharacterCount = 200
+            self.blockCount = 50
+        }
         
         // lock the cursor
         Cursor.lock()
         
         // show performance statistics
         App.view?.showsStatistics = true
+        
+        // acquire the frame data
+        self.frame = App.view?.frame
         
         // configure the game engine frameworks
         GraphicsManager.configure()
@@ -214,5 +233,62 @@ import CameraKit
         
         // remove the press
         self.renderer.remove(press: press)
+    }
+    
+    // define the touches started behavior
+    override func started(touch: Int, position: CGPoint) {
+        if (self.isPaused) {
+            self.isPaused = false
+            return
+        }
+        if (self.moveTouch == nil) {
+            if (position.x < self.frame.midX) {
+                self.moveTouch = (touch, position, App.time)
+            }
+        }
+        if (self.rotateTouch == nil) {
+            if (position.x > self.frame.midX) {
+                self.rotateTouch = (touch, position, App.time)
+            }
+        }
+    }
+    
+    // define the touches dragged behavior
+    override func dragged(touch: Int, position: CGPoint) {
+        if let moveTouch = self.moveTouch {
+            if (moveTouch.0 == touch) {
+                self.renderer.moveVector.x = Float(position.x - moveTouch.1.x)
+                self.renderer.moveVector.z = Float(position.y - moveTouch.1.y)
+                self.renderer.moveVector = normalize(self.renderer.moveVector)
+            }
+        }
+        if let rotateTouch = self.rotateTouch {
+            if (rotateTouch.0 == touch) {
+                self.renderer.targetRotation.y -= Float(position.x - rotateTouch.1.x) * 0.01
+                self.renderer.targetRotation.x -= Float(position.y - rotateTouch.1.y) * 0.01
+                self.rotateTouch = (touch, position, rotateTouch.2)
+            }
+        }
+    }
+    
+    // define the touches removed behavior
+    override func removed(touch: Int, position: CGPoint) {
+        if let moveTouch = self.moveTouch {
+            if (App.time - moveTouch.2 < 0.1) {
+                self.renderer.decorationVisibility = !self.renderer.decorationVisibility
+            }
+            if (moveTouch.0 == touch) {
+                self.renderer.moveVector = .zero
+                self.moveTouch = nil
+            }
+        }
+        if let rotateTouch = self.rotateTouch {
+            if (App.time - rotateTouch.2 < 0.1) {
+                self.renderer.decorationVisibility = !self.renderer.decorationVisibility
+            }
+            if (rotateTouch.0 == touch) {
+                self.rotateTouch = nil
+            }
+        }
     }
 }
