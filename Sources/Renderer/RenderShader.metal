@@ -204,6 +204,18 @@ struct PresentIntermediateData {
     float2 coordinate;
 };
 
+// define a sphere
+struct Sphere {
+    float3 center;
+    float radius;
+};
+
+// define a ray
+struct Ray {
+    float3 origin;
+    float3 direction;
+};
+
 // define the function that update the nodes based on the visible characters
 kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]],
                            device NodeData* nodes [[buffer(1)]],
@@ -285,47 +297,32 @@ float2 moveInEllipse(const float t, const float a, const float b) {
     return float2(x, y);
 }
 
-float sdSphere(const float3 point, const float3 center, const float radius) {
-    return length(point - center) - radius;
-}
+// Function to calculate ray-sphere intersection
+// Returns the distance to the closest intersection or -1 if no intersection
+float raySphereIntersection(const Ray ray, const Sphere sphere) {
+    float3 oc = ray.origin - sphere.center;
+    float a = dot(ray.direction, ray.direction);
+    float b = 2.0 * dot(oc, ray.direction);
+    float c = dot(oc, oc) - sphere.radius * sphere.radius;
+    float discriminant = b * b - 4.0 * a * c;
 
-float2 sdScene(const float3 point, const float4 bodyPositions) {
-    
-    // sun - 0.0
-    const float sunRadius = 40.0f;
-    const float dSun = sdSphere(point, float3(bodyPositions.xy, 0.0f), sunRadius);
-    float dFinal = dSun;
-    float objectType = 0.0f;
-    
-    // moon - 1.0
-    const float moonRadius = 30.0f;
-    const float dMoon = sdSphere(point, float3(bodyPositions.zw, 0.0f), moonRadius);
-    if (dMoon < dFinal) {
-        dFinal = dMoon;
-        objectType = 1.0f;
-    }
-    return float2(dFinal, objectType);
-}
+    if (discriminant < 0.0) {
+        return -1.0;
+    } else {
+        float t1 = (-b - sqrt(discriminant)) / (2.0 * a);
+        float t2 = (-b + sqrt(discriminant)) / (2.0 * a);
 
-float2 rayMarch(const float3 ro, const float3 rd, const float4 bodyPositions) {
-    const int maxIterations = 128;
-    const float epsilon = 0.001f;
-    float3 pos = ro;
-    int itr = 0;
-    const float2 sdResult = sdScene(pos, bodyPositions);
-    float t = sdResult.x;
-    float objectType = sdResult.y;
-    float t_final = t;
-    while (abs(t) > epsilon && itr < maxIterations) {
-        pos += t * rd;
-        const float2 currentResult = sdScene(pos, bodyPositions);
-        t = currentResult.x;
-        t_final += t;
-        objectType = currentResult.y;
-        itr += 1;
+        // Return the closest positive intersection
+        if (t1 > 0.0 && t2 > 0.0) {
+            return min(t1, t2);
+        } else if (t1 > 0.0) {
+            return t1;
+        } else if (t2 > 0.0) {
+            return t2;
+        } else {
+            return -1.0; // Both intersections are behind the ray
+        }
     }
-    objectType = t <= epsilon ? objectType : -1.0f;
-    return float2(t, objectType);
 }
 
 float3 getSkyColor(float sunAngle, const float3 skyColors[4], const float transitionAngles[4]) {
@@ -407,20 +404,26 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     const float sunAngle = atan2(bodyCoordinates.y, bodyCoordinates.x);
     const float3 view = normalize(camera.matrices[2][3].xyz - point.xyz);
     float4 outColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    const float3 ro = camera.matrices[2][3].xyz;
-    const float3 rd = normalize(point.xyz - ro);
-    const float2 rayMarchResult = rayMarch(ro, rd, bodyPositions);
-    if (rayMarchResult.y < 0.0f) {
+    Ray ray;
+    ray.origin = camera.matrices[2][3].xyz;
+    ray.direction = normalize(point.xyz - ray.origin);
+    Sphere sun;
+    sun.center = float3(bodyPositions.xy, 0.0f);
+    sun.radius = 40.0f;
+    Sphere moon;
+    moon.center = float3(bodyPositions.zw, 0.0f);
+    moon.radius = 30.0f;
+    if (raySphereIntersection(ray, sun) != -1.0f) {
+        outColor.xyz = colors[88];
+    } else if (raySphereIntersection(ray, moon) != -1.0f) {
+        outColor.xyz = colors[89];
+    } else {
         outColor = float4(getSkyColor(sunAngle, skyColors, transitionAngles), 1.0f);
         const float starThreshold = 8.0f;
         const float starExposure = (1.0f - (normalize(bodyCoordinates).y * 0.5f + 0.5f)) * 200.0f;
         float starColors = pow(clamp(noise(view * 200.0f), 0.0f, 1.0f), starThreshold) * starExposure;
         starColors *= mix(0.4f, 1.4f, noise(view * 100.0f + float3(time)));
         outColor += starColors;
-    } else if (rayMarchResult.y < 1.0f) {
-        outColor.xyz = colors[88];
-    } else if (rayMarchResult.y < 2.0f) {
-        outColor.xyz = colors[89];
     }
     if (r < 1.0f) {
         const float3 light = normalize(float3(bodyPositions.xy, 0.0f) - point.xyz);
