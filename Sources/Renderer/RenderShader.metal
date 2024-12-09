@@ -129,6 +129,28 @@ constant float3 colors[] = {
     float3(0.07f, 0.20f, 0.34f),
     float3(0.03f, 0.09f, 0.24f),
     float3(0.80f, 0.80f, 0.80f),
+    
+    // twilight (80 - 81)
+    float3(0.64f, 0.84f, 0.98f),
+    float3(0.99f, 0.95f, 0.0f),
+    
+    // morning (82 - 83)
+    float3(0.28f, 0.79f, 0.89f),
+    float3(0.79f, 0.94f, 0.97f),
+    
+    // sunset (84 - 85)
+    float3(1.0f, 0.73f, 0.03f),
+    float3(0.82f, 0.0f, 0.0f),
+    
+    // night (86 - 87)
+    float3(0.0f, 0.03f, 0.08f),
+    float3(0.0f, 0.11f, 0.24f),
+    
+    // sun (88)
+    float3(255, 250, 229) / 255.0f,
+    
+    // moon (89)
+    float3(255, 233, 127) / 255.0f,
 };
 
 // define the visible character data
@@ -236,6 +258,103 @@ kernel void UpdateFunction(device VisibleCharacterData* characters [[buffer(0)]]
     }
 }
 
+float3 hash(float3 p) {
+    p = float3(dot(p, float3(127.1f, 311.7f, 74.7f)),
+               dot(p, float3(269.5f, 183.3f, 246.1f)),
+               dot(p, float3(113.5f, 271.9f, 124.6f)));
+    return -1.0f + 2.0f * fract(sin(p) * 43758.5453123f);
+}
+
+float noise(const float3 p) {
+    const float3 i = floor(p);
+    const float3 f = fract(p);
+    const float3 u = f * f * (3.0f - 2.0f * f);
+    return mix(mix(mix(dot(hash(i + float3(0.0f, 0.0f, 0.0f)), f - float3(0.0f, 0.0f, 0.0f)),
+                       dot(hash(i + float3(1.0f, 0.0f, 0.0f)), f - float3(1.0f, 0.0f, 0.0f)), u.x),
+                    mix(dot(hash(i + float3(0.0f, 1.0f, 0.0f)), f - float3(0.0f, 1.0f, 0.0f)),
+                        dot(hash(i + float3(1.0f, 1.0f, 0.0f)), f - float3(1.0f, 1.0f, 0.0f)), u.x), u.y),
+               mix(mix(dot(hash(i + float3(0.0f, 0.0f, 1.0f)), f - float3(0.0f, 0.0f, 1.0f)),
+                        dot(hash(i + float3(1.0f, 0.0f, 1.0f)), f - float3(1.0f, 0.0f, 1.0f)), u.x),
+                   mix(dot(hash(i + float3(0.0f, 1.0f, 1.0f)), f - float3(0.0f, 1.0f, 1.0f)),
+                       dot(hash(i + float3(1.0f, 1.0f, 1.0f)), f - float3(1.0f, 1.0f, 1.0f)), u.x), u.y), u.z);
+}
+
+float2 moveInEllipse(const float t, const float a, const float b) {
+    const float x = a * cos(t);
+    const float y = b * sin(t);
+    return float2(x, y);
+}
+
+float sdSphere(const float3 point, const float3 center, const float radius) {
+    return length(point - center) - radius;
+}
+
+float2 sdScene(const float3 point, const float4 bodyPositions) {
+    
+    // sun - 0.0
+    const float sunRadius = 40.0f;
+    const float dSun = sdSphere(point, float3(bodyPositions.xy, 0.0f), sunRadius);
+    float dFinal = dSun;
+    float objectType = 0.0f;
+    
+    // moon - 1.0
+    const float moonRadius = 30.0f;
+    const float dMoon = sdSphere(point, float3(bodyPositions.zw, 0.0f), moonRadius);
+    if (dMoon < dFinal) {
+        dFinal = dMoon;
+        objectType = 1.0f;
+    }
+    return float2(dFinal, objectType);
+}
+
+float2 rayMarch(const float3 ro, const float3 rd, const float4 bodyPositions) {
+    const int maxIterations = 128;
+    const float epsilon = 0.001f;
+    float3 pos = ro;
+    int itr = 0;
+    const float2 sdResult = sdScene(pos, bodyPositions);
+    float t = sdResult.x;
+    float objectType = sdResult.y;
+    float t_final = t;
+    while (abs(t) > epsilon && itr < maxIterations) {
+        pos += t * rd;
+        const float2 currentResult = sdScene(pos, bodyPositions);
+        t = currentResult.x;
+        t_final += t;
+        objectType = currentResult.y;
+        itr += 1;
+    }
+    objectType = t <= epsilon ? objectType : -1.0f;
+    return float2(t, objectType);
+}
+
+float3 getSkyColor(float sunAngle, const float3 skyColors[4], const float transitionAngles[4]) {
+    float3 result = float3(0.0f);
+    int startIndex = -1;
+    float t = 0.0f;
+    
+    // Determine which segment the sunAngle falls into
+    if (sunAngle >= transitionAngles[0] && sunAngle < transitionAngles[1]) {
+        startIndex = 0;
+        t = (sunAngle - transitionAngles[0]) / (transitionAngles[1] - transitionAngles[0]);
+    } else if (sunAngle >= transitionAngles[1] && sunAngle < transitionAngles[2]) {
+        startIndex = 1;
+        t = (sunAngle - transitionAngles[1]) / (transitionAngles[2] - transitionAngles[1]);
+    } else if (sunAngle >= transitionAngles[2] && sunAngle <= M_PI_F) {
+        startIndex = 2;
+        t = (sunAngle - transitionAngles[2]) / (M_PI_F - transitionAngles[2]);
+    } else if (sunAngle >= transitionAngles[3] && sunAngle < transitionAngles[0]) {
+        startIndex = 3;
+        t = (sunAngle - transitionAngles[3]) / (transitionAngles[0] - transitionAngles[3]);
+    }
+    if (startIndex != -1) {
+        result = skyColors[startIndex] + t * (skyColors[(startIndex + 1) % 4] - skyColors[startIndex]);
+    } else {
+        result = skyColors[3];
+    }
+    return result;
+}
+
 // define the present fragment function
 fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[stage_in]],
                                         const device CameraData* cameras [[buffer(0)]],
@@ -275,10 +394,40 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     }
     
     // perform shading
-    const float3 light = normalize(float3(1.0f, 2.0f, 3.0f));
+    const float timeScale = 0.05f;
+    const float2 bodyCoordinates = moveInEllipse(time * timeScale, 1000.0f, 1000.0f);
+    const float4 bodyPositions = float4(bodyCoordinates.x, bodyCoordinates.y, -bodyCoordinates.x, -bodyCoordinates.y);
+    const float3 skyColors[4] = {
+        mix(mix(colors[80], colors[81], data.coordinate.y), float3(0.0f), 0.8f),
+        mix(colors[82], colors[83], data.coordinate.y),
+        mix(mix(colors[84], colors[85], data.coordinate.y), float3(0.0f), 0.5f),
+        mix(mix(colors[86], colors[87], data.coordinate.y), float3(0.0f), 0.6f),
+    };
+    const float transitionAngles[4] = {0.0f, 0.5f, 2.84f, -0.1f};
+    const float sunAngle = atan2(bodyCoordinates.y, bodyCoordinates.x);
     const float3 view = normalize(camera.matrices[2][3].xyz - point.xyz);
-    float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
-    lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
-    const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
-    return float4(float3(r < 1.0f ? lambert * 0.8f + 0.2f : 0.0f) * materialColor * fog, 1.0f);
+    float4 outColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    const float3 ro = camera.matrices[2][3].xyz;
+    const float3 rd = normalize(point.xyz - ro);
+    const float2 rayMarchResult = rayMarch(ro, rd, bodyPositions);
+    if (rayMarchResult.y < 0.0f) {
+        outColor = float4(getSkyColor(sunAngle, skyColors, transitionAngles), 1.0f);
+        const float starThreshold = 8.0f;
+        const float starExposure = (1.0f - (normalize(bodyCoordinates).y * 0.5f + 0.5f)) * 200.0f;
+        float starColors = pow(clamp(noise(view * 200.0f), 0.0f, 1.0f), starThreshold) * starExposure;
+        starColors *= mix(0.4f, 1.4f, noise(view * 100.0f + float3(time)));
+        outColor += starColors;
+    } else if (rayMarchResult.y < 1.0f) {
+        outColor.xyz = colors[88];
+    } else if (rayMarchResult.y < 2.0f) {
+        outColor.xyz = colors[89];
+    }
+    if (r < 1.0f) {
+        const float3 light = normalize(float3(bodyPositions.xy, 0.0f) - point.xyz);
+        float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
+        lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
+        const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
+        outColor.xyz = mix(outColor.xyz, float3(lambert * 0.8f + 0.2f) * materialColor, fog);
+    }
+    return outColor;
 }
