@@ -41,6 +41,9 @@ import CameraKit
     // define an array of simulation durations
     var simulationDurations: [CFTimeInterval] = []
     
+    // define the status of the simulation
+    var isPaused: Bool = true
+    
     // define the launching behavior
     override func launched() {
         
@@ -133,7 +136,7 @@ import CameraKit
     override func updated(state: Int) {
         
         // define the behavior of the primary update state
-        if (state == 0) {
+        if (state == 0 && !self.isPaused) {
             
             // create a new command buffer
             let commandBuffer = self.commandQueue.makeCommandBuffer()!
@@ -194,6 +197,11 @@ import CameraKit
         
         // record the press
         self.renderer.start(press: press)
+        
+        // check for simulation start
+        if (press.lowercased() == "p" && self.isPaused) {
+            self.isPaused = false
+        }
         
         // check for zombification
         if (press.lowercased() == "z") {
