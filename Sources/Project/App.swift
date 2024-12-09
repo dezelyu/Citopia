@@ -41,9 +41,6 @@ import CameraKit
     // define an array of simulation durations
     var simulationDurations: [CFTimeInterval] = []
     
-    // define the status of the simulation
-    var isPaused: Bool = true
-    
     // define the frame data
     var frame: CGRect!
     
@@ -52,6 +49,9 @@ import CameraKit
     
     // define the rotate touch data
     var rotateTouch: (Int, CGPoint, Float)?
+    
+    // define the countdown
+    var countdown: Int = 2
     
     // define the launching behavior
     override func launched() {
@@ -62,12 +62,6 @@ import CameraKit
             self.visibleCharacterCount = 200
             self.blockCount = 50
         }
-        
-        // lock the cursor
-        Cursor.lock()
-        
-        // show performance statistics
-        App.view?.showsStatistics = true
         
         // acquire the frame data
         self.frame = App.view?.frame
@@ -155,7 +149,11 @@ import CameraKit
     override func updated(state: Int) {
         
         // define the behavior of the primary update state
-        if (state == 0 && !self.isPaused) {
+        if (state == 0) {
+            if (self.countdown > 0) {
+                self.countdown -= 1
+                self.renderer.decorationVisibility = !self.renderer.decorationVisibility
+            }
             
             // create a new command buffer
             let commandBuffer = self.commandQueue.makeCommandBuffer()!
@@ -218,8 +216,8 @@ import CameraKit
         self.renderer.start(press: press)
         
         // check for simulation start
-        if (press.lowercased() == "p" && self.isPaused) {
-            self.isPaused = false
+        if (press.lowercased() == "p" && self.simulator.paused) {
+            self.simulator.paused = false
         }
         
         // check for zombification
@@ -237,8 +235,8 @@ import CameraKit
     
     // define the touches started behavior
     override func started(touch: Int, position: CGPoint) {
-        if (self.isPaused) {
-            self.isPaused = false
+        if (self.simulator.paused) {
+            self.simulator.paused = false
             return
         }
         if (self.moveTouch == nil) {
@@ -266,6 +264,9 @@ import CameraKit
             if (rotateTouch.0 == touch) {
                 self.renderer.targetRotation.y -= Float(position.x - rotateTouch.1.x) * 0.01
                 self.renderer.targetRotation.x -= Float(position.y - rotateTouch.1.y) * 0.01
+                self.renderer.targetRotation.x = max(
+                    -Float.pi * 0.4, min(self.renderer.targetRotation.x, Float.pi * 0.4)
+                )
                 self.rotateTouch = (touch, position, rotateTouch.2)
             }
         }

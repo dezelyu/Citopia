@@ -291,46 +291,21 @@ float noise(const float3 p) {
                        dot(hash(i + float3(1.0f, 1.0f, 1.0f)), f - float3(1.0f, 1.0f, 1.0f)), u.x), u.y), u.z);
 }
 
-float2 moveInEllipse(const float t, const float a, const float b) {
-    const float x = a * cos(t);
-    const float y = b * sin(t);
-    return float2(x, y);
+bool intersection(const Ray ray, const Sphere sphere) {
+    const float3 oc = ray.origin - sphere.center;
+    const float a = dot(ray.direction, ray.direction);
+    const float b = 2.0f * dot(oc, ray.direction);
+    const float c = dot(oc, oc) - sphere.radius * sphere.radius;
+    const float discriminant = b * b - 4.0 * a * c;
+    const float t1 = (-b - sqrt(discriminant)) / (2.0f * a);
+    const float t2 = (-b + sqrt(discriminant)) / (2.0f * a);
+    return discriminant >= 0.0f && (t1 > 0.0f || t2 > 0.0f);
 }
 
-// Function to calculate ray-sphere intersection
-// Returns the distance to the closest intersection or -1 if no intersection
-float raySphereIntersection(const Ray ray, const Sphere sphere) {
-    float3 oc = ray.origin - sphere.center;
-    float a = dot(ray.direction, ray.direction);
-    float b = 2.0 * dot(oc, ray.direction);
-    float c = dot(oc, oc) - sphere.radius * sphere.radius;
-    float discriminant = b * b - 4.0 * a * c;
-
-    if (discriminant < 0.0) {
-        return -1.0;
-    } else {
-        float t1 = (-b - sqrt(discriminant)) / (2.0 * a);
-        float t2 = (-b + sqrt(discriminant)) / (2.0 * a);
-
-        // Return the closest positive intersection
-        if (t1 > 0.0 && t2 > 0.0) {
-            return min(t1, t2);
-        } else if (t1 > 0.0) {
-            return t1;
-        } else if (t2 > 0.0) {
-            return t2;
-        } else {
-            return -1.0; // Both intersections are behind the ray
-        }
-    }
-}
-
-float3 getSkyColor(float sunAngle, const float3 skyColors[4], const float transitionAngles[4]) {
+float3 render(float sunAngle, const float3 skyColors[4], const float transitionAngles[4]) {
     float3 result = float3(0.0f);
     int startIndex = -1;
     float t = 0.0f;
-    
-    // Determine which segment the sunAngle falls into
     if (sunAngle >= transitionAngles[0] && sunAngle < transitionAngles[1]) {
         startIndex = 0;
         t = (sunAngle - transitionAngles[0]) / (transitionAngles[1] - transitionAngles[0]);
@@ -391,46 +366,57 @@ fragment float4 PresentFragmentFunction(const PresentIntermediateData data [[sta
     }
     
     // perform shading
-    const float timeScale = 0.05f;
-    const float2 bodyCoordinates = moveInEllipse(time * timeScale, 1000.0f, 1000.0f);
-    const float4 bodyPositions = float4(bodyCoordinates.x, bodyCoordinates.y, -bodyCoordinates.x, -bodyCoordinates.y);
+    const float scaledTime = time * 0.05f;
+    const float2 coordinates = float2(cos(scaledTime), sin(scaledTime)) * 1000.0f;
+    const float4 centers = float4(coordinates.x, coordinates.y, -coordinates.x, -coordinates.y);
     const float3 skyColors[4] = {
         mix(mix(colors[80], colors[81], data.coordinate.y), float3(0.0f), 0.8f),
         mix(colors[82], colors[83], data.coordinate.y),
         mix(mix(colors[84], colors[85], data.coordinate.y), float3(0.0f), 0.5f),
         mix(mix(colors[86], colors[87], data.coordinate.y), float3(0.0f), 0.6f),
     };
-    const float transitionAngles[4] = {0.0f, 0.5f, 2.84f, -0.1f};
-    const float sunAngle = atan2(bodyCoordinates.y, bodyCoordinates.x);
+    const float transitionAngles[4] = {
+        0.0f,
+        0.5f,
+        2.84f,
+        -0.1f,
+    };
+    const float sunAngle = atan2(coordinates.y, coordinates.x);
     const float3 view = normalize(camera.matrices[2][3].xyz - point.xyz);
-    float4 outColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float4 sceneColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float fog = 1.0f;
+    if (r < 1.0f) {
+        const float3 light = normalize(float3(centers.xy, 0.0f) - point.xyz);
+        float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
+        lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
+        fog = smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
+        sceneColor.xyz = float3(lambert * 0.8f + 0.2f) * materialColor;
+    }
+    if (fog == 0.0f) {
+        return sceneColor;
+    }
+    float4 skyColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     Ray ray;
     ray.origin = camera.matrices[2][3].xyz;
     ray.direction = normalize(point.xyz - ray.origin);
     Sphere sun;
-    sun.center = float3(bodyPositions.xy, 0.0f);
+    sun.center = float3(centers.xy, 0.0f);
     sun.radius = 40.0f;
     Sphere moon;
-    moon.center = float3(bodyPositions.zw, 0.0f);
+    moon.center = float3(centers.zw, 0.0f);
     moon.radius = 30.0f;
-    if (raySphereIntersection(ray, sun) != -1.0f) {
-        outColor.xyz = colors[88];
-    } else if (raySphereIntersection(ray, moon) != -1.0f) {
-        outColor.xyz = colors[89];
+    if (intersection(ray, sun)) {
+        skyColor.xyz = colors[88];
+    } else if (intersection(ray, moon)) {
+        skyColor.xyz = colors[89];
     } else {
-        outColor = float4(getSkyColor(sunAngle, skyColors, transitionAngles), 1.0f);
+        skyColor = float4(render(sunAngle, skyColors, transitionAngles), 1.0f);
         const float starThreshold = 8.0f;
-        const float starExposure = (1.0f - (normalize(bodyCoordinates).y * 0.5f + 0.5f)) * 200.0f;
-        float starColors = pow(clamp(noise(view * 200.0f), 0.0f, 1.0f), starThreshold) * starExposure;
-        starColors *= mix(0.4f, 1.4f, noise(view * 100.0f + float3(time)));
-        outColor += starColors;
+        const float starExposure = (1.0f - (normalize(coordinates).y * 0.5f + 0.5f)) * 200.0f;
+        const float noiseFactor = noise(view * 200.0f + float3(time * 0.2f));
+        float starColors = pow(clamp(noiseFactor, 0.0f, 1.0f), starThreshold) * starExposure;
+        starColors *= mix(0.4f, 1.4f, noiseFactor);
+        skyColor += starColors;
     }
-    if (r < 1.0f) {
-        const float3 light = normalize(float3(bodyPositions.xy, 0.0f) - point.xyz);
-        float lambert = max(dot(normal, light), 0.0f) * 0.8f + max(dot(normal, view), 0.0f) * 0.2f;
-        lambert *= (3 <= material && material <= 22) ? 10.0f : 1.0f;
-        const float fog = 1.0f - smoothstep(400.0f, 450.0f, length(camera.matrices[2][3].xyz - point.xyz));
-        outColor.xyz = mix(outColor.xyz, float3(lambert * 0.8f + 0.2f) * materialColor, fog);
-    }
-    return outColor;
+    return mix(sceneColor, skyColor, fog);
 }

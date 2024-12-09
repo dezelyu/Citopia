@@ -591,10 +591,10 @@ extension Citopia {
         )
         
         // update the time
-        pointer.pointee.data.x = time
+        pointer.pointee.data.x = self.paused ? 0.0 : time
         
         // update the delta time scale factor
-        pointer.pointee.data.y = (time - self.previousTime) / (1.0 / 60.0)
+        pointer.pointee.data.y = self.paused ? 0.0 : (time - self.previousTime) / (1.0 / 60.0)
         self.previousTime = time
         
         // update the zombification indicator

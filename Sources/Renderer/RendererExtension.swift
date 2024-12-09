@@ -57,6 +57,9 @@ extension Renderer {
         // update the target rotation of the camera
         self.targetRotation.y -= Float(delta.dx) * sensitivity
         self.targetRotation.x += Float(delta.dy) * sensitivity
+        self.targetRotation.x = max(
+            -Float.pi * 0.4, min(self.targetRotation.x, Float.pi * 0.4)
+        )
     }
     
     // define the function that updates the position of the ground

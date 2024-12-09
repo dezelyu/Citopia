@@ -241,6 +241,9 @@ struct GridData {
 // define the class for performing the simulation
 class Citopia {
     
+    // define the paused variable
+    var paused: Bool = true
+    
     // define the total number of characters to simulate
     var characterCount: Int = 0
     
