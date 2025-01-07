@@ -23,3 +23,14 @@ For the final version, we completed the integration of entertainment building ty
 #
 ### Setup Instructions
 To build and run this project, use Xcode version 15.4 or later. Open the Xcode project file located in the Sources folder, and ensure an appropriate development team is selected in the Signing & Capabilities settings to enable local execution. If you encounter an error related to AVKit, you may need to remove and re-add the AVKit framework under “Link Binary with Libraries” in the Build Phases settings.
+#
+### Control Instructions
+To begin the simulation, press the **P** key. Once started, you can use the following controls:
+- **Mouse**: Rotate the camera.
+- **W**: Move along the camera's forward direction.
+- **A**: Move along the camera's left direction.
+- **S**: Move along the camera's backward direction.
+- **D**: Move along the camera's right direction.
+- **Space**: Increase movement speed.
+- **V**: Toggle the visibility of ceilings.
+- **Z**: Zombify the group of characters pointed at by the cursor.
